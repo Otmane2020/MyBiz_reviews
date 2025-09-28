@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, User, Calendar } from 'lucide-react';
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
+const REDIRECT_URI = `${APP_URL}/callback`;
+
 interface GoogleReview {
   reviewId: string;
   reviewer: {
@@ -30,16 +34,6 @@ interface GoogleLocation {
   };
 }
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-const SCOPE = 'https://www.googleapis.com/auth/business.manage';
-
-declare global {
-  interface Window {
-    google: any;
-    gapi: any;
-  }
-}
-
 interface GoogleReviewsProps {
   user?: any;
   accessToken?: string;
@@ -62,82 +56,72 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
   const [replyingTo, setReplyingTo] = useState<string>('');
 
   useEffect(() => {
-    // Charger le script Google Identity Services
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse,
-        });
-      }
-    };
-
-    return () => {
-      document.body.removeChild(script);
-    };
+    // Vérifier si on revient du callback OAuth
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      handleOAuthCallback(code);
+      // Nettoyer l'URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
-  const handleCredentialResponse = async (response: any) => {
+  const handleOAuthCallback = async (code: string) => {
+    setLoading(true);
     try {
-      // Demander l'autorisation pour accéder aux avis Google My Business
-      const authResponse = await window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: SCOPE,
-        callback: (tokenResponse: any) => {
-          setAccessToken(tokenResponse.access_token);
-          fetchUserProfile(tokenResponse.access_token);
-          fetchAccounts(tokenResponse.access_token);
+      const response = await fetch('/api/google-oauth?action=exchange-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          code,
+          redirectUri: REDIRECT_URI,
+        }),
       });
+
+      const data = await response.json();
       
-      authResponse.requestAccessToken();
+      if (response.ok) {
+        setAccessToken(data.access_token);
+        setUser(data.user);
+        
+        // Sauvegarder les tokens
+        localStorage.setItem('accessToken', data.access_token);
+        localStorage.setItem('refreshToken', data.refresh_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        if (onUserLogin) {
+          onUserLogin(data.user, data.access_token);
+        }
+        
+        fetchAccounts(data.access_token);
+      } else {
+        console.error('OAuth error:', data.error);
+      }
     } catch (error) {
-      console.error('Erreur lors de la connexion:', error);
+      console.error('Erreur lors de l\'échange du code:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
     if (!GOOGLE_CLIENT_ID) {
-      alert('Veuillez configurer votre GOOGLE_CLIENT_ID dans les variables d\'environnement.\n\n1. Créez un fichier .env à la racine du projet\n2. Ajoutez: VITE_GOOGLE_CLIENT_ID=votre_client_id_google\n3. Obtenez votre client ID depuis Google Cloud Console');
+      alert('Configuration Google OAuth manquante');
       return;
     }
 
-    if (window.google) {
-      const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: SCOPE,
-        callback: (tokenResponse: any) => {
-          setAccessToken(tokenResponse.access_token);
-          fetchUserProfile(tokenResponse.access_token);
-          fetchAccounts(tokenResponse.access_token);
-        },
-      });
-      
-      client.requestAccessToken();
-    }
-  };
-
-  const fetchUserProfile = async (token: string) => {
-    try {
-      const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const userData = await response.json();
-      setUser(userData);
-      if (onUserLogin) {
-        onUserLogin(userData, token);
-      }
-    } catch (error) {
-      console.error('Erreur lors de la récupération du profil utilisateur:', error);
-    }
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${GOOGLE_CLIENT_ID}&` +
+      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+      `response_type=code&` +
+      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage')}&` +
+      `access_type=offline&` +
+      `prompt=consent`;
+    
+    window.location.href = authUrl;
   };
 
   const fetchAccounts = async (token: string) => {
@@ -186,14 +170,17 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `https://mybusiness.googleapis.com/v4/${selectedLocationId}/reviews`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const response = await fetch('/api/google-oauth?action=get-reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accessToken,
+          locationId: selectedLocationId,
+        }),
+      });
+      
       const data = await response.json();
       if (data.reviews) {
         setReviews(data.reviews);
@@ -212,19 +199,18 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
     setReplyingTo(reviewId);
     try {
-      const response = await fetch(
-        `https://mybusiness.googleapis.com/v4/${selectedLocationId}/reviews/${reviewId}/reply`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            comment: "Merci beaucoup pour votre retour 🙏",
-          }),
-        }
-      );
+      const response = await fetch('/api/google-oauth?action=reply-review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accessToken,
+          locationId: selectedLocationId,
+          reviewId,
+          comment: "Merci beaucoup pour votre retour 🙏",
+        }),
+      });
 
       if (response.ok) {
         // Rafraîchir les avis pour voir la réponse
@@ -235,6 +221,57 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     } finally {
       setReplyingTo('');
     }
+  };
+
+  // Fonction pour rafraîchir le token si nécessaire
+  const refreshAccessToken = async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) return null;
+
+    try {
+      const response = await fetch('/api/google-oauth?action=refresh-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refreshToken,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setAccessToken(data.access_token);
+        localStorage.setItem('accessToken', data.access_token);
+        return data.access_token;
+      }
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement du token:', error);
+    }
+    return null;
+  };
+
+  // Charger les données sauvegardées au démarrage
+  useEffect(() => {
+    const savedToken = localStorage.getItem('accessToken');
+    const savedUser = localStorage.getItem('user');
+    
+    if (savedToken && savedUser) {
+      setAccessToken(savedToken);
+      setUser(JSON.parse(savedUser));
+      fetchAccounts(savedToken);
+    }
+  }, []);
+
+  if (loading && !accessToken) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4285F4] mx-auto mb-4"></div>
+          <p className="text-gray-600">Connexion en cours...</p>
+        }
+      </div>
+    );
   };
 
   const getStarRating = (rating: string): number => {
