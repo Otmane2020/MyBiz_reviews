@@ -80,6 +80,17 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     // Vérifier si on revient du callback OAuth
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
+    
+    // Si on est dans une popup, envoyer le code au parent
+    if (code && window.opener) {
+      window.opener.postMessage({
+        type: 'GOOGLE_AUTH_SUCCESS',
+        code: code
+      }, window.location.origin);
+      window.close();
+      return;
+    }
+    
     const state = sessionStorage.getItem('oauth_state');
     
     if (code && state === 'google_login') {
