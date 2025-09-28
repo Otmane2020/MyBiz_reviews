@@ -7,8 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 }
 
-const GOOGLE_CLIENT_ID = "395527284495-g1re11jn5e1oe1r5dfs6joe9gn285c2l.apps.googleusercontent.com"
-const GOOGLE_CLIENT_SECRET = "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"
+// Récupérer les identifiants depuis les variables d'environnement
+const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')
+const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -19,6 +20,11 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Vérifier que les variables d'environnement sont configurées
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      console.error('Google OAuth credentials not configured')
+    }
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
