@@ -40,9 +40,19 @@ declare global {
   }
 }
 
-const GoogleReviews: React.FC = () => {
-  const [accessToken, setAccessToken] = useState<string>('');
-  const [user, setUser] = useState<any>(null);
+interface GoogleReviewsProps {
+  user?: any;
+  accessToken?: string;
+  onUserLogin?: (user: any, token: string) => void;
+}
+
+const GoogleReviews: React.FC<GoogleReviewsProps> = ({ 
+  user: propUser, 
+  accessToken: propAccessToken, 
+  onUserLogin 
+}) => {
+  const [accessToken, setAccessToken] = useState<string>(propAccessToken || '');
+  const [user, setUser] = useState<any>(propUser || null);
   const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
   const [locations, setLocations] = useState<GoogleLocation[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
@@ -122,6 +132,9 @@ const GoogleReviews: React.FC = () => {
       });
       const userData = await response.json();
       setUser(userData);
+      if (onUserLogin) {
+        onUserLogin(userData, token);
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération du profil utilisateur:', error);
     }
@@ -270,22 +283,6 @@ const GoogleReviews: React.FC = () => {
 
   if (!accessToken) {
     return (
-      <div className="min-h-screen bg-[#F1F3F4]">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center">
-                <GoogleLogo />
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Gestion des Avis Google
-                </h1>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Page de connexion */}
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
           <div className="max-w-md w-full space-y-8 p-8">
             <div className="text-center">
