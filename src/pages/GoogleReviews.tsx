@@ -6,7 +6,7 @@ import NotificationCenter from '../components/NotificationCenter';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-const REDIRECT_URI = window.location.origin;
+const REDIRECT_URI = window.location.origin + window.location.pathname;
 
 interface GoogleReview {
   reviewId: string;
