@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, User, Calendar } from 'lucide-react';
+import { useReviewsNotifications } from '../hooks/useReviewsNotifications';
+import NotificationToast from '../components/NotificationToast';
+import NotificationCenter from '../components/NotificationCenter';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
@@ -54,6 +57,24 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
   const [reviews, setReviews] = useState<GoogleReview[]>([]);
   const [loading, setLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string>('');
+  const [activeToast, setActiveToast] = useState<any>(null);
+
+  // Notifications hook
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    clearNotifications,
+  } = useReviewsNotifications(selectedLocationId);
+
+  // Show toast for new notifications
+  useEffect(() => {
+    const latestNotification = notifications.find(n => !n.read);
+    if (latestNotification && !activeToast) {
+      setActiveToast(latestNotification);
+    }
+  }, [notifications, activeToast]);
 
   useEffect(() => {
     // Vérifier si on revient du callback OAuth
@@ -170,7 +191,8 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch('/api/google-oauth?action=get-reviews', {
+      // Use the new fetch-reviews function that stores in Supabase
+      const response = await fetch('/api/fetch-reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,13 +204,53 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
       });
       
       const data = await response.json();
-      if (data.reviews) {
-        setReviews(data.reviews);
+      if (data.success) {
+        // Refresh the reviews display
+        await fetchStoredReviews();
+        
+        if (data.newReviews > 0) {
+          console.log(`${data.newReviews} nouveaux avis ajoutés`);
+        }
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des avis:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStoredReviews = async () => {
+    if (!selectedLocationId) return;
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/rest/v1/reviews?location_id=eq.${selectedLocationId}&order=created_at.desc`, {
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+      });
+      
+      const storedReviews = await response.json();
+      
+      // Convert stored reviews to GoogleReview format
+      const convertedReviews = storedReviews.map((review: any) => ({
+        reviewId: review.review_id,
+        reviewer: {
+          displayName: review.author,
+          profilePhotoUrl: '',
+        },
+        starRating: ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][review.rating],
+        comment: review.comment,
+        createTime: review.review_date,
+        reviewReply: review.replied ? { comment: 'Répondu', updateTime: review.updated_at } : undefined,
+      }));
+      
+      setReviews(convertedReviews);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des avis stockés:', error);
     }
   };
 
@@ -358,8 +420,17 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
               </h1>
             </div>
             
-            {user && (
-              <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4">
+              <NotificationCenter
+                notifications={notifications}
+                unreadCount={unreadCount}
+                onMarkAsRead={markAsRead}
+                onMarkAllAsRead={markAllAsRead}
+                onClearAll={clearNotifications}
+              />
+              
+              {user && (
+                <>
                 <img
                   src={user.picture}
                   alt={user.name}
@@ -368,8 +439,9 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
                 <span className="text-sm font-medium text-gray-700">
                   {user.name}
                 </span>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -501,6 +573,14 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
           ))}
         </div>
       </main>
+      
+      {/* Toast Notification */}
+      {activeToast && (
+        <NotificationToast
+          notification={activeToast}
+          onClose={() => setActiveToast(null)}
+        />
+      )}
     </div>
   );
 };
