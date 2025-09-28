@@ -305,7 +305,6 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
