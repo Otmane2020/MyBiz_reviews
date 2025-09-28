@@ -269,10 +269,10 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4285F4] mx-auto mb-4"></div>
           <p className="text-gray-600">Connexion en cours...</p>
-        }
+        </div>
       </div>
     );
-  };
+  }
 
   const getStarRating = (rating: string): number => {
     const ratingMap: { [key: string]: number } = {
