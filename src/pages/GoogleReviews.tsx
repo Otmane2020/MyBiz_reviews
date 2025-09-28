@@ -6,8 +6,7 @@ import NotificationCenter from '../components/NotificationCenter';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
-const REDIRECT_URI = `${APP_URL}/callback`;
+const REDIRECT_URI = window.location.origin;
 
 interface GoogleReview {
   reviewId: string;
@@ -140,6 +139,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     // Sauvegarder l'état avant la redirection
     sessionStorage.setItem('oauth_state', 'google_login');
     
+    // Ouvrir dans une popup au lieu d'une redirection
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${GOOGLE_CLIENT_ID}&` +
       `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
@@ -148,7 +148,33 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
       `access_type=offline&` +
       `prompt=consent`;
     
-    window.location.href = authUrl;
+    // Ouvrir dans une popup pour éviter les problèmes de CSP
+    const popup = window.open(
+      authUrl,
+      'google-auth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+    
+    // Écouter les messages de la popup
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+        handleOAuthCallback(event.data.code);
+        popup?.close();
+        window.removeEventListener('message', handleMessage);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    
+    // Vérifier si la popup est fermée manuellement
+    const checkClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkClosed);
+        window.removeEventListener('message', handleMessage);
+      }
+    }, 1000);
   };
 
   const fetchAccounts = async (token: string) => {
@@ -417,7 +443,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <StarlinkoLogo size="md" />
+              <StarlinkoLogo size="md" showGoogleIcon={true} />
               <span className="ml-2 text-lg font-medium text-gray-600">Avis Google</span>
             </div>
             
