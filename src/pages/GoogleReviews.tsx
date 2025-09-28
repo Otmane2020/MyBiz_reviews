@@ -80,11 +80,13 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     // Vérifier si on revient du callback OAuth
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
+    const state = sessionStorage.getItem('oauth_state');
     
-    if (code) {
+    if (code && state === 'google_login') {
       handleOAuthCallback(code);
       // Nettoyer l'URL
       window.history.replaceState({}, document.title, window.location.pathname);
+      sessionStorage.removeItem('oauth_state');
     }
   }, []);
 
@@ -134,11 +136,14 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
       return;
     }
 
+    // Sauvegarder l'état avant la redirection
+    sessionStorage.setItem('oauth_state', 'google_login');
+    
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${GOOGLE_CLIENT_ID}&` +
       `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
       `response_type=code&` +
-      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage')}&` +
+      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&` +
       `access_type=offline&` +
       `prompt=consent`;
     

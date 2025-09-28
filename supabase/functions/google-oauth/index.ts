@@ -40,17 +40,23 @@ serve(async (req: Request) => {
       const tokens = await tokenResponse.json()
 
       if (!tokenResponse.ok) {
+        console.error('Token exchange error:', tokens)
         throw new Error(`Token exchange failed: ${tokens.error_description}`)
       }
 
       // Récupérer les informations utilisateur
-      const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      const userResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
         headers: {
           Authorization: `Bearer ${tokens.access_token}`,
         },
       })
 
       const userData = await userResponse.json()
+      
+      if (!userResponse.ok) {
+        console.error('User info error:', userData)
+        throw new Error(`Failed to get user info: ${userData.error_description}`)
+      }
 
       return new Response(
         JSON.stringify({
