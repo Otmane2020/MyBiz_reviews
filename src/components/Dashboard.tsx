@@ -89,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       <div className="bg-gradient-to-r from-[#4285F4] to-[#34A853] text-white p-6">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-2">
-            Bonjour {user?.name?.split(' ')[0]} ! 👋
+            Bonjour {user?.name?.split(' ')[0]} sur Starlinko ! 👋
           </h1>
           <p className="text-white/90">
             Voici un aperçu de vos avis Google My Business
