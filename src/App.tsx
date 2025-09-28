@@ -5,12 +5,23 @@ import Onboarding from './components/Onboarding';
 import MobileMenu from './components/MobileMenu';
 import Dashboard from './components/Dashboard';
 import GoogleReviews from './pages/GoogleReviews';
+import { useReviewsNotifications } from './hooks/useReviewsNotifications';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'onboarding' | 'app'>('landing');
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [user, setUser] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string>('');
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+
+  // Notifications hook
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    clearNotifications,
+  } = useReviewsNotifications(selectedLocationId);
 
   // Vérifier si l'utilisateur a déjà vu l'onboarding
   useEffect(() => {
@@ -72,6 +83,11 @@ function App() {
         currentPage={currentPage}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        onClearAll={clearNotifications}
       />
       
       {currentPage === 'dashboard' && <Dashboard user={user} />}
@@ -80,6 +96,9 @@ function App() {
           user={user} 
           accessToken={accessToken}
           onUserLogin={handleUserLogin}
+          selectedLocationId={selectedLocationId}
+          setSelectedLocationId={setSelectedLocationId}
+          onNavigate={handleNavigate}
         />
       )}
       {currentPage === 'responses' && (

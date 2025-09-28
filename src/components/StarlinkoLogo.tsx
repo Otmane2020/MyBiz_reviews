@@ -5,13 +5,15 @@ interface StarlinkoLogoProps {
   showText?: boolean;
   showGoogleIcon?: boolean;
   className?: string;
+  onClick?: () => void;
 }
 
 const StarlinkoLogo: React.FC<StarlinkoLogoProps> = ({ 
   size = 'md', 
   showText = true, 
   showGoogleIcon = false,
-  className = '' 
+  className = '',
+  onClick
 }) => {
   const sizeClasses = {
     sm: 'w-6 h-6',
@@ -25,33 +27,28 @@ const StarlinkoLogo: React.FC<StarlinkoLogoProps> = ({
     lg: 'text-2xl'
   };
 
+  const Component = onClick ? 'button' : 'div';
+
   return (
-    <div className={`flex items-center ${className}`}>
-      {/* Logo SVG - Étoile avec couleurs Google */}
+    <Component 
+      className={`flex items-center ${onClick ? 'hover:opacity-80 transition-opacity cursor-pointer' : ''} ${className}`}
+      onClick={onClick}
+    >
+      {/* Logo SVG - Étoile avec couleur bleue unie */}
       <div className={`${sizeClasses[size]} mr-2 flex-shrink-0`}>
         <svg viewBox="0 0 40 40" className="w-full h-full">
-          {/* Gradient definitions avec couleurs Google officielles */}
-          <defs>
-            <linearGradient id="starGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#4285F4" />
-              <stop offset="33%" stopColor="#34A853" />
-              <stop offset="66%" stopColor="#FBBC05" />
-              <stop offset="100%" stopColor="#EA4335" />
-            </linearGradient>
-          </defs>
-          
-          {/* Étoile avec couleurs Google */}
+          {/* Étoile avec couleur bleue Google */}
           <path
             d="M20 2 L24.5 14 L38 14 L28 22 L32 34 L20 26 L8 34 L12 22 L2 14 L15.5 14 Z"
-            fill="url(#starGradient)"
+            fill="#4285F4"
             className="drop-shadow-sm"
           />
         </svg>
       </div>
       
-      {/* Text Starlinko avec couleurs Google */}
+      {/* Text Starlinko avec couleur standard */}
       {showText && (
-        <span className={`font-bold bg-gradient-to-r from-[#4285F4] via-[#34A853] via-[#FBBC05] to-[#EA4335] bg-clip-text text-transparent ${textSizeClasses[size]}`}>
+        <span className={`font-bold text-gray-900 ${textSizeClasses[size]}`}>
           Starlinko
         </span>
       )}
@@ -67,7 +64,7 @@ const StarlinkoLogo: React.FC<StarlinkoLogoProps> = ({
           </svg>
         </div>
       )}
-    </div>
+    </Component>
   );
 };
 

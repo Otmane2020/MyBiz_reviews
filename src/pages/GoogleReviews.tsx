@@ -1,12 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, User, Calendar } from 'lucide-react';
-import { useReviewsNotifications } from '../hooks/useReviewsNotifications';
-import NotificationToast from '../components/NotificationToast';
-import NotificationCenter from '../components/NotificationCenter';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-const REDIRECT_URI = window.location.origin + window.location.pathname;
 
 interface GoogleReview {
   reviewId: string;
@@ -41,63 +37,57 @@ interface GoogleReviewsProps {
   user?: any;
   accessToken?: string;
   onUserLogin?: (user: any, token: string) => void;
+  selectedLocationId: string;
+  setSelectedLocationId: (id: string) => void;
+  onNavigate: (page: string) => void;
 }
 
 const GoogleReviews: React.FC<GoogleReviewsProps> = ({ 
   user: propUser, 
   accessToken: propAccessToken, 
-  onUserLogin 
+  onUserLogin,
+  selectedLocationId: propSelectedLocationId,
+  setSelectedLocationId: propSetSelectedLocationId,
+  onNavigate
 }) => {
   const [accessToken, setAccessToken] = useState<string>(propAccessToken || '');
   const [user, setUser] = useState<any>(propUser || null);
   const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
   const [locations, setLocations] = useState<GoogleLocation[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [reviews, setReviews] = useState<GoogleReview[]>([]);
   const [loading, setLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string>('');
-  const [activeToast, setActiveToast] = useState<any>(null);
-
-  // Notifications hook
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    clearNotifications,
-  } = useReviewsNotifications(selectedLocationId);
-
-  // Show toast for new notifications
-  useEffect(() => {
-    const latestNotification = notifications.find(n => !n.read);
-    if (latestNotification && !activeToast) {
-      setActiveToast(latestNotification);
-    }
-  }, [notifications, activeToast]);
+  
+  const selectedLocationId = propSelectedLocationId;
+  const setSelectedLocationId = propSetSelectedLocationId;
 
   useEffect(() => {
-    // Vérifier si on revient du callback OAuth
+    // Écouter les messages de la popup OAuth
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        handleOAuthCallback(event.data.code);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Vérifier si on est dans une popup OAuth
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     
-    // Si on est dans une popup, envoyer le code au parent
     if (code && window.opener) {
+      // On est dans une popup, envoyer le code au parent
       window.opener.postMessage({
         type: 'GOOGLE_AUTH_SUCCESS',
         code: code
       }, window.location.origin);
       window.close();
-      return;
-    }
-    
-    const state = sessionStorage.getItem('oauth_state');
-    
-    if (code && state === 'google_login') {
-      handleOAuthCallback(code);
-      // Nettoyer l'URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      sessionStorage.removeItem('oauth_state');
     }
   }, []);
 
@@ -111,7 +101,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         },
         body: JSON.stringify({
           code,
-          redirectUri: REDIRECT_URI,
+          redirectUri: window.location.origin,
         }),
       });
 
@@ -147,18 +137,25 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
       return;
     }
 
-    // URL d'authentification Google avec redirect_uri correct
+    // URL d'authentification Google pour popup
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+      `redirect_uri=${encodeURIComponent(window.location.origin)}&` +
       `response_type=code&` +
       `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&` +
       `access_type=offline&` +
       `prompt=consent`;
     
-    // Redirection directe (plus simple et plus fiable)
-    sessionStorage.setItem('oauth_state', 'google_login');
-    window.location.href = authUrl;
+    // Ouvrir dans une popup
+    const popup = window.open(
+      authUrl,
+      'google-oauth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+    
+    if (!popup) {
+      alert('Les popups sont bloquées. Veuillez autoriser les popups pour ce site.');
+    }
   };
 
   const fetchAccounts = async (token: string) => {
@@ -427,19 +424,15 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <StarlinkoLogo size="md" showGoogleIcon={true} />
+              <StarlinkoLogo 
+                size="md" 
+                showGoogleIcon={true} 
+                onClick={() => onNavigate('dashboard')}
+              />
               <span className="ml-2 text-lg font-medium text-gray-600">Avis Google</span>
             </div>
             
             <div className="flex items-center space-x-4">
-              <NotificationCenter
-                notifications={notifications}
-                unreadCount={unreadCount}
-                onMarkAsRead={markAsRead}
-                onMarkAllAsRead={markAllAsRead}
-                onClearAll={clearNotifications}
-              />
-              
               {user && (
                 <>
                  <img
@@ -450,7 +443,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
                  <span className="text-sm font-medium text-gray-700">
                    {user.name}
                  </span>
-                 {/* Google Icon à droite */}
+                 {/* Google Icon */}
                  <div className="flex items-center">
                    <svg className="w-5 h-5" viewBox="0 0 24 24">
                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -594,13 +587,6 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         </div>
       </main>
       
-      {/* Toast Notification */}
-      {activeToast && (
-        <NotificationToast
-          notification={activeToast}
-          onClose={() => setActiveToast(null)}
-        />
-      )}
     </div>
   );
 };

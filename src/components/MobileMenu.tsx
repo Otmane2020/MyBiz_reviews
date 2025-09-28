@@ -1,15 +1,31 @@
 import React, { useState } from 'react';
 import { Menu, X, Home, Star, MessageSquare, Settings, User, LogOut } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
+import NotificationCenter from './NotificationCenter';
 
 interface MobileMenuProps {
   user: any;
   currentPage: string;
   onNavigate: (page: string) => void;
   onLogout: () => void;
+  notifications: any[];
+  unreadCount: number;
+  onMarkAsRead: (id: string) => void;
+  onMarkAllAsRead: () => void;
+  onClearAll: () => void;
 }
 
-const MobileMenu: React.FC<MobileMenuProps> = ({ user, currentPage, onNavigate, onLogout }) => {
+const MobileMenu: React.FC<MobileMenuProps> = ({ 
+  user, 
+  currentPage, 
+  onNavigate, 
+  onLogout,
+  notifications,
+  unreadCount,
+  onMarkAsRead,
+  onMarkAllAsRead,
+  onClearAll
+}) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
@@ -33,15 +49,29 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ user, currentPage, onNavigate, 
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center">
-            <StarlinkoLogo size="md" showGoogleIcon={true} />
+            <StarlinkoLogo 
+              size="md" 
+              showGoogleIcon={true} 
+              onClick={() => handleNavigate('dashboard')}
+            />
           </div>
           
-          <button
-            onClick={toggleMenu}
-            className="p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center space-x-2">
+            <NotificationCenter
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onMarkAsRead={onMarkAsRead}
+              onMarkAllAsRead={onMarkAllAsRead}
+              onClearAll={onClearAll}
+            />
+            
+            <button
+              onClick={toggleMenu}
+              className="p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </header>
 
