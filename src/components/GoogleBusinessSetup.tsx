@@ -45,10 +45,10 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
 
   const fetchAccounts = async () => {
     try {
-      console.log('🔍 Fetching Google My Business accounts...');
+      console.log('🔍 Fetching Google My Business accounts via Supabase Edge Function...');
       console.log('🔑 Access token:', accessToken ? 'Present' : 'Missing');
       
-      // Use Supabase Edge Function as proxy to avoid CORS issues
+      // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
@@ -56,6 +56,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
+      console.log('📡 Calling Supabase Edge Function for accounts...');
       const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
@@ -72,7 +73,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       const data = await response.json();
       console.log('📊 Accounts response:', data);
       
-      if (data.accounts && data.accounts.length > 0) {
+      if (data.success && data.accounts && data.accounts.length > 0) {
         setAccounts(data.accounts);
         if (data.accounts.length === 1) {
           // Auto-select if only one account
@@ -107,9 +108,9 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   const fetchLocations = async (accountId: string) => {
     setLoading(true);
     try {
-      console.log('🏪 Fetching locations for account:', accountId);
+      console.log('🏪 Fetching locations for account via Supabase Edge Function:', accountId);
       
-      // Use Supabase Edge Function as proxy to avoid CORS issues
+      // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
@@ -117,6 +118,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
+      console.log('📡 Calling Supabase Edge Function for locations...');
       const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
@@ -134,7 +136,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       const data = await response.json();
       console.log('🏢 Locations response:', data);
       
-      if (data.locations && data.locations.length > 0) {
+      if (data.success && data.locations && data.locations.length > 0) {
         setLocations(data.locations);
         setStep('locations');
       } else {

@@ -64,17 +64,31 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
   const fetchAccounts = async (token: string) => {
     try {
-      // Use the correct Google My Business API v4 endpoint
-      const response = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+      // Use Supabase Edge Function as proxy to avoid CORS issues
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
         },
+        body: JSON.stringify({
+          action: 'get-accounts',
+          accessToken: token,
+        }),
       });
+      
       const data = await response.json();
       
       console.log('GMB Accounts:', data);
       
-      if (data.accounts) {
+      if (data.success && data.accounts) {
         setAccounts(data.accounts);
         if (data.accounts.length > 0) {
           if (!selectedAccountId) {
@@ -96,17 +110,32 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
   const fetchLocations = async (token: string, accountId: string) => {
     try {
-      // Use the correct Google My Business API v4 endpoint
-      const response = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+      // Use Supabase Edge Function as proxy to avoid CORS issues
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
         },
+        body: JSON.stringify({
+          action: 'get-locations',
+          accessToken: token,
+          accountId: accountId,
+        }),
       });
+      
       const data = await response.json();
       
       console.log('GMB Locations:', data);
       
-      if (data.locations) {
+      if (data.success && data.locations) {
         setLocations(data.locations);
         if (data.locations.length > 0) {
           if (!selectedLocationId) {
