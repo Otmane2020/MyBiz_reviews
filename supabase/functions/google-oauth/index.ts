@@ -11,6 +11,7 @@ const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
 
 serve(async (req: Request) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -19,15 +20,24 @@ serve(async (req: Request) => {
   }
 
   try {
+    console.log('🚀 Google OAuth function called')
+    console.log('📝 Request method:', req.method)
+    console.log('🔑 Environment check:', {
+      hasClientId: !!GOOGLE_CLIENT_ID,
+      hasClientSecret: !!GOOGLE_CLIENT_SECRET,
+      clientIdLength: GOOGLE_CLIENT_ID?.length || 0
+    })
+
     // Vérifier que les variables d'environnement sont configurées
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      console.error('Missing Google OAuth credentials:', {
+      console.error('❌ Missing Google OAuth credentials:', {
         hasClientId: !!GOOGLE_CLIENT_ID,
         hasClientSecret: !!GOOGLE_CLIENT_SECRET
       });
       return new Response(
         JSON.stringify({ 
-          error: 'Configuration Google OAuth manquante. Vérifiez les variables d\'environnement GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET.' 
+          error: 'Configuration Google OAuth manquante. Vérifiez les variables d\'environnement GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET.',
+          success: false
         }),
         {
           status: 500,
@@ -41,11 +51,17 @@ serve(async (req: Request) => {
 
     let requestData;
     try {
-      requestData = await req.json();
+      const requestText = await req.text()
+      console.log('📨 Raw request body:', requestText)
+      requestData = JSON.parse(requestText);
+      console.log('📋 Parsed request data:', requestData)
     } catch (parseError) {
-      console.error('Failed to parse request JSON:', parseError);
+      console.error('❌ Failed to parse request JSON:', parseError);
       return new Response(
-        JSON.stringify({ error: 'Requête JSON invalide' }),
+        JSON.stringify({ 
+          error: 'Requête JSON invalide',
+          success: false
+        }),
         {
           status: 400,
           headers: {
@@ -57,10 +73,27 @@ serve(async (req: Request) => {
     }
 
     const { action, ...body } = requestData;
+    console.log('🎯 Action requested:', action)
 
     if (action === 'exchange-code') {
-      // Échanger le code d'autorisation contre des tokens
+      console.log('🔄 Exchanging authorization code for tokens')
       const { code, redirectUri } = body
+
+      if (!code || !redirectUri) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Code et redirectUri requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
 
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
@@ -76,10 +109,23 @@ serve(async (req: Request) => {
       })
 
       const tokens = await tokenResponse.json()
+      console.log('🎫 Token response status:', tokenResponse.status)
 
       if (!tokenResponse.ok) {
-        console.error('Token exchange error:', tokens)
-        throw new Error(`Token exchange failed: ${tokens.error_description}`)
+        console.error('❌ Token exchange error:', tokens)
+        return new Response(
+          JSON.stringify({ 
+            error: `Token exchange failed: ${tokens.error_description || tokens.error}`,
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
       }
 
       // Récupérer les informations utilisateur
@@ -92,16 +138,30 @@ serve(async (req: Request) => {
       const userData = await userResponse.json()
       
       if (!userResponse.ok) {
-        console.error('User info error:', userData)
-        throw new Error(`Failed to get user info: ${userData.error_description}`)
+        console.error('❌ User info error:', userData)
+        return new Response(
+          JSON.stringify({ 
+            error: `Failed to get user info: ${userData.error_description || userData.error}`,
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
       }
 
+      console.log('✅ OAuth exchange successful')
       return new Response(
         JSON.stringify({
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
           expires_in: tokens.expires_in,
           user: userData,
+          success: true
         }),
         {
           headers: {
@@ -113,8 +173,24 @@ serve(async (req: Request) => {
     }
 
     if (action === 'refresh-token') {
-      // Rafraîchir le token d'accès
+      console.log('🔄 Refreshing access token')
       const { refreshToken } = body
+
+      if (!refreshToken) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Refresh token requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
 
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
@@ -130,13 +206,28 @@ serve(async (req: Request) => {
       const tokens = await tokenResponse.json()
 
       if (!tokenResponse.ok) {
-        throw new Error(`Token refresh failed: ${tokens.error_description}`)
+        console.error('❌ Token refresh error:', tokens)
+        return new Response(
+          JSON.stringify({ 
+            error: `Token refresh failed: ${tokens.error_description || tokens.error}`,
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
       }
 
+      console.log('✅ Token refresh successful')
       return new Response(
         JSON.stringify({
           access_token: tokens.access_token,
           expires_in: tokens.expires_in,
+          success: true
         }),
         {
           headers: {
@@ -148,14 +239,32 @@ serve(async (req: Request) => {
     }
 
     if (action === 'get-accounts') {
-      // Récupérer les comptes Google My Business
+      console.log('🏢 Getting Google My Business accounts')
       const { accessToken } = body
 
-      console.log('🔍 Getting accounts with token:', accessToken ? 'Present' : 'Missing')
+      if (!accessToken) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Access token requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
+
+      console.log('🔍 Calling Google My Business API for accounts...')
+      console.log('🔑 Using access token:', accessToken.substring(0, 20) + '...')
       
       const accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
       })
 
@@ -167,9 +276,27 @@ serve(async (req: Request) => {
       
       if (!accountsResponse.ok) {
         console.error('❌ Accounts API error:', accountsData)
+        
+        let errorMessage = 'Erreur inconnue'
+        if (accountsData.error) {
+          if (accountsData.error.code === 401) {
+            errorMessage = 'Token d\'accès expiré ou invalide'
+          } else if (accountsData.error.code === 403) {
+            errorMessage = 'Accès refusé. Vérifiez que l\'API Google My Business est activée'
+          } else if (accountsData.error.code === 404) {
+            errorMessage = 'Aucun compte Google My Business trouvé'
+          } else {
+            errorMessage = accountsData.error.message || `Erreur ${accountsData.error.code}`
+          }
+        }
+        
         return new Response(
           JSON.stringify({
-            error: accountsData.error || { message: `HTTP ${accountsResponse.status}: ${accountsResponse.statusText}` },
+            error: {
+              message: errorMessage,
+              code: accountsData.error?.code || accountsResponse.status,
+              details: accountsData.error
+            },
             success: false
           }),
           {
@@ -182,9 +309,10 @@ serve(async (req: Request) => {
         )
       }
 
+      console.log('✅ Accounts retrieved successfully')
       return new Response(
         JSON.stringify({
-          ...accountsData,
+          accounts: accountsData.accounts || [],
           success: true
         }),
         {
@@ -197,15 +325,32 @@ serve(async (req: Request) => {
     }
 
     if (action === 'get-locations') {
-      // Récupérer les établissements pour un compte
+      console.log('🏪 Getting locations for account')
       const { accessToken, accountId } = body
 
+      if (!accessToken || !accountId) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Access token et account ID requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
+
       console.log('🏪 Getting locations for account:', accountId)
-      console.log('🔑 Using token:', accessToken ? 'Present' : 'Missing')
+      console.log('🔑 Using access token:', accessToken.substring(0, 20) + '...')
       
       const locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
       })
 
@@ -217,9 +362,27 @@ serve(async (req: Request) => {
       
       if (!locationsResponse.ok) {
         console.error('❌ Locations API error:', locationsData)
+        
+        let errorMessage = 'Erreur inconnue'
+        if (locationsData.error) {
+          if (locationsData.error.code === 401) {
+            errorMessage = 'Token d\'accès expiré ou invalide'
+          } else if (locationsData.error.code === 403) {
+            errorMessage = 'Accès refusé aux établissements'
+          } else if (locationsData.error.code === 404) {
+            errorMessage = 'Aucun établissement trouvé pour ce compte'
+          } else {
+            errorMessage = locationsData.error.message || `Erreur ${locationsData.error.code}`
+          }
+        }
+        
         return new Response(
           JSON.stringify({
-            error: locationsData.error || { message: `HTTP ${locationsResponse.status}: ${locationsResponse.statusText}` },
+            error: {
+              message: errorMessage,
+              code: locationsData.error?.code || locationsResponse.status,
+              details: locationsData.error
+            },
             success: false
           }),
           {
@@ -232,9 +395,10 @@ serve(async (req: Request) => {
         )
       }
 
+      console.log('✅ Locations retrieved successfully')
       return new Response(
         JSON.stringify({
-          ...locationsData,
+          locations: locationsData.locations || [],
           success: true
         }),
         {
@@ -247,22 +411,60 @@ serve(async (req: Request) => {
     }
 
     if (action === 'get-reviews') {
-      // Récupérer les avis Google My Business
+      console.log('⭐ Getting reviews for location')
       const { accessToken, locationId } = body
+
+      if (!accessToken || !locationId) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Access token et location ID requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
 
       const reviewsResponse = await fetch(
         `https://mybusiness.googleapis.com/v4/${locationId}/reviews`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
           },
         }
       )
 
       const reviewsData = await reviewsResponse.json()
+      console.log('⭐ Reviews API response:', reviewsData)
+
+      if (!reviewsResponse.ok) {
+        console.error('❌ Reviews API error:', reviewsData)
+        return new Response(
+          JSON.stringify({
+            error: reviewsData.error || { message: `HTTP ${reviewsResponse.status}` },
+            success: false
+          }),
+          {
+            status: reviewsResponse.status,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
 
       return new Response(
-        JSON.stringify(reviewsData),
+        JSON.stringify({
+          reviews: reviewsData.reviews || [],
+          success: true
+        }),
         {
           headers: {
             'Content-Type': 'application/json',
@@ -273,8 +475,24 @@ serve(async (req: Request) => {
     }
 
     if (action === 'reply-review') {
-      // Répondre à un avis
+      console.log('💬 Replying to review')
       const { accessToken, locationId, reviewId, comment } = body
+
+      if (!accessToken || !locationId || !reviewId || !comment) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Tous les paramètres sont requis: accessToken, locationId, reviewId, comment',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
 
       const replyResponse = await fetch(
         `https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/reply`,
@@ -289,9 +507,30 @@ serve(async (req: Request) => {
       )
 
       const replyData = await replyResponse.json()
+      console.log('💬 Reply API response:', replyData)
+
+      if (!replyResponse.ok) {
+        console.error('❌ Reply API error:', replyData)
+        return new Response(
+          JSON.stringify({
+            error: replyData.error || { message: `HTTP ${replyResponse.status}` },
+            success: false
+          }),
+          {
+            status: replyResponse.status,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
 
       return new Response(
-        JSON.stringify(replyData),
+        JSON.stringify({
+          reply: replyData,
+          success: true
+        }),
         {
           headers: {
             'Content-Type': 'application/json',
@@ -301,8 +540,13 @@ serve(async (req: Request) => {
       )
     }
 
+    // Action non supportée
+    console.log('❌ Unsupported action:', action)
     return new Response(
-      JSON.stringify({ error: 'Action not supported' }),
+      JSON.stringify({ 
+        error: `Action non supportée: ${action}`,
+        success: false
+      }),
       {
         status: 400,
         headers: {
@@ -313,13 +557,14 @@ serve(async (req: Request) => {
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('💥 Unexpected error in google-oauth function:', error)
     
     // S'assurer que la réponse est toujours en JSON
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Erreur inconnue',
-        success: false 
+        error: error.message || 'Erreur interne du serveur',
+        success: false,
+        stack: error.stack
       }),
       {
         status: 500,

@@ -62,10 +62,10 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
-        },
+        console.error('Non-JSON response received from google-oauth function:', text);
         body: JSON.stringify({
           action: 'get-accounts',
-          accessToken: accessToken,
+          throw new Error('La fonction Supabase google-oauth n\'est pas déployée ou retourne une erreur HTML. Vérifiez les logs Supabase.');
         }),
       });
       
@@ -73,29 +73,28 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       const data = await response.json();
       console.log('📊 Accounts response:', data);
       
-      if (data.success && data.accounts && data.accounts.length > 0) {
+      if (data && data.success && data.accounts && data.accounts.length > 0) {
         setAccounts(data.accounts);
         if (data.accounts.length === 1) {
           // Auto-select if only one account
           setSelectedAccountId(data.accounts[0].name);
           fetchLocations(data.accounts[0].name);
         }
-      } else {
+      } else if (data && data.error) {
         console.error('❌ Aucun compte Google My Business trouvé:', data);
-        if (data.error) {
-          console.error('🚨 Erreur API:', data.error);
-          if (data.error.code === 401 || data.error.status === 401) {
-            alert('Token d\'accès expiré. Veuillez vous reconnecter.');
-          } else if (data.error.code === 403 || data.error.status === 403) {
-            alert('Accès refusé. Vérifiez que l\'API Google My Business est activée et que vous avez les permissions nécessaires.');
-          } else if (data.error.code === 404 || data.error.status === 404) {
-            alert('Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google.');
-          } else {
-            alert(`Erreur API Google: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
-          }
+        console.error('🚨 Erreur API:', data.error);
+        if (data.error.code === 401 || data.error.status === 401) {
+          alert('Token d\'accès expiré. Veuillez vous reconnecter.');
+        } else if (data.error.code === 403 || data.error.status === 403) {
+          alert('Accès refusé. Vérifiez que l\'API Google My Business est activée et que vous avez les permissions nécessaires.');
+        } else if (data.error.code === 404 || data.error.status === 404) {
+          alert('Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google.');
         } else {
-          alert('Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google et que l\'API Google My Business Management est activée dans votre projet Google Cloud.');
+          alert(`Erreur API Google: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
         }
+      } else {
+        console.error('❌ Réponse inattendue:', data);
+        alert('Réponse inattendue du serveur. Vérifiez les logs de la console.');
       }
     } catch (error) {
       console.error('💥 Erreur lors de la récupération des comptes:', error);
@@ -136,17 +135,15 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       const data = await response.json();
       console.log('🏢 Locations response:', data);
       
-      if (data.success && data.locations && data.locations.length > 0) {
+      if (data && data.success && data.locations && data.locations.length > 0) {
         setLocations(data.locations);
         setStep('locations');
+      } else if (data && data.error) {
+        console.error('🚨 Erreur API locations:', data.error);
+        alert(`Erreur lors de la récupération des établissements: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
       } else {
-        if (data.error) {
-          console.error('🚨 Erreur API locations:', data.error);
-          alert(`Erreur lors de la récupération des établissements: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
-        } else {
-          console.error('❌ Aucun établissement trouvé:', data);
-          alert('Aucun établissement trouvé pour ce compte. Assurez-vous d\'avoir créé au moins un établissement dans votre profil Google My Business.');
-        }
+        console.error('❌ Aucun établissement trouvé:', data);
+        alert('Aucun établissement trouvé pour ce compte. Assurez-vous d\'avoir créé au moins un établissement dans votre profil Google My Business.');
       }
     } catch (error) {
       console.error('💥 Erreur lors de la récupération des établissements:', error);
