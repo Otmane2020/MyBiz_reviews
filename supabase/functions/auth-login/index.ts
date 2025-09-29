@@ -251,8 +251,9 @@ serve(async (req: Request) => {
       console.log('🏢 Getting Google My Business accounts...')
       
       try {
-        // Essayer d'abord la nouvelle API, puis l'ancienne en fallback
-        let accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+        // Essayer d'abord la nouvelle API Business Profile
+        console.log('🔄 Trying Business Profile API...')
+        let accountsResponse = await fetch('https://businessprofileperformance.googleapis.com/v1/accounts', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -268,9 +269,28 @@ serve(async (req: Request) => {
           fullResponse: accountsData
         })
         
-        // Si la nouvelle API échoue, essayer l'ancienne
-        if (!accountsResponse.ok && accountsResponse.status === 403) {
-          console.log('🔄 Trying legacy API...')
+        // Si Business Profile API échoue, essayer Account Management API
+        if (!accountsResponse.ok) {
+          console.log('🔄 Trying Account Management API...')
+          accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          accountsData = await accountsResponse.json()
+          console.log('🏢 Account Management API response:', {
+            status: accountsResponse.status,
+            hasAccounts: !!accountsData.accounts,
+            accountsCount: accountsData.accounts?.length || 0,
+            error: accountsData.error
+          })
+        }
+        
+        // Si Account Management API échoue aussi, essayer l'ancienne API v4
+        if (!accountsResponse.ok) {
+          console.log('🔄 Trying legacy v4 API...')
           accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -295,7 +315,7 @@ serve(async (req: Request) => {
             if (accountsData.error.code === 401) {
               errorMessage = 'Token d\'accès expiré ou invalide'
             } else if (accountsData.error.code === 403) {
-              errorMessage = 'Accès refusé. Vérifiez que l\'API Google My Business est activée et que vous avez un profil d\'entreprise Google'
+              errorMessage = 'Accès refusé. Vérifiez que vous avez un profil d\'entreprise Google et les APIs activées (Business Profile API, My Business Account Management API)'
             } else if (accountsData.error.code === 404) {
               errorMessage = 'Aucun compte Google My Business trouvé'
             } else {
@@ -308,7 +328,13 @@ serve(async (req: Request) => {
               error: {
                 message: errorMessage,
                 code: accountsData.error?.code || accountsResponse.status,
-                details: accountsData
+                details: accountsData,
+                troubleshooting: {
+                  step1: 'Vérifiez que vous avez un profil d\'entreprise Google (pas juste un compte personnel)',
+                  step2: 'Activez ces APIs dans Google Cloud Console: Business Profile API, My Business Account Management API',
+                  step3: 'Assurez-vous que votre compte a les permissions pour gérer le profil d\'entreprise',
+                  step4: 'Essayez de vous reconnecter avec les bonnes permissions OAuth'
+                }
               },
               success: false
             }),
@@ -373,26 +399,46 @@ serve(async (req: Request) => {
       console.log('🏪 Getting locations for account:', accountId)
       
       try {
-        // Essayer d'abord la nouvelle API
-        let locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
+        // Essayer d'abord la Business Profile API
+        console.log('🔄 Trying Business Profile API for locations...')
+        let locationsResponse = await fetch(`https://businessprofileperformance.googleapis.com/v1/${accountId}/locations`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
         })
 
-        console.log('📊 Google My Business Locations API response status:', locationsResponse.status)
+        console.log('📊 Business Profile Locations API response status:', locationsResponse.status)
         let locationsData = await locationsResponse.json()
-        console.log('🏪 Locations data received:', {
+        console.log('🏪 Business Profile locations data:', {
           hasLocations: !!locationsData.locations,
           locationsCount: locationsData.locations?.length || 0,
           error: locationsData.error,
           fullResponse: locationsData
         })
         
-        // Si la nouvelle API échoue, essayer l'ancienne
-        if (!locationsResponse.ok && locationsResponse.status === 403) {
-          console.log('🔄 Trying legacy locations API...')
+        // Si Business Profile API échoue, essayer Business Information API
+        if (!locationsResponse.ok) {
+          console.log('🔄 Trying Business Information API...')
+          locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          locationsData = await locationsResponse.json()
+          console.log('🏪 Business Information API response:', {
+            status: locationsResponse.status,
+            hasLocations: !!locationsData.locations,
+            locationsCount: locationsData.locations?.length || 0,
+            error: locationsData.error
+          })
+        }
+        
+        // Si Business Information API échoue aussi, essayer l'ancienne API v4
+        if (!locationsResponse.ok) {
+          console.log('🔄 Trying legacy v4 locations API...')
           locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -417,7 +463,7 @@ serve(async (req: Request) => {
             if (locationsData.error.code === 401) {
               errorMessage = 'Token d\'accès expiré ou invalide'
             } else if (locationsData.error.code === 403) {
-              errorMessage = 'Accès refusé aux établissements. Vérifiez les permissions de l\'API'
+              errorMessage = 'Accès refusé aux établissements. Vérifiez que les APIs sont activées et que vous avez les permissions'
             } else if (locationsData.error.code === 404) {
               errorMessage = 'Aucun établissement trouvé pour ce compte'
             } else {
@@ -430,7 +476,13 @@ serve(async (req: Request) => {
               error: {
                 message: errorMessage,
                 code: locationsData.error?.code || locationsResponse.status,
-                details: locationsData
+                details: locationsData,
+                troubleshooting: {
+                  step1: 'Vérifiez que votre profil d\'entreprise Google a des établissements créés',
+                  step2: 'Activez ces APIs: Business Profile API, My Business Business Information API',
+                  step3: 'Assurez-vous que le compte a les permissions pour voir les établissements',
+                  step4: 'Vérifiez que l\'accountId est correct'
+                }
               },
               success: false
             }),
