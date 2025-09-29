@@ -98,7 +98,11 @@ Pour obtenir votre Client ID:
       console.log('Request details:', {
         url: `${supabaseUrl}/functions/v1/auth-login`,
         code: code ? `${code.substring(0, 20)}...` : 'MISSING',
-        redirectUri: window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro'
+        redirectUri: window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        }
       });
       
       const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
@@ -106,6 +110,7 @@ Pour obtenir votre Client ID:
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseKey,
         },
         body: JSON.stringify({
           action: 'exchange-code',
