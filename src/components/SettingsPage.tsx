@@ -547,6 +547,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                         <div>
                           <div className="font-medium text-gray-900">Établissement {index + 1}</div>
                           <div className="text-sm text-gray-500">ID: {storeId.split('/').pop()}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="bg-[#34A853]/10 text-[#34A853] px-2 py-1 rounded-full text-xs font-medium">
+                          Connecté
+                        </span>
                         <button className="text-gray-400 hover:text-gray-600">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
