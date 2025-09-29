@@ -260,9 +260,9 @@ serve(async (req: Request) => {
           },
         })
 
-        console.log('📊 Google My Business Accounts API response status:', accountsResponse.status)
+        console.log('📊 Business Profile API response status:', accountsResponse.status)
         let accountsData = await accountsResponse.json()
-        console.log('🏢 Accounts data received:', {
+        console.log('🏢 Business Profile accounts data:', {
           hasAccounts: !!accountsData.accounts,
           accountsCount: accountsData.accounts?.length || 0,
           error: accountsData.error,
@@ -308,16 +308,33 @@ serve(async (req: Request) => {
         }
         
         if (!accountsResponse.ok) {
-          console.error('❌ Accounts API error:', accountsData)
+          console.error('❌ All accounts APIs failed:', accountsData)
           
           let errorMessage = 'Erreur inconnue'
+          let troubleshooting = {}
+          
           if (accountsData.error) {
             if (accountsData.error.code === 401) {
               errorMessage = 'Token d\'accès expiré ou invalide'
+              troubleshooting = {
+                step1: 'Reconnectez-vous à Google',
+                step2: 'Vérifiez que le token n\'est pas expiré'
+              }
             } else if (accountsData.error.code === 403) {
-              errorMessage = 'Accès refusé. Vérifiez que vous avez un profil d\'entreprise Google et les APIs activées (Business Profile API, My Business Account Management API)'
+              errorMessage = 'Accès refusé. Vérifiez que vous avez un profil d\'entreprise Google et les APIs activées'
+              troubleshooting = {
+                step1: 'Créez un profil d\'entreprise Google (pas juste un compte personnel)',
+                step2: 'Activez ces APIs dans Google Cloud Console: Business Profile API, My Business Account Management API',
+                step3: 'Assurez-vous que votre compte a les permissions pour gérer le profil d\'entreprise',
+                step4: 'Essayez de vous reconnecter avec les bonnes permissions OAuth'
+              }
             } else if (accountsData.error.code === 404) {
               errorMessage = 'Aucun compte Google My Business trouvé'
+              troubleshooting = {
+                step1: 'Créez un profil d\'entreprise sur Google My Business',
+                step2: 'Ajoutez au moins un établissement',
+                step3: 'Attendez quelques minutes que les données se synchronisent'
+              }
             } else {
               errorMessage = accountsData.error.message || `Erreur ${accountsData.error.code}`
             }
@@ -329,12 +346,7 @@ serve(async (req: Request) => {
                 message: errorMessage,
                 code: accountsData.error?.code || accountsResponse.status,
                 details: accountsData,
-                troubleshooting: {
-                  step1: 'Vérifiez que vous avez un profil d\'entreprise Google (pas juste un compte personnel)',
-                  step2: 'Activez ces APIs dans Google Cloud Console: Business Profile API, My Business Account Management API',
-                  step3: 'Assurez-vous que votre compte a les permissions pour gérer le profil d\'entreprise',
-                  step4: 'Essayez de vous reconnecter avec les bonnes permissions OAuth'
-                }
+                troubleshooting
               },
               success: false
             }),
@@ -456,16 +468,28 @@ serve(async (req: Request) => {
         }
         
         if (!locationsResponse.ok) {
-          console.error('❌ Locations API error:', locationsData)
+          console.error('❌ All locations APIs failed:', locationsData)
           
           let errorMessage = 'Erreur inconnue'
+          let troubleshooting = {}
+          
           if (locationsData.error) {
             if (locationsData.error.code === 401) {
               errorMessage = 'Token d\'accès expiré ou invalide'
             } else if (locationsData.error.code === 403) {
               errorMessage = 'Accès refusé aux établissements. Vérifiez que les APIs sont activées et que vous avez les permissions'
+              troubleshooting = {
+                step1: 'Activez ces APIs: Business Profile API, My Business Business Information API',
+                step2: 'Assurez-vous que le compte a les permissions pour voir les établissements',
+                step3: 'Vérifiez que l\'accountId est correct'
+              }
             } else if (locationsData.error.code === 404) {
               errorMessage = 'Aucun établissement trouvé pour ce compte'
+              troubleshooting = {
+                step1: 'Vérifiez que votre profil d\'entreprise Google a des établissements créés',
+                step2: 'Ajoutez au moins un établissement dans Google My Business',
+                step3: 'Attendez quelques minutes que les données se synchronisent'
+              }
             } else {
               errorMessage = locationsData.error.message || `Erreur ${locationsData.error.code}`
             }
@@ -477,12 +501,7 @@ serve(async (req: Request) => {
                 message: errorMessage,
                 code: locationsData.error?.code || locationsResponse.status,
                 details: locationsData,
-                troubleshooting: {
-                  step1: 'Vérifiez que votre profil d\'entreprise Google a des établissements créés',
-                  step2: 'Activez ces APIs: Business Profile API, My Business Business Information API',
-                  step3: 'Assurez-vous que le compte a les permissions pour voir les établissements',
-                  step4: 'Vérifiez que l\'accountId est correct'
-                }
+                troubleshooting
               },
               success: false
             }),
