@@ -38,18 +38,17 @@ const StarlinkoLogo: React.FC<StarlinkoLogoProps> = ({
       <div className={`${sizeClasses[size]} mr-2 flex-shrink-0`}>
         <svg viewBox="0 0 40 40" className="w-full h-full">
           <defs>
-            <radialGradient id="googleRadialGradient" cx="50%" cy="50%" r="70%">
+            <linearGradient id="googleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#4285F4" />
-              <stop offset="25%" stopColor="#0F9D58" />
-              <stop offset="50%" stopColor="#F4B400" />
-              <stop offset="75%" stopColor="#DB4437" />
-              <stop offset="100%" stopColor="#4285F4" />
-            </radialGradient>
+              <stop offset="33%" stopColor="#DB4437" />
+              <stop offset="66%" stopColor="#F4B400" />
+              <stop offset="100%" stopColor="#0F9D58" />
+            </linearGradient>
           </defs>
           {/* Étoile avec dégradé Google */}
           <path
             d="M20 2 L24.5 14 L38 14 L28 22 L32 34 L20 26 L8 34 L12 22 L2 14 L15.5 14 Z"
-            fill="url(#googleRadialGradient)"
+            fill="url(#googleGradient)"
             className="drop-shadow-sm"
           />
         </svg>
