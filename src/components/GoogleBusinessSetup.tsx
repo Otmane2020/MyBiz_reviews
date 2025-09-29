@@ -1,757 +1,324 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { Building2, MapPin, Star, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
+interface GoogleBusinessSetupProps {
+  accessToken?: string;
+  onSetupComplete: (locationData: any) => void;
 }
 
-// Configuration Google OAuth
-const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')
-const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
+interface Account {
+  name: string;
+  accountName?: string;
+}
 
-serve(async (req: Request) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    })
-  }
+interface Location {
+  name: string;
+  title?: string;
+  storefrontAddress?: {
+    addressLines?: string[];
+    locality?: string;
+    administrativeArea?: string;
+    postalCode?: string;
+  };
+}
 
-  // Handle GET requests for health check
-  if (req.method === "GET") {
-    return new Response(
-      JSON.stringify({ 
-        status: "OK",
-        message: "Auth-login function is running",
-        timestamp: new Date().toISOString(),
-        availableActions: ["exchange-code", "get-accounts", "get-locations", "get-reviews"]
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
-    )
-  }
+export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: GoogleBusinessSetupProps) {
+  const [step, setStep] = useState<'connect' | 'accounts' | 'locations' | 'reviews'>('connect');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
 
-  try {
-    console.log('🚀 Auth-login function called:', {
-      method: req.method,
-      url: req.url,
-      hasAuthHeader: !!req.headers.get('authorization'),
-      contentType: req.headers.get('content-type')
-    })
-    
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    
-    // Vérifier les variables d'environnement
-    console.log('🔑 Environment check:', {
-      hasClientId: !!GOOGLE_CLIENT_ID,
-      hasClientSecret: !!GOOGLE_CLIENT_SECRET,
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseKey: !!supabaseServiceKey,
-      clientIdLength: GOOGLE_CLIENT_ID?.length || 0,
-      clientIdPreview: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'MISSING'
-    })
-
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      console.error('❌ Missing Google OAuth credentials')
-      return new Response(
-        JSON.stringify({ 
-          error: 'Configuration Google OAuth manquante. Vérifiez GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET dans les variables d\'environnement Supabase.',
-          details: {
-            hasClientId: !!GOOGLE_CLIENT_ID,
-            hasClientSecret: !!GOOGLE_CLIENT_SECRET,
-            clientIdPreview: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'MISSING'
-          },
-          success: false
-        }),
-        {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      )
+  useEffect(() => {
+    if (accessToken) {
+      setStep('accounts');
+      fetchAccounts();
     }
+  }, [accessToken]);
 
-    // Initialize Supabase client after env check
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const handleGoogleConnect = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const redirectUri = `${window.location.origin}/auth/callback`;
+    
+    const scope = [
+      'https://www.googleapis.com/auth/business.manage',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile'
+    ].join(' ');
 
-    // Parse request body
-    let requestData;
+    const authUrl = `https://accounts.google.com/oauth/authorize?` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `response_type=code&` +
+      `access_type=offline&` +
+      `prompt=consent`;
+
+    window.location.href = authUrl;
+  };
+
+  const fetchAccounts = async () => {
+    if (!accessToken) return;
+    
+    setLoading(true);
+    setError(null);
+
     try {
-      const bodyText = await req.text()
-      console.log('📥 Request body length:', bodyText.length)
-      requestData = JSON.parse(bodyText)
-      console.log('📋 Parsed request data:', {
-        action: requestData.action,
-        hasCode: !!requestData.code,
-        codeLength: requestData.code?.length || 0,
-        redirectUri: requestData.redirectUri,
-        hasAccessToken: !!requestData.accessToken,
-        tokenLength: requestData.accessToken?.length || 0
-      })
-    } catch (parseError) {
-      console.error('❌ Error parsing request body:', parseError)
-      return new Response(
-        JSON.stringify({ 
-          error: 'Corps de requête JSON invalide',
-          details: parseError.message,
-          success: false
-        }),
-        {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
+      const { data, error } = await supabase.functions.invoke('auth-login', {
+        body: {
+          action: 'get-accounts',
+          accessToken: accessToken
         }
-      )
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setAccounts(data.accounts || []);
+        if (data.accounts?.length === 1) {
+          setSelectedAccount(data.accounts[0].name);
+          fetchLocations(data.accounts[0].name);
+        }
+      } else {
+        throw new Error(data.error?.message || 'Erreur lors de la récupération des comptes');
+      }
+    } catch (err: any) {
+      console.error('Error fetching accounts:', err);
+      setError(err.message || 'Erreur lors de la récupération des comptes');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const fetchLocations = async (accountId: string) => {
+    if (!accessToken) return;
     
-    const { action } = requestData
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('auth-login', {
+        body: {
+          action: 'get-locations',
+          accessToken: accessToken,
+          accountId: accountId
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setLocations(data.locations || []);
+        setStep('locations');
+      } else {
+        throw new Error(data.error?.message || 'Erreur lors de la récupération des établissements');
+      }
+    } catch (err: any) {
+      console.error('Error fetching locations:', err);
+      setError(err.message || 'Erreur lors de la récupération des établissements');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReviews = async (locationName: string) => {
+    if (!accessToken) return;
     
-    console.log('🎯 Action requested:', action)
+    setLoading(true);
+    setError(null);
 
-    // ==========================================
-    // ACTION: exchange-code
-    // ==========================================
-    if (action === 'exchange-code') {
-      const { code, redirectUri } = requestData
-
-      console.log('📋 Exchange code parameters:', {
-        hasCode: !!code,
-        codeLength: code?.length || 0,
-        redirectUri: redirectUri
-      })
-
-      if (!code || !redirectUri) {
-        console.error('❌ Missing code or redirectUri')
-        return new Response(
-          JSON.stringify({ 
-            error: 'Code et redirectUri requis',
-            success: false
-          }),
-          {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
-
-      console.log('🔄 Exchanging code for tokens with Google...')
-
-      try {
-        const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: GOOGLE_CLIENT_ID,
-            client_secret: GOOGLE_CLIENT_SECRET,
-            code: code,
-            grant_type: "authorization_code",
-            redirect_uri: redirectUri,
-          }),
-        })
-
-        console.log('📊 Google Token API response status:', tokenResponse.status)
-        
-        const tokens = await tokenResponse.json()
-        console.log('📄 Google Token API response:', {
-          hasAccessToken: !!tokens.access_token,
-          hasRefreshToken: !!tokens.refresh_token,
-          expiresIn: tokens.expires_in,
-          error: tokens.error,
-          errorDescription: tokens.error_description
-        })
-
-        if (!tokenResponse.ok) {
-          console.error('❌ Token exchange error:', tokens)
-          return new Response(
-            JSON.stringify({ 
-              error: `Token exchange failed: ${tokens.error_description || tokens.error}`,
-              success: false
-            }),
-            {
-              status: 400,
-              headers: {
-                'Content-Type': 'application/json',
-                ...corsHeaders,
-              },
-            }
-          )
+    try {
+      const { data, error } = await supabase.functions.invoke('auth-login', {
+        body: {
+          action: 'get-reviews',
+          accessToken: accessToken,
+          locationName: locationName
         }
+      });
 
-        console.log('👤 Fetching user info from Google...')
-        const userResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
-          headers: {
-            Authorization: `Bearer ${tokens.access_token}`,
-          },
-        })
+      if (error) throw error;
 
-        console.log('📊 Google User Info API response status:', userResponse.status)
-        const userData = await userResponse.json()
-        console.log('👤 User data received:', {
-          hasId: !!userData.id,
-          hasEmail: !!userData.email,
-          hasName: !!userData.name,
-          error: userData.error
-        })
+      if (data.success) {
+        setReviews(data.reviews || []);
+        setStep('reviews');
         
-        if (!userResponse.ok) {
-          console.error('❌ User info error:', userData)
-          return new Response(
-            JSON.stringify({ 
-              error: `Failed to get user info: ${userData.error}`,
-              success: false
-            }),
-            {
-              status: 400,
-              headers: {
-                'Content-Type': 'application/json',
-                ...corsHeaders,
-              },
-            }
-          )
-        }
-
-        console.log('✅ OAuth exchange successful')
-        return new Response(
-          JSON.stringify({
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            expires_in: tokens.expires_in,
-            user: userData,
-            success: true
-          }),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      } catch (fetchError) {
-        console.error('💥 Error during token exchange fetch:', fetchError)
-        throw fetchError
+        // Appeler onSetupComplete avec les données de l'établissement
+        const selectedLocationData = locations.find(loc => loc.name === locationName);
+        onSetupComplete({
+          accountId: selectedAccount,
+          locationId: locationName,
+          locationData: selectedLocationData,
+          reviewsCount: data.totalReviews || 0,
+          newReviews: data.newReviews || 0
+        });
+      } else {
+        throw new Error(data.error?.message || 'Erreur lors de la récupération des avis');
       }
+    } catch (err: any) {
+      console.error('Error fetching reviews:', err);
+      setError(err.message || 'Erreur lors de la récupération des avis');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // ==========================================
-    // ACTION: get-accounts (Google My Business)
-    // ==========================================
-    if (action === 'get-accounts') {
-      const { accessToken } = requestData
+  const handleAccountSelect = (accountId: string) => {
+    setSelectedAccount(accountId);
+    fetchLocations(accountId);
+  };
 
-      console.log('🏢 Get accounts parameters:', {
-        hasAccessToken: !!accessToken,
-        tokenLength: accessToken?.length || 0
-      })
+  const handleLocationSelect = (locationName: string) => {
+    setSelectedLocation(locationName);
+    fetchReviews(locationName);
+  };
 
-      if (!accessToken) {
-        console.error('❌ Missing access token for get-accounts')
-        return new Response(
-          JSON.stringify({ 
-            error: 'Access token requis',
-            success: false
-          }),
-          {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
+  if (step === 'connect') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+          <div className="text-center mb-8">
+            <Building2 className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Connecter Google My Business
+            </h1>
+            <p className="text-gray-600">
+              Connectez votre compte Google My Business pour gérer vos avis
+            </p>
+          </div>
 
-      console.log('🏢 Getting Google My Business accounts...')
-      
-      try {
-        // Essayer d'abord la nouvelle API Business Profile
-        console.log('🔄 Trying Business Profile API...')
-        let accountsResponse = await fetch('https://businessprofileperformance.googleapis.com/v1/accounts', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        })
-
-        console.log('📊 Business Profile API response status:', accountsResponse.status)
-        let accountsData = await accountsResponse.json()
-        console.log('🏢 Business Profile accounts data:', {
-          hasAccounts: !!accountsData.accounts,
-          accountsCount: accountsData.accounts?.length || 0,
-          error: accountsData.error,
-          fullResponse: accountsData
-        })
-        
-        // Si Business Profile API échoue, essayer Account Management API
-        if (!accountsResponse.ok) {
-          console.log('🔄 Trying Account Management API...')
-          accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          
-          accountsData = await accountsResponse.json()
-          console.log('🏢 Account Management API response:', {
-            status: accountsResponse.status,
-            hasAccounts: !!accountsData.accounts,
-            accountsCount: accountsData.accounts?.length || 0,
-            error: accountsData.error
-          })
-        }
-        
-        // Si Account Management API échoue aussi, essayer l'ancienne API v4
-        if (!accountsResponse.ok) {
-          console.log('🔄 Trying legacy v4 API...')
-          accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          
-          accountsData = await accountsResponse.json()
-          console.log('🏢 Legacy API response:', {
-            status: accountsResponse.status,
-            hasAccounts: !!accountsData.accounts,
-            accountsCount: accountsData.accounts?.length || 0,
-            error: accountsData.error
-          })
-        }
-        
-        if (!accountsResponse.ok) {
-          console.error('❌ All accounts APIs failed:', accountsData)
-          
-          let errorMessage = 'Erreur inconnue'
-          let troubleshooting = {}
-          
-          if (accountsData.error) {
-            if (accountsData.error.code === 401) {
-              errorMessage = 'Token d\'accès expiré ou invalide'
-              troubleshooting = {
-                step1: 'Reconnectez-vous à Google',
-                step2: 'Vérifiez que le token n\'est pas expiré'
-              }
-            } else if (accountsData.error.code === 403) {
-              errorMessage = 'Accès refusé. Vérifiez que vous avez un profil d\'entreprise Google et les APIs activées'
-              troubleshooting = {
-                step1: 'Créez un profil d\'entreprise Google (pas juste un compte personnel)',
-                step2: 'Activez ces APIs dans Google Cloud Console: Business Profile API, My Business Account Management API',
-                step3: 'Assurez-vous que votre compte a les permissions pour gérer le profil d\'entreprise',
-                step4: 'Essayez de vous reconnecter avec les bonnes permissions OAuth'
-              }
-            } else if (accountsData.error.code === 404) {
-              errorMessage = 'Aucun compte Google My Business trouvé'
-              troubleshooting = {
-                step1: 'Créez un profil d\'entreprise sur Google My Business',
-                step2: 'Ajoutez au moins un établissement',
-                step3: 'Attendez quelques minutes que les données se synchronisent'
-              }
-            } else {
-              errorMessage = accountsData.error.message || `Erreur ${accountsData.error.code}`
-            }
-          }
-          
-          return new Response(
-            JSON.stringify({
-              error: {
-                message: errorMessage,
-                code: accountsData.error?.code || accountsResponse.status,
-                details: accountsData,
-                troubleshooting
-              },
-              success: false
-            }),
-            {
-              status: accountsResponse.status,
-              headers: {
-                'Content-Type': 'application/json',
-                ...corsHeaders,
-              },
-            }
-          )
-        }
-
-        console.log('✅ Accounts retrieved successfully')
-        return new Response(
-          JSON.stringify({
-            accounts: accountsData.accounts || [],
-            success: true
-          }),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      } catch (fetchError) {
-        console.error('💥 Error during accounts fetch:', fetchError)
-        throw fetchError
-      }
-    }
-
-    // ==========================================
-    // ACTION: get-locations (Google My Business)
-    // ==========================================
-    if (action === 'get-locations') {
-      const { accessToken, accountId } = requestData
-
-      console.log('🏪 Get locations parameters:', {
-        hasAccessToken: !!accessToken,
-        hasAccountId: !!accountId,
-        accountId: accountId
-      })
-
-      if (!accessToken || !accountId) {
-        console.error('❌ Missing access token or account ID for get-locations')
-        return new Response(
-          JSON.stringify({ 
-            error: 'Access token et account ID requis',
-            success: false
-          }),
-          {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
-
-      console.log('🏪 Getting locations for account:', accountId)
-      
-      try {
-        // Essayer d'abord la Business Profile API
-        console.log('🔄 Trying Business Profile API for locations...')
-        let locationsResponse = await fetch(`https://businessprofileperformance.googleapis.com/v1/${accountId}/locations`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        })
-
-        console.log('📊 Business Profile Locations API response status:', locationsResponse.status)
-        let locationsData = await locationsResponse.json()
-        console.log('🏪 Business Profile locations data:', {
-          hasLocations: !!locationsData.locations,
-          locationsCount: locationsData.locations?.length || 0,
-          error: locationsData.error,
-          fullResponse: locationsData
-        })
-        
-        // Si Business Profile API échoue, essayer Business Information API
-        if (!locationsResponse.ok) {
-          console.log('🔄 Trying Business Information API...')
-          locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          
-          locationsData = await locationsResponse.json()
-          console.log('🏪 Business Information API response:', {
-            status: locationsResponse.status,
-            hasLocations: !!locationsData.locations,
-            locationsCount: locationsData.locations?.length || 0,
-            error: locationsData.error
-          })
-        }
-        
-        // Si Business Information API échoue aussi, essayer l'ancienne API v4
-        if (!locationsResponse.ok) {
-          console.log('🔄 Trying legacy v4 locations API...')
-          locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          
-          locationsData = await locationsResponse.json()
-          console.log('🏪 Legacy locations API response:', {
-            status: locationsResponse.status,
-            hasLocations: !!locationsData.locations,
-            locationsCount: locationsData.locations?.length || 0,
-            error: locationsData.error
-          })
-        }
-        
-        if (!locationsResponse.ok) {
-          console.error('❌ All locations APIs failed:', locationsData)
-          
-          let errorMessage = 'Erreur inconnue'
-          let troubleshooting = {}
-          
-          if (locationsData.error) {
-            if (locationsData.error.code === 401) {
-              errorMessage = 'Token d\'accès expiré ou invalide'
-            } else if (locationsData.error.code === 403) {
-              errorMessage = 'Accès refusé aux établissements. Vérifiez que les APIs sont activées et que vous avez les permissions'
-              troubleshooting = {
-                step1: 'Activez ces APIs: Business Profile API, My Business Business Information API',
-                step2: 'Assurez-vous que le compte a les permissions pour voir les établissements',
-                step3: 'Vérifiez que l\'accountId est correct'
-              }
-            } else if (locationsData.error.code === 404) {
-              errorMessage = 'Aucun établissement trouvé pour ce compte'
-              troubleshooting = {
-                step1: 'Vérifiez que votre profil d\'entreprise Google a des établissements créés',
-                step2: 'Ajoutez au moins un établissement dans Google My Business',
-                step3: 'Attendez quelques minutes que les données se synchronisent'
-              }
-            } else {
-              errorMessage = locationsData.error.message || `Erreur ${locationsData.error.code}`
-            }
-          }
-          
-          return new Response(
-            JSON.stringify({
-              error: {
-                message: errorMessage,
-                code: locationsData.error?.code || locationsResponse.status,
-                details: locationsData,
-                troubleshooting
-              },
-              success: false
-            }),
-            {
-              status: locationsResponse.status,
-              headers: {
-                'Content-Type': 'application/json',
-                ...corsHeaders,
-              },
-            }
-          )
-        }
-
-        console.log('✅ Locations retrieved successfully')
-        return new Response(
-          JSON.stringify({
-            locations: locationsData.locations || [],
-            success: true
-          }),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      } catch (fetchError) {
-        console.error('💥 Error during locations fetch:', fetchError)
-        throw fetchError
-      }
-    }
-
-    // ==========================================
-    // ACTION: get-reviews (Google My Business)
-    // ==========================================
-    if (action === 'get-reviews') {
-      const { accessToken, locationName } = requestData
-
-      console.log('⭐ Get reviews parameters:', {
-        hasAccessToken: !!accessToken,
-        hasLocationName: !!locationName,
-        locationName: locationName
-      })
-
-      if (!accessToken || !locationName) {
-        console.error('❌ Missing access token or location name for get-reviews')
-        return new Response(
-          JSON.stringify({ 
-            error: 'Access token et location name requis',
-            success: false
-          }),
-          {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
-
-      console.log('⭐ Getting reviews for location:', locationName)
-      
-      try {
-        // Utiliser l'API Google My Business Business Information pour les avis
-        const reviewsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${locationName}/reviews`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        })
-
-        console.log('📊 Google My Business Reviews API response status:', reviewsResponse.status)
-        const reviewsData = await reviewsResponse.json()
-        console.log('⭐ Reviews data received:', {
-          hasReviews: !!reviewsData.reviews,
-          reviewsCount: reviewsData.reviews?.length || 0,
-          error: reviewsData.error,
-          fullResponse: reviewsData
-        })
-        
-        if (!reviewsResponse.ok) {
-          console.error('❌ Reviews API error:', reviewsData)
-          
-          let errorMessage = 'Erreur inconnue'
-          if (reviewsData.error) {
-            if (reviewsData.error.code === 401) {
-              errorMessage = 'Token d\'accès expiré ou invalide'
-            } else if (reviewsData.error.code === 403) {
-              errorMessage = 'Accès refusé aux avis. Vérifiez les permissions de l\'API'
-            } else if (reviewsData.error.code === 404) {
-              errorMessage = 'Aucun avis trouvé pour cet établissement'
-            } else {
-              errorMessage = reviewsData.error.message || `Erreur ${reviewsData.error.code}`
-            }
-          }
-          
-          return new Response(
-            JSON.stringify({
-              error: {
-                message: errorMessage,
-                code: reviewsData.error?.code || reviewsResponse.status,
-                details: reviewsData
-              },
-              success: false
-            }),
-            {
-              status: reviewsResponse.status,
-              headers: {
-                'Content-Type': 'application/json',
-                ...corsHeaders,
-              },
-            }
-          )
-        }
-
-        // Stocker les avis dans Supabase
-        let newReviewsCount = 0
-        const newReviews = []
-
-        if (reviewsData.reviews && reviewsData.reviews.length > 0) {
-          for (const review of reviewsData.reviews) {
-            const reviewId = review.name?.split('/').pop() || `review_${Date.now()}_${Math.random()}`
-            
-            // Vérifier si l'avis existe déjà
-            const { data: existingReview } = await supabase
-              .from('reviews')
-              .select('id')
-              .eq('review_id', reviewId)
-              .single()
-
-            if (!existingReview) {
-              // Convertir la note Google en nombre
-              const ratingMap: { [key: string]: number } = {
-                'ONE': 1,
-                'TWO': 2,
-                'THREE': 3,
-                'FOUR': 4,
-                'FIVE': 5,
-              }
-
-              const reviewData = {
-                review_id: reviewId,
-                location_id: locationName,
-                author: review.reviewer?.displayName || 'Anonyme',
-                rating: ratingMap[review.starRating] || 5,
-                comment: review.comment || '',
-                review_date: review.createTime || new Date().toISOString(),
-                replied: !!review.reviewReply,
-              }
-
-              // Insérer le nouvel avis
-              const { error } = await supabase
-                .from('reviews')
-                .insert([reviewData])
-
-              if (error) {
-                console.error('❌ Error inserting review:', error)
-              } else {
-                newReviewsCount++
-                newReviews.push(reviewData)
-                console.log('✅ New review inserted:', reviewId)
-              }
-            }
-          }
-        }
-
-        console.log('✅ Reviews retrieved and stored successfully')
-        return new Response(
-          JSON.stringify({
-            reviews: reviewsData.reviews || [],
-            totalReviews: reviewsData.reviews?.length || 0,
-            newReviews: newReviewsCount,
-            storedReviews: newReviews,
-            success: true
-          }),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      } catch (fetchError) {
-        console.error('💥 Error during reviews fetch:', fetchError)
-        throw fetchError
-      }
-    }
-
-    // Action non supportée
-    console.error('❌ Unsupported action:', action)
-    return new Response(
-      JSON.stringify({ 
-        error: `Action non supportée: ${action}`,
-        success: false
-      }),
-      {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
-    )
-
-  } catch (error) {
-    console.error('💥 Unexpected error in auth-login function:', error)
-    console.error('Error stack:', error.stack)
-    
-    return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Erreur interne du serveur',
-        success: false
-      }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
-    )
+          <button
+            onClick={handleGoogleConnect}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <Building2 className="w-5 h-5" />
+            Se connecter avec Google
+          </button>
+        </div>
+      </div>
+    );
   }
-})
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Configuration Google My Business
+            </h1>
+            <p className="text-gray-600">
+              Sélectionnez votre établissement pour commencer à gérer vos avis
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
+
+          {step === 'accounts' && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Building2 className="w-5 h-5" />
+                Sélectionnez votre compte
+              </h2>
+              
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {accounts.map((account) => (
+                    <button
+                      key={account.name}
+                      onClick={() => handleAccountSelect(account.name)}
+                      className="w-full p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <div className="font-medium text-gray-900">
+                        {account.accountName || account.name}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 'locations' && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Sélectionnez votre établissement
+              </h2>
+              
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {locations.map((location) => (
+                    <button
+                      key={location.name}
+                      onClick={() => handleLocationSelect(location.name)}
+                      className="w-full p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <div className="font-medium text-gray-900 mb-1">
+                        {location.title || location.name}
+                      </div>
+                      {location.storefrontAddress && (
+                        <div className="text-sm text-gray-600">
+                          {location.storefrontAddress.addressLines?.join(', ')}, {' '}
+                          {location.storefrontAddress.locality}, {' '}
+                          {location.storefrontAddress.administrativeArea} {' '}
+                          {location.storefrontAddress.postalCode}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 'reviews' && (
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Configuration terminée !
+                </h2>
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="w-5 h-5 text-yellow-500" />
+                  <span className="font-medium text-green-800">
+                    {reviews.length} avis récupérés
+                  </span>
+                </div>
+                <p className="text-green-700 text-sm">
+                  Votre établissement a été configuré avec succès. Vous allez être redirigé vers le tableau de bord.
+                </p>
+              </div>
+
+              {loading && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  <span className="ml-2 text-gray-600">Finalisation...</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
