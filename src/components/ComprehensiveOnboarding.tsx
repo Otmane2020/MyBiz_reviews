@@ -185,13 +185,27 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
     setLoading(true);
     
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    console.log('GMB Client ID:', clientId);
+    
+    if (!clientId || clientId === 'your_google_client_id_here') {
+      alert('Configuration Google OAuth manquante. Client ID: ' + clientId);
+      setLoading(false);
+      return;
+    }
+    
+    const redirectUri = window.location.origin;
+    console.log('GMB Redirect URI:', redirectUri);
+    
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(window.location.origin)}&` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
       `response_type=code&` +
       `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage')}&` +
       `access_type=offline&` +
       `prompt=consent`;
+    
+    console.log('GMB Auth URL:', authUrl);
     
     const popup = window.open(
       authUrl,
@@ -209,6 +223,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       if (event.origin !== window.location.origin) return;
       
       if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        console.log('GMB Received auth code:', event.data.code);
         handleOAuthCallback(event.data.code);
         window.removeEventListener('message', handleMessage);
       }
@@ -227,6 +242,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
   const handleOAuthCallback = async (code: string) => {
     try {
+      console.log('GMB Exchanging code for token...');
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth?action=exchange-code`, {
         method: 'POST',
         headers: {
@@ -240,6 +257,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       });
 
       const data = await response.json();
+      console.log('GMB OAuth response:', data);
       
       if (response.ok) {
         setAccessToken(data.access_token);
@@ -248,11 +266,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         await fetchAccounts();
       } else {
         console.error('OAuth error:', data.error);
-        alert('Erreur lors de la connexion Google');
+        alert(`Erreur lors de la connexion Google My Business: ${data.error || 'Erreur inconnue'}`);
       }
     } catch (error) {
       console.error('Erreur lors de l\'échange du code:', error);
-      alert('Erreur lors de la connexion');
+      alert(`Erreur lors de la connexion GMB: ${error.message}`);
     } finally {
       setLoading(false);
     }

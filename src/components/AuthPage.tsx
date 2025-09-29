@@ -21,20 +21,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   });
 
   const handleGoogleAuth = () => {
-    if (!GOOGLE_CLIENT_ID) {
-      alert('Configuration Google OAuth manquante. Veuillez configurer VITE_GOOGLE_CLIENT_ID dans les variables d\'environnement.');
+    console.log('Google Client ID:', GOOGLE_CLIENT_ID);
+    
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your_google_client_id_here') {
+      alert('Configuration Google OAuth manquante ou invalide. Client ID: ' + GOOGLE_CLIENT_ID);
       return;
     }
 
     setLoading(true);
     
+    const redirectUri = window.location.origin;
+    console.log('Redirect URI:', redirectUri);
+    
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(window.location.origin)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
       `response_type=code&` +
       `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&` +
       `access_type=offline&` +
       `prompt=consent`;
+    
+    console.log('Auth URL:', authUrl);
     
     const popup = window.open(
       authUrl,
@@ -53,6 +60,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       if (event.origin !== window.location.origin) return;
       
       if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        console.log('Received auth code:', event.data.code);
         handleOAuthCallback(event.data.code);
         window.removeEventListener('message', handleMessage);
       }
@@ -72,6 +80,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
 
   const handleOAuthCallback = async (code: string) => {
     try {
+      console.log('Exchanging code for token...');
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth?action=exchange-code`, {
         method: 'POST',
         headers: {
@@ -85,16 +95,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       });
 
       const data = await response.json();
+      console.log('OAuth response:', data);
       
       if (response.ok) {
+        console.log('OAuth success, calling onGoogleAuth');
         onGoogleAuth(data.user, data.access_token);
       } else {
         console.error('OAuth error:', data.error);
-        alert('Erreur lors de la connexion Google');
+        alert(`Erreur lors de la connexion Google: ${data.error || 'Erreur inconnue'}`);
       }
     } catch (error) {
       console.error('Erreur lors de l\'échange du code:', error);
-      alert('Erreur lors de la connexion');
+      alert(`Erreur lors de la connexion: ${error.message}`);
     } finally {
       setLoading(false);
     }
