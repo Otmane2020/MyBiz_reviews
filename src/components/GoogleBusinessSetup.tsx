@@ -240,14 +240,13 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
     try {
       console.log('🔄 Processing OAuth callback...');
       
+      const redirectUri = window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro';
+      
       const response = await supabase.functions.invoke('auth-login', {
-        // Assurer la cohérence de l'URI de redirection pour la fonction Supabase
-        const redirectUri = window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro';
-
         body: {
           action: 'exchange-code',
           code,
-          redirectUri: window.location.origin,
+          redirectUri: redirectUri,
         }
       });
 
