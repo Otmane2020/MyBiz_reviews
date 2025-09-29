@@ -156,6 +156,41 @@ const SuperAdmin: React.FC = () => {
     }
   };
 
+  const handleMessageFormChange = (field: string, value: string) => {
+    setMessageForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSendMessage = () => {
+    if (!messageForm.subject || !messageForm.message) {
+      alert('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    const newMessage = {
+      id: Date.now(),
+      recipient: messageForm.recipient === 'all' ? 'Tous les utilisateurs' : messageForm.recipient,
+      subject: messageForm.subject,
+      message: messageForm.message,
+      type: messageForm.type,
+      sentAt: new Date().toISOString(),
+      status: 'sent',
+      openRate: '0%'
+    };
+
+    setSentMessages(prev => [newMessage, ...prev]);
+    setMessageForm({
+      recipient: 'all',
+      subject: '',
+      message: '',
+      type: 'notification'
+    });
+
+    alert('Message envoyé avec succès !');
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
