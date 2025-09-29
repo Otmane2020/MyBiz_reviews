@@ -47,6 +47,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
     try {
       console.log('🔍 Fetching Google My Business accounts via Supabase Edge Function...');
       console.log('🔑 Access token:', accessToken ? 'Present' : 'Missing');
+      console.log('🔑 Access token preview:', accessToken ? `${accessToken.substring(0, 20)}...` : 'N/A');
       
       // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -57,11 +58,12 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       }
       
       console.log('📡 Calling Supabase Edge Function for accounts...');
-      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseKey,
         },
         body: JSON.stringify({
           action: 'get-accounts',
@@ -70,6 +72,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       });
       
       console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const text = await response.text();
@@ -82,7 +85,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         } catch (parseError) {
           // If not JSON, it's likely an HTML error page
           if (text.includes('<!DOCTYPE') || text.includes('<html>')) {
-            throw new Error('La fonction Supabase google-oauth n\'est pas déployée correctement. Vérifiez que la fonction Edge est active dans votre projet Supabase.');
+            throw new Error('La fonction Supabase google-oauth n\'est pas déployée. Utilisez: supabase functions deploy google-oauth');
           } else {
             throw new Error(`Erreur HTTP ${response.status}: ${text.substring(0, 100)}...`);
           }
@@ -102,18 +105,18 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       } else if (data && data.error) {
         console.error('❌ Aucun compte Google My Business trouvé:', data);
         console.error('🚨 Erreur API:', data.error);
-        if (data.error.code === 401 || data.error.status === 401) {
+        if (data.error.code === 401 || data.error.status === 401 || response.status === 401) {
           alert('Token d\'accès expiré. Veuillez vous reconnecter.');
-        } else if (data.error.code === 403 || data.error.status === 403) {
+        } else if (data.error.code === 403 || data.error.status === 403 || response.status === 403) {
           alert('Accès refusé. Vérifiez que l\'API Google My Business est activée et que vous avez les permissions nécessaires.');
-        } else if (data.error.code === 404 || data.error.status === 404) {
+        } else if (data.error.code === 404 || data.error.status === 404 || response.status === 404) {
           alert('Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google.');
         } else {
           alert(`Erreur API Google: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
         }
       } else {
         console.error('❌ Réponse inattendue:', data);
-        alert('Réponse inattendue du serveur. Vérifiez les logs de la console.');
+        alert('Aucun compte Google My Business trouvé. Créez d\'abord un profil d\'entreprise sur Google.');
       }
     } catch (error) {
       console.error('💥 Erreur lors de la récupération des comptes:', error);
@@ -137,16 +140,17 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       }
       
       console.log('📡 Calling Supabase Edge Function for locations...');
-      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseKey,
         },
         body: JSON.stringify({
           action: 'get-locations',
           accessToken: accessToken,
-          accountName: accountId,
+          accountId: accountId,
         }),
       });
       

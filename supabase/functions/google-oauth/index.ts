@@ -204,20 +204,39 @@ serve(async (req: Request) => {
       console.log('🏢 Getting Google My Business accounts...')
       
       try {
-        const accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
-          headers: {
+        // Essayer d'abord la nouvelle API, puis l'ancienne en fallback
+        let accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
         })
 
         console.log('📊 Google My Business Accounts API response status:', accountsResponse.status)
-        const accountsData = await accountsResponse.json()
+        let accountsData = await accountsResponse.json()
         console.log('🏢 Accounts data received:', {
           hasAccounts: !!accountsData.accounts,
           accountsCount: accountsData.accounts?.length || 0,
           error: accountsData.error
         })
+        
+        // Si la nouvelle API échoue, essayer l'ancienne
+        if (!accountsResponse.ok && accountsResponse.status === 403) {
+          console.log('🔄 Trying legacy API...')
+          accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          accountsData = await accountsResponse.json()
+          console.log('🏢 Legacy API response:', {
+            status: accountsResponse.status,
+            hasAccounts: !!accountsData.accounts,
+            accountsCount: accountsData.accounts?.length || 0,
+            error: accountsData.error
+          })
+        }
         
         if (!accountsResponse.ok) {
           console.error('❌ Accounts API error:', accountsData)
@@ -227,7 +246,7 @@ serve(async (req: Request) => {
             if (accountsData.error.code === 401) {
               errorMessage = 'Token d\'accès expiré ou invalide'
             } else if (accountsData.error.code === 403) {
-              errorMessage = 'Accès refusé. Vérifiez que l\'API Google My Business est activée'
+              errorMessage = 'Accès refusé. Vérifiez que l\'API Google My Business est activée et que vous avez un profil d\'entreprise Google'
             } else if (accountsData.error.code === 404) {
               errorMessage = 'Aucun compte Google My Business trouvé'
             } else {
@@ -301,20 +320,39 @@ serve(async (req: Request) => {
       console.log('🏪 Getting locations for account:', accountId)
       
       try {
-        const locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
-          headers: {
+        // Essayer d'abord la nouvelle API, puis l'ancienne en fallback
+        let locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
         })
 
         console.log('📊 Google My Business Locations API response status:', locationsResponse.status)
-        const locationsData = await locationsResponse.json()
+        let locationsData = await locationsResponse.json()
         console.log('🏪 Locations data received:', {
           hasLocations: !!locationsData.locations,
           locationsCount: locationsData.locations?.length || 0,
           error: locationsData.error
         })
+        
+        // Si la nouvelle API échoue, essayer l'ancienne
+        if (!locationsResponse.ok && locationsResponse.status === 403) {
+          console.log('🔄 Trying legacy locations API...')
+          locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          locationsData = await locationsResponse.json()
+          console.log('🏪 Legacy locations API response:', {
+            status: locationsResponse.status,
+            hasLocations: !!locationsData.locations,
+            locationsCount: locationsData.locations?.length || 0,
+            error: locationsData.error
+          })
+        }
         
         if (!locationsResponse.ok) {
           console.error('❌ Locations API error:', locationsData)
