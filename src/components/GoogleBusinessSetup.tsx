@@ -42,12 +42,23 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
     if (accessToken) {
       setStep('accounts');
       fetchAccounts();
+    } else {
+      // Check for OAuth callback
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code) {
+        console.log('OAuth callback detected with code:', code);
+        handleOAuthCallback(code);
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     }
   }, [accessToken]);
 
   const handleGoogleConnect = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = `${window.location.origin}/auth/callback`;
+    const redirectUri = window.location.origin;
     
     const scope = [
       'https://www.googleapis.com/auth/business.manage',
@@ -55,7 +66,7 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
       'https://www.googleapis.com/auth/userinfo.profile'
     ].join(' ');
 
-    const authUrl = `https://accounts.google.com/oauth/authorize?` +
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${clientId}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
       `scope=${encodeURIComponent(scope)}&` +
@@ -215,6 +226,45 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
     } catch (err: any) {
       console.error('Error fetching reviews:', err);
       setError(err.message || 'Erreur lors de la récupération des avis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuthCallback = async (code: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('🔄 Processing OAuth callback...');
+      
+      const response = await supabase.functions.invoke('auth-login', {
+        body: {
+          action: 'exchange-code',
+          code,
+          redirectUri: window.location.origin,
+        }
+      });
+
+      console.log('📡 OAuth callback response:', response);
+      
+      if (response.error) {
+        throw new Error(`Erreur fonction: ${response.error.message || JSON.stringify(response.error)}`);
+      }
+
+      const data = response.data;
+      
+      if (data?.success && data.access_token) {
+        console.log('✅ OAuth success, got access token');
+        // Update the access token and proceed
+        window.location.href = `${window.location.origin}?token=${data.access_token}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
+      } else {
+        const errorMsg = data?.error || 'Erreur lors de l\'échange du code OAuth';
+        throw new Error(errorMsg);
+      }
+    } catch (err: any) {
+      console.error('Error in OAuth callback:', err);
+      setError(err.message || 'Erreur lors de la connexion Google');
     } finally {
       setLoading(false);
     }
