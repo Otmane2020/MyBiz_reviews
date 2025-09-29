@@ -309,13 +309,21 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         }),
       });
 
+      const contentType = response.headers.get('content-type');
       let data;
-      try {
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Si ce n'est pas du JSON, c'est probablement une erreur HTML
         const text = await response.text();
-        data = JSON.parse(text);
-      } catch (parseError) {
-        console.error('GMB Response parsing error:', parseError);
-        throw new Error('Réponse invalide du serveur GMB');
+        console.error('GMB Non-JSON response received:', text);
+        
+        if (text.includes('<!DOCTYPE')) {
+          throw new Error('Fonction google-oauth non disponible. Vérifiez la configuration Supabase.');
+        } else {
+          throw new Error(`Réponse inattendue du serveur GMB: ${text.substring(0, 100)}...`);
+        }
       }
       
       console.log('GMB OAuth response:', data);

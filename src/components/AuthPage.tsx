@@ -103,13 +103,21 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
         }),
       });
 
+      const contentType = response.headers.get('content-type');
       let data;
-      try {
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Si ce n'est pas du JSON, c'est probablement une erreur HTML
         const text = await response.text();
-        data = JSON.parse(text);
-      } catch (parseError) {
-        console.error('Response parsing error:', parseError);
-        throw new Error('Réponse invalide du serveur');
+        console.error('Non-JSON response received:', text);
+        
+        if (text.includes('<!DOCTYPE')) {
+          throw new Error('Erreur de configuration Supabase. Vérifiez que la fonction google-oauth est déployée.');
+        } else {
+          throw new Error(`Réponse inattendue du serveur: ${text.substring(0, 100)}...`);
+        }
       }
       
       console.log('OAuth response:', data);

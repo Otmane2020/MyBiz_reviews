@@ -21,10 +21,42 @@ serve(async (req: Request) => {
   try {
     // Vérifier que les variables d'environnement sont configurées
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      throw new Error('Google OAuth credentials not configured in environment variables')
+      console.error('Missing Google OAuth credentials:', {
+        hasClientId: !!GOOGLE_CLIENT_ID,
+        hasClientSecret: !!GOOGLE_CLIENT_SECRET
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Configuration Google OAuth manquante. Vérifiez les variables d\'environnement GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET.' 
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      )
     }
 
-    const { action, ...body } = await req.json()
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error('Failed to parse request JSON:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Requête JSON invalide' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      )
+    }
+
+    const { action, ...body } = requestData;
 
     if (action === 'exchange-code') {
       // Échanger le code d'autorisation contre des tokens
@@ -183,8 +215,13 @@ serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Error:', error)
+    
+    // S'assurer que la réponse est toujours en JSON
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'Erreur inconnue',
+        success: false 
+      }),
       {
         status: 500,
         headers: {
