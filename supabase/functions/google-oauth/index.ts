@@ -217,9 +217,10 @@ serve(async (req: Request) => {
         )
       }
 
-      console.log('🏢 Getting Google My Business accounts')
+      console.log('🏢 Getting Google Business Profile accounts')
       
-      const accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+      // Use the new Google Business Profile API
+      const accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
@@ -245,9 +246,9 @@ serve(async (req: Request) => {
           if (errorData.error.code === 401) {
             errorMessage = 'Token d\'accès expiré ou invalide'
           } else if (errorData.error.code === 403) {
-            errorMessage = 'Accès refusé. Vérifiez que l\'API Google My Business est activée'
+            errorMessage = 'Accès refusé. Vérifiez que l\'API Google Business Profile est activée'
           } else if (errorData.error.code === 404) {
-            errorMessage = 'Aucun compte Google My Business trouvé'
+            errorMessage = 'Aucun compte Google Business Profile trouvé'
           } else {
             errorMessage = errorData.error.message || `Erreur ${errorData.error.code}`
           }
@@ -312,7 +313,8 @@ serve(async (req: Request) => {
 
       console.log('🏪 Getting locations for account:', accountId)
       
-      const locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+      // Use the new Google Business Profile API for locations
+      const locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
