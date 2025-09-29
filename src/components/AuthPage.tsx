@@ -32,7 +32,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     setLoading(true);
     
     // Use direct redirect instead of popup for better compatibility
-    const redirectUri = window.location.origin;
+    const redirectUri = window.location.origin + '/';
     console.log('Redirect URI:', redirectUri);
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -86,7 +86,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
         body: JSON.stringify({
           action: 'exchange-code',
           code,
-          redirectUri: window.location.origin,
+          redirectUri: window.location.origin + '/',
         }),
       });
 

@@ -239,7 +239,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       return;
     }
     
-    const redirectUri = window.location.origin;
+    const redirectUri = window.location.origin + '/';
     console.log('GMB Redirect URI:', redirectUri);
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -312,7 +312,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         body: JSON.stringify({
           action: 'exchange-code',
           code,
-          redirectUri: window.location.origin,
+          redirectUri: window.location.origin + '/',
         }),
       });
 
