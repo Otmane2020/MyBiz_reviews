@@ -303,7 +303,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         return;
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -364,7 +364,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -407,7 +407,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

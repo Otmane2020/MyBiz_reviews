@@ -160,15 +160,16 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     setLoading(true);
     try {
       // Use the new fetch-reviews function that stores in Supabase
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-reviews`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          accessToken,
-          locationId: selectedLocationId,
+          action: 'get-reviews',
+          accessToken: accessToken,
+          locationName: selectedLocationId,
         }),
       });
       

@@ -57,7 +57,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       }
       
       console.log('📡 Calling Supabase Edge Function for accounts...');
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       }
       
       console.log('📡 Calling Supabase Edge Function for locations...');
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +146,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         body: JSON.stringify({
           action: 'get-locations',
           accessToken: accessToken,
-          accountId: accountId,
+          accountName: accountId,
         }),
       });
       
