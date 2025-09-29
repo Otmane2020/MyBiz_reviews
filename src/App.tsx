@@ -114,7 +114,7 @@ function App() {
         body: JSON.stringify({
           action: 'exchange-code',
           code,
-          redirectUri: window.location.origin,
+          redirectUri: window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro',
         }),
       });
 
