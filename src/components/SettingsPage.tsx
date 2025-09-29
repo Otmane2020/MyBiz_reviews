@@ -381,12 +381,34 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                       <strong>Pay-as-you-go:</strong> {plan.payAsYouGo}
                     </div>
                     
-                    {selectedPlan === plan.id && (
-                      <div className="flex items-center text-sm text-[#34A853]">
-                        <Check className="w-4 h-4 mr-2" />
-                        {isTrialActive ? 'Plan sélectionné (essai gratuit)' : 'Plan actuel'}
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      {selectedPlan === plan.id ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center text-sm text-[#34A853]">
+                            <Check className="w-4 h-4 mr-2" />
+                            {isTrialActive ? 'Plan sélectionné (essai gratuit)' : 'Plan actuel'}
+                          </div>
+                          <button
+                            onClick={() => handleSubscribe(plan.id, billingCycle)}
+                            disabled={stripeLoading}
+                            className="w-full bg-[#4285F4] text-white py-2 px-4 rounded-lg hover:bg-[#3367D6] transition-colors disabled:opacity-50"
+                          >
+                            {stripeLoading ? 'Chargement...' : 'S\'abonner maintenant'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setSelectedPlan(plan.id);
+                            handleSubscribe(plan.id, billingCycle);
+                          }}
+                          disabled={stripeLoading}
+                          className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                        >
+                          {stripeLoading ? 'Chargement...' : 'Choisir ce plan'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -535,37 +557,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                           </svg>
-              {selectedPlan === plan.id ? (
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-[#34A853]">
-                    <Check className="w-4 h-4 mr-2" />
-                    {isTrialActive ? 'Plan sélectionné (essai gratuit)' : 'Plan actuel'}
-                  </div>
-                  <button
-                    onClick={() => handleSubscribe(plan.id, billingCycle)}
-                    disabled={stripeLoading}
-                    className="w-full bg-[#4285F4] text-white py-2 px-4 rounded-lg hover:bg-[#3367D6] transition-colors disabled:opacity-50"
-                  >
-                    {stripeLoading ? 'Chargement...' : 'S\'abonner maintenant'}
-                  </button>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setSelectedPlan(plan.id);
-                    handleSubscribe(plan.id, billingCycle);
-                  }}
-                  disabled={stripeLoading}
-                  className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-                >
-                  {stripeLoading ? 'Chargement...' : 'Choisir ce plan'}
-                </button>
               )}
             </div>
           </div>
-        ))}
-      </div>
-    </div>
         );
 
       case 'notifications':
