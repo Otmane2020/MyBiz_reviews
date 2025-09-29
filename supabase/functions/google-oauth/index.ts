@@ -40,6 +40,7 @@ serve(async (req: Request) => {
           code: code,
           grant_type: "authorization_code",
           redirect_uri: redirectUri,
+          scope: "https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
         }),
       })
 

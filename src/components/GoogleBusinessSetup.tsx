@@ -42,12 +42,15 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+      // Try the new Google My Business API endpoint
+      const response = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
       const data = await response.json();
+      
+      console.log('Accounts response:', data);
       
       if (data.accounts && data.accounts.length > 0) {
         setAccounts(data.accounts);
@@ -57,11 +60,13 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
           fetchLocations(data.accounts[0].name);
         }
       } else {
-        // No accounts found
-        console.log('Aucun compte Google My Business trouvé');
+        // Try alternative endpoint or show error
+        console.error('Aucun compte Google My Business trouvé:', data);
+        alert('Aucun compte Google My Business trouvé. Assurez-vous d\'avoir un compte GMB configuré.');
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des comptes:', error);
+      alert('Erreur de connexion à Google My Business. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -70,21 +75,26 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   const fetchLocations = async (accountId: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+      // Use the new API endpoint
+      const response = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
       const data = await response.json();
       
+      console.log('Locations response:', data);
+      
       if (data.locations && data.locations.length > 0) {
         setLocations(data.locations);
         setStep('locations');
       } else {
-        console.log('Aucun établissement trouvé pour ce compte');
+        console.error('Aucun établissement trouvé:', data);
+        alert('Aucun établissement trouvé pour ce compte. Vérifiez votre configuration Google My Business.');
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des établissements:', error);
+      alert('Erreur lors de la récupération des établissements. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }

@@ -19,7 +19,7 @@ function App() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
   // Check if current path is /superadmin
-  const isSupeAdminRoute = window.location.pathname === '/superadmin';
+  const isSuperAdminRoute = window.location.pathname === '/superadmin';
 
   // Notifications hook
   const {
@@ -129,7 +129,7 @@ function App() {
   };
 
   // Handle Super Admin route
-  if (isSupeAdminRoute) {
+  if (isSuperAdminRoute) {
     return <SuperAdmin />;
   }
 

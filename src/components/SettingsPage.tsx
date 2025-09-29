@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, CreditCard, Building2, Bell, Shield, LogOut, Check, Crown, Star, Zap, Gift, Users, Settings } from 'lucide-react';
+import { User, CreditCard, Building2, Bell, Shield, LogOut, Check, Crown, Star, Zap, Gift, Users, Settings, TrendingUp, X, ChevronRight } from 'lucide-react';
 
 interface SettingsPageProps {
   user: any;
@@ -10,6 +10,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [selectedPlan, setSelectedPlan] = useState('starter');
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [isTrialActive, setIsTrialActive] = useState(true);
   const [trialDaysLeft, setTrialDaysLeft] = useState(14);
   const [billingInfo, setBillingInfo] = useState({
@@ -27,7 +28,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
       name: 'Starter',
       subtitle: 'Découverte',
       price: '9,90€',
+      annualPrice: '95,04€',
+      annualSavings: '20%',
       period: '/mois',
+      annualPeriod: '/an',
       description: 'Parfait pour débuter',
       trial: '14 jours gratuits',
       trialBonus: '20 réponses IA incluses',
@@ -48,7 +52,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
       name: 'Pro',
       subtitle: 'Visibilité',
       price: '29,90€',
+      annualPrice: '287,04€',
+      annualSavings: '20%',
       period: '/mois',
+      annualPeriod: '/an',
       description: 'Pour développer votre visibilité',
       trial: '14 jours gratuits',
       trialBonus: '100 réponses IA incluses',
@@ -70,7 +77,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
       name: 'Business',
       subtitle: 'Croissance',
       price: '79,90€',
+      annualPrice: '767,04€',
+      annualSavings: '20%',
       period: '/mois',
+      annualPeriod: '/an',
       description: 'Pour les entreprises en croissance',
       trial: '14 jours gratuits',
       trialBonus: '200 réponses IA incluses',
@@ -241,6 +251,36 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
 
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Plans disponibles</h3>
+              
+              {/* Billing Cycle Toggle */}
+              <div className="flex items-center justify-center mb-6">
+                <div className="bg-gray-100 rounded-lg p-1 flex">
+                  <button
+                    onClick={() => setBillingCycle('monthly')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      billingCycle === 'monthly'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Mensuel
+                  </button>
+                  <button
+                    onClick={() => setBillingCycle('annual')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors relative ${
+                      billingCycle === 'annual'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Annuel
+                    <span className="absolute -top-2 -right-2 bg-[#34A853] text-white text-xs px-1.5 py-0.5 rounded-full">
+                      -20%
+                    </span>
+                  </button>
+                </div>
+              </div>
+              
               <div className="grid gap-4">
                 {plans.map((plan) => (
                   <div
@@ -272,8 +312,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                       </div>
                       
                       <div className="text-right">
-                        <div className="text-xl font-bold text-gray-900">{plan.price}</div>
-                        <div className="text-sm text-gray-500">{plan.period}</div>
+                        <div className="text-xl font-bold text-gray-900">
+                          {billingCycle === 'monthly' ? plan.price : plan.annualPrice}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {billingCycle === 'monthly' ? plan.period : plan.annualPeriod}
+                        </div>
+                        {billingCycle === 'annual' && (
+                          <div className="text-xs text-[#34A853] font-medium">
+                            Économie de {plan.annualSavings}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -365,17 +414,43 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
               </div>
             </div>
 
-            <div className="bg-[#4285F4]/10 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-900 mb-2">Configuration des paiements</h4>
-              <p className="text-sm text-gray-600 mb-3">
-                Connectez Stripe pour gérer vos paiements et abonnements de manière sécurisée.
-              </p>
-              <button
-                onClick={connectStripe}
-                className="bg-[#635BFF] text-white px-4 py-2 rounded-lg hover:bg-[#5A52E8] transition-colors font-medium"
-              >
-                Configurer Stripe
-              </button>
+            {/* Subscription Management */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Gérer mon abonnement</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors">
+                  <CreditCard className="w-5 h-5 text-[#4285F4] mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">Modifier le plan</div>
+                    <div className="text-sm text-gray-500">Changer d'abonnement</div>
+                  </div>
+                </button>
+                
+                <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:border-[#34A853] hover:bg-[#34A853]/5 transition-colors">
+                  <TrendingUp className="w-5 h-5 text-[#34A853] mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">Passer à l'annuel</div>
+                    <div className="text-sm text-gray-500">Économisez 20%</div>
+                  </div>
+                </button>
+                
+                <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:border-[#FBBC05] hover:bg-[#FBBC05]/5 transition-colors">
+                  <Settings className="w-5 h-5 text-[#FBBC05] mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">Gérer la facturation</div>
+                    <div className="text-sm text-gray-500">Factures et paiements</div>
+                  </div>
+                </button>
+                
+                <button className="flex items-center justify-center p-4 border border-red-200 rounded-lg hover:border-red-400 hover:bg-red-50 transition-colors">
+                  <X className="w-5 h-5 text-red-500 mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">Annuler l'abonnement</div>
+                    <div className="text-sm text-gray-500">Résilier le service</div>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -636,6 +711,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                   <ChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
               </button>
+              
+              <div className="text-center mt-4">
+                <a
+                  href="/superadmin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#4285F4] hover:underline text-sm"
+                >
+                  Ou accédez directement via /superadmin
+                </a>
+              </div>
             </div>
           </div>
         );

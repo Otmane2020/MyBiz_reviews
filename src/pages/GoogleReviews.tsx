@@ -64,12 +64,16 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
   const fetchAccounts = async (token: string) => {
     try {
-      const response = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+      // Use the new Google My Business API endpoint
+      const response = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       const data = await response.json();
+      
+      console.log('GMB Accounts:', data);
+      
       if (data.accounts) {
         setAccounts(data.accounts);
         if (data.accounts.length > 0) {
@@ -83,17 +87,23 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des comptes:', error);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des comptes:', error);
     }
   };
 
   const fetchLocations = async (token: string, accountId: string) => {
     try {
-      const response = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+      // Use the new API endpoint
+      const response = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       const data = await response.json();
+      
+      console.log('GMB Locations:', data);
+      
       if (data.locations) {
         setLocations(data.locations);
         if (data.locations.length > 0) {

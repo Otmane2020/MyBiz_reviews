@@ -37,6 +37,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [locations, setLocations] = useState<GoogleLocation[]>([]);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>('starter');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(false);
   const [gmbConnected, setGmbConnected] = useState(!!initialAccessToken);
 
@@ -46,7 +47,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       name: 'Starter',
       subtitle: 'Découverte',
       price: '9,90€',
+      annualPrice: '95,04€',
+      annualSavings: '20%',
       period: '/mois',
+      annualPeriod: '/an',
       originalPrice: null,
       description: 'Parfait pour débuter',
       trial: '14 jours gratuits',
@@ -68,7 +72,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       name: 'Pro',
       subtitle: 'Visibilité',
       price: '29,90€',
+      annualPrice: '287,04€',
+      annualSavings: '20%',
       period: '/mois',
+      annualPeriod: '/an',
       originalPrice: null,
       description: 'Pour développer votre visibilité',
       trial: '14 jours gratuits',
@@ -91,7 +98,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       name: 'Business',
       subtitle: 'Croissance',
       price: '79,90€',
+      annualPrice: '767,04€',
+      annualSavings: '20%',
       period: '/mois',
+      annualPeriod: '/an',
       originalPrice: null,
       description: 'Pour les entreprises en croissance',
       trial: '14 jours gratuits',
@@ -400,6 +410,35 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     if (currentStepData.type === 'plan-selection') {
       return (
         <div className="space-y-4">
+          {/* Billing Cycle Toggle */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="bg-gray-100 rounded-lg p-1 flex">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  billingCycle === 'monthly'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Mensuel
+              </button>
+              <button
+                onClick={() => setBillingCycle('annual')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors relative ${
+                  billingCycle === 'annual'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Annuel
+                <span className="absolute -top-2 -right-2 bg-[#34A853] text-white text-xs px-1.5 py-0.5 rounded-full">
+                  -20%
+                </span>
+              </button>
+            </div>
+          </div>
+          
           {plans.map((plan) => (
             <div
               key={plan.id}
@@ -430,8 +469,17 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                 </div>
                 
                 <div className="text-right">
-                  <div className="text-xl font-bold text-gray-900">{plan.price}</div>
-                  <div className="text-sm text-gray-500">{plan.period}</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {billingCycle === 'monthly' ? plan.price : plan.annualPrice}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {billingCycle === 'monthly' ? plan.period : plan.annualPeriod}
+                  </div>
+                  {billingCycle === 'annual' && (
+                    <div className="text-xs text-[#34A853] font-medium">
+                      Économie de {plan.annualSavings}
+                    </div>
+                  )}
                 </div>
               </div>
 
