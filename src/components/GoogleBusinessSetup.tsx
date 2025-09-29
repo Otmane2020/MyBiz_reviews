@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Star, ArrowRight, CheckCircle } from 'lucide-react';
 
-interface GoogleAccount {
+// Hardcode temporairement pour debug
+const GOOGLE_CLIENT_ID = '395527284495-g1re11jn5e1oe1r5dfs6joe9gn285c2l.apps.googleusercontent.com';
   name: string;
   type: string;
   role: string;

@@ -185,7 +185,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
     setLoading(true);
     
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    // Hardcode temporairement pour debug
+    const clientId = '395527284495-g1re11jn5e1oe1r5dfs6joe9gn285c2l.apps.googleusercontent.com';
     console.log('GMB Client ID:', clientId);
     
     if (!clientId || clientId === 'your_google_client_id_here') {
