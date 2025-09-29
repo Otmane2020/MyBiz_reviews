@@ -34,26 +34,35 @@ const StarlinkoLogo: React.FC<StarlinkoLogoProps> = ({
       className={`flex items-center ${onClick ? 'hover:opacity-80 transition-opacity cursor-pointer' : ''} ${className}`}
       onClick={onClick}
     >
-      {/* Logo SVG - Étoile avec couleur bleue unie */}
+      {/* Logo SVG - Étoile avec dégradé Google */}
       <div className={`${sizeClasses[size]} mr-2 flex-shrink-0`}>
         <svg viewBox="0 0 40 40" className="w-full h-full">
-          {/* Étoile avec couleur bleue Google */}
+          <defs>
+            <linearGradient id="googleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#4285F4" />
+              <stop offset="25%" stopColor="#34A853" />
+              <stop offset="50%" stopColor="#FBBC05" />
+              <stop offset="75%" stopColor="#EA4335" />
+              <stop offset="100%" stopColor="#4285F4" />
+            </linearGradient>
+          </defs>
+          {/* Étoile avec dégradé Google */}
           <path
             d="M20 2 L24.5 14 L38 14 L28 22 L32 34 L20 26 L8 34 L12 22 L2 14 L15.5 14 Z"
-            fill="#4285F4"
+            fill="url(#googleGradient)"
             className="drop-shadow-sm"
           />
         </svg>
       </div>
       
-      {/* Text Starlinko avec couleur standard */}
+      {/* Text Starlinko */}
       {showText && (
         <span className={`font-bold text-gray-900 ${textSizeClasses[size]}`}>
           Starlinko
         </span>
       )}
       
-      {/* Google Icon à droite */}
+      {/* Google Icon à droite (optionnel) */}
       {showGoogleIcon && (
         <div className="ml-3 flex-shrink-0">
           <svg className="w-5 h-5" viewBox="0 0 24 24">

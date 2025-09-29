@@ -89,11 +89,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       <div className="bg-gradient-to-r from-[#4285F4] to-[#34A853] text-white p-6">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-2">
-            Bonjour {user?.name?.split(' ')[0]} sur Starlinko ! 👋
+            Bonjour {user?.name?.split(' ')[0]} ! 👋
           </h1>
           <p className="text-white/90">
-            Voici un aperçu de vos avis Google My Business
+            Bienvenue sur Starlinko - Voici un aperçu de vos avis Google My Business
           </p>
+          
+          {/* Trial Status */}
+          <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3 inline-block">
+            <div className="flex items-center text-sm">
+              <div className="w-2 h-2 bg-[#FBBC05] rounded-full mr-2 animate-pulse"></div>
+              Essai gratuit actif - 14 jours restants
+            </div>
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap, Gift, Shield } from 'lucide-react';
 
 interface GoogleAccount {
   name: string;
@@ -44,61 +44,79 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     {
       id: 'starter',
       name: 'Starter',
-      price: '29€',
+      subtitle: 'Découverte',
+      price: '9,90€',
       period: '/mois',
+      originalPrice: null,
       description: 'Parfait pour débuter',
+      trial: '14 jours gratuits',
+      trialBonus: '20 réponses IA incluses',
       features: [
-        '1 établissement',
-        '100 réponses IA/mois',
-        'Notifications en temps réel',
+        '1 établissement Google',
+        '50 avis/réponses automatiques par mois',
+        'Réponses IA basiques (GPT-4 mini)',
+        'Alertes email sur nouveaux avis',
         'Tableau de bord basique'
       ],
       icon: <Star className="w-6 h-6" />,
       color: 'from-[#4285F4] to-[#34A853]',
-      popular: false
+      popular: false,
+      payAsYouGo: '0,10€ par réponse supplémentaire'
     },
     {
-      id: 'professional',
-      name: 'Professional',
-      price: '79€',
+      id: 'pro',
+      name: 'Pro',
+      subtitle: 'Visibilité',
+      price: '29,90€',
       period: '/mois',
-      description: 'Pour les entreprises en croissance',
+      originalPrice: null,
+      description: 'Pour développer votre visibilité',
+      trial: '14 jours gratuits',
+      trialBonus: '100 réponses IA incluses',
       features: [
-        '5 établissements',
-        'Réponses IA illimitées',
-        'Analytics avancés',
-        'Support prioritaire',
-        'Personnalisation des réponses'
+        'Jusqu\'à 3 établissements',
+        '300 avis/réponses automatiques par mois',
+        'Réponses IA premium (GPT-4.1)',
+        'Notifications temps réel + dashboard complet',
+        'Statistiques (note moyenne, tendances)',
+        'Support email prioritaire'
       ],
       icon: <Crown className="w-6 h-6" />,
       color: 'from-[#FBBC05] to-[#EA4335]',
-      popular: true
+      popular: true,
+      payAsYouGo: '0,10€ par réponse supplémentaire'
     },
     {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: '199€',
+      id: 'business',
+      name: 'Business',
+      subtitle: 'Croissance',
+      price: '79,90€',
       period: '/mois',
-      description: 'Pour les grandes entreprises',
+      originalPrice: null,
+      description: 'Pour les entreprises en croissance',
+      trial: '14 jours gratuits',
+      trialBonus: '200 réponses IA incluses',
       features: [
         'Établissements illimités',
-        'IA personnalisée',
+        '1 000 avis/réponses automatiques par mois',
+        'Réponses IA premium + posts auto sur Google Business',
+        'Rapports PDF mensuels',
+        'Support prioritaire (chat + téléphone)',
         'API complète',
-        'Support dédié',
-        'Intégrations avancées',
-        'Rapports personnalisés'
+        'Intégrations avancées'
       ],
       icon: <Zap className="w-6 h-6" />,
       color: 'from-[#EA4335] to-[#4285F4]',
-      popular: false
+      popular: false,
+      payAsYouGo: '0,10€ par réponse supplémentaire'
     }
   ];
 
   const steps = [
     {
-      icon: <Star className="w-16 h-16 text-[#FBBC05]" />,
+      icon: <Gift className="w-16 h-16 text-[#FBBC05]" />,
       title: `Bienvenue ${user?.name?.split(' ')[0]} !`,
-      description: "Félicitations ! Vous venez de rejoindre Starlinko, la plateforme qui va révolutionner la gestion de vos avis Google My Business.",
+      description: "Félicitations ! Vous venez de rejoindre Starlinko, la plateforme qui va révolutionner la gestion de vos avis Google My Business. Commencez avec 14 jours d'essai gratuit !",
       color: "from-[#4285F4] to-[#34A853]",
       type: 'welcome'
     },
@@ -114,35 +132,35 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     {
       icon: <CreditCard className="w-16 h-16 text-[#34A853]" />,
       title: "Choisissez votre plan",
-      description: "Sélectionnez le plan qui correspond le mieux à vos besoins. Vous pourrez changer à tout moment.",
+      description: "Sélectionnez le plan qui correspond le mieux à vos besoins. Tous les plans incluent 14 jours d'essai gratuit avec réponses IA incluses !",
       color: "from-[#FBBC05] to-[#EA4335]",
       type: 'plan-selection'
     },
     {
       icon: <MessageSquare className="w-16 h-16 text-[#EA4335]" />,
       title: "IA de réponse intelligente",
-      description: "Notre intelligence artificielle analyse chaque avis et génère des réponses personnalisées et professionnelles en quelques secondes.",
+      description: "Notre intelligence artificielle analyse chaque avis et génère des réponses personnalisées et professionnelles en quelques secondes. Testez gratuitement pendant 14 jours !",
       color: "from-[#EA4335] to-[#4285F4]",
       type: 'feature'
     },
     {
       icon: <TrendingUp className="w-16 h-16 text-[#4285F4]" />,
       title: "Tableau de bord analytique",
-      description: "Suivez l'évolution de votre réputation avec des statistiques détaillées : note moyenne, taux de réponse, tendances.",
+      description: "Suivez l'évolution de votre réputation avec des statistiques détaillées : note moyenne, taux de réponse, tendances et rapports PDF mensuels.",
       color: "from-[#4285F4] to-[#34A853]",
       type: 'feature'
     },
     {
       icon: <Smartphone className="w-16 h-16 text-[#34A853]" />,
       title: "Notifications en temps réel",
-      description: "Recevez des alertes instantanées pour chaque nouvel avis et ne manquez jamais une opportunité d'interaction.",
+      description: "Recevez des alertes instantanées pour chaque nouvel avis et ne manquez jamais une opportunité d'interaction avec vos clients.",
       color: "from-[#34A853] to-[#FBBC05]",
       type: 'feature'
     },
     {
       icon: <Check className="w-16 h-16 text-[#FBBC05]" />,
       title: "Tout est prêt !",
-      description: "Votre compte est configuré et prêt à l'emploi. Commencez dès maintenant à améliorer votre réputation en ligne.",
+      description: "Votre compte est configuré et prêt à l'emploi. Commencez dès maintenant votre essai gratuit de 14 jours et améliorez votre réputation en ligne !",
       color: "from-[#FBBC05] to-[#EA4335]",
       type: 'complete'
     }
@@ -400,24 +418,30 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                 </div>
               )}
               
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-lg bg-gradient-to-r ${plan.color} text-white mr-3`}>
                     {plan.icon}
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">{plan.name}</h3>
-                    <p className="text-sm text-gray-600">{plan.description}</p>
+                    <p className="text-sm text-gray-600">"{plan.subtitle}"</p>
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900">{plan.price}</div>
+                  <div className="text-xl font-bold text-gray-900">{plan.price}</div>
                   <div className="text-sm text-gray-500">{plan.period}</div>
                 </div>
               </div>
+
+              {/* Trial Badge */}
+              <div className="bg-gradient-to-r from-[#34A853] to-[#4285F4] text-white px-3 py-1 rounded-full text-xs font-medium mb-3 inline-block">
+                <Gift className="w-3 h-3 inline mr-1" />
+                {plan.trial} → {plan.trialBonus}
+              </div>
               
-              <ul className="mt-3 space-y-1">
+              <ul className="space-y-1 mb-3">
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-center text-sm text-gray-600">
                     <Check className="w-4 h-4 text-[#34A853] mr-2 flex-shrink-0" />
@@ -425,6 +449,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                   </li>
                 ))}
               </ul>
+
+              {/* Pay as you go */}
+              <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
+                <strong>Pay-as-you-go:</strong> {plan.payAsYouGo}
+              </div>
               
               <div className="mt-3 flex items-center justify-center">
                 <div className={`w-4 h-4 rounded-full border-2 ${
@@ -484,8 +513,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
           {/* User info for first step */}
           {currentStep === 0 && user && (
-            <div className="bg-gray-50 rounded-xl p-4 mb-6">
-              <div className="flex items-center justify-center">
+            <div className="bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 rounded-xl p-4 mb-6">
+              <div className="flex items-center justify-center mb-3">
                 <img
                   src={user.picture}
                   alt={user.name}
@@ -495,6 +524,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                   <div className="font-medium text-gray-900">{user.name}</div>
                   <div className="text-sm text-gray-500">{user.email}</div>
                 </div>
+              </div>
+              <div className="bg-[#34A853] text-white px-4 py-2 rounded-full text-sm font-medium inline-flex items-center">
+                <Gift className="w-4 h-4 mr-2" />
+                14 jours d'essai gratuit inclus !
               </div>
             </div>
           )}
@@ -506,8 +539,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
           {steps[currentStep].type === 'feature' && (
             <div className="bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 rounded-xl p-4 mb-6">
               <div className="flex items-center justify-center text-sm text-gray-600">
-                <Check className="w-4 h-4 text-[#34A853] mr-2" />
-                Fonctionnalité incluse dans votre plan
+                <Shield className="w-4 h-4 text-[#34A853] mr-2" />
+                Testez gratuitement pendant 14 jours
               </div>
             </div>
           )}
@@ -536,7 +569,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
               disabled={!canProceed()}
               className="flex items-center px-6 py-3 bg-[#4285F4] text-white rounded-full hover:bg-[#3367D6] transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {currentStep === steps.length - 1 ? 'Commencer' : 'Suivant'}
+              {currentStep === steps.length - 1 ? 'Commencer l\'essai' : 'Suivant'}
               <ChevronRight className="w-5 h-5 ml-1" />
             </button>
           </div>
