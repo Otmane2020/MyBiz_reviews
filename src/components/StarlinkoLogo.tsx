@@ -40,8 +40,9 @@ const StarlinkoLogo: React.FC<StarlinkoLogoProps> = ({
           <defs>
             <linearGradient id="googleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#4285F4" />
-              <stop offset="33%" stopColor="#34A853" />
-              <stop offset="66%" stopColor="#FBBC05" />
+              <stop offset="25%" stopColor="#EA4335" />
+              <stop offset="50%" stopColor="#FBBC05" />
+              <stop offset="75%" stopColor="#34A853" />
               <stop offset="100%" stopColor="#EA4335" />
             </linearGradient>
           </defs>
