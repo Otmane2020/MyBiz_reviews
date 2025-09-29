@@ -87,8 +87,6 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des comptes:', error);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des comptes:', error);
     }
   };
 
