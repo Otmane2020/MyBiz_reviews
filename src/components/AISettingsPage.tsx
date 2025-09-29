@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bot, MessageSquare, Settings, Save, RefreshCw, Zap, Volume2, Smile, Heart, Coffee, User, FileText, Ligature as Signature, TestTube, Send } from 'lucide-react';
-import { useChatGPT } from '../hooks/useChatGPT';
+import { useDeepSeek } from '../hooks/useChatGPT';
 
 interface AISettingsPageProps {
   user: any;
@@ -40,7 +40,7 @@ const AISettingsPage: React.FC<AISettingsPageProps> = ({ user }) => {
   const [generatedResponse, setGeneratedResponse] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
-  const { generateResponse, loading: isGenerating, error: generationError } = useChatGPT();
+  const { generateResponse, loading: isGenerating, error: generationError } = useDeepSeek();
 
   const tones = [
     {
@@ -159,10 +159,10 @@ const AISettingsPage: React.FC<AISettingsPageProps> = ({ user }) => {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center">
             <Bot className="w-8 h-8 text-[#4285F4] mr-3" />
-            Intelligence Artificielle
+            Intelligence Artificielle (DeepSeek)
           </h1>
           <p className="text-gray-600">
-            Configurez les réponses automatiques de l'IA pour vos avis Google My Business
+            Configurez les réponses automatiques avec DeepSeek AI pour vos avis Google My Business
           </p>
         </div>
 
@@ -175,10 +175,10 @@ const AISettingsPage: React.FC<AISettingsPageProps> = ({ user }) => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                     <Zap className="w-5 h-5 text-[#FBBC05] mr-2" />
-                    Réponses automatiques
+                    Réponses automatiques DeepSeek
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Activer ou désactiver les réponses automatiques de l'IA
+                    Activer ou désactiver les réponses automatiques avec DeepSeek AI
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -432,7 +432,7 @@ const AISettingsPage: React.FC<AISettingsPageProps> = ({ user }) => {
 
             {/* Statistiques */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistiques IA</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistiques DeepSeek</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Réponses ce mois</span>
@@ -444,7 +444,7 @@ const AISettingsPage: React.FC<AISettingsPageProps> = ({ user }) => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Temps de réponse moyen</span>
-                  <span className="text-sm font-medium text-gray-900">3 min</span>
+                  <span className="text-sm font-medium text-gray-900">2 min</span>
                 </div>
               </div>
             </div>

@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 }
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
+const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY') || 'sk-966e26a969904218ac5e5caac00d5ccc'
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -17,8 +17,8 @@ serve(async (req: Request) => {
   }
 
   try {
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured')
+    if (!DEEPSEEK_API_KEY) {
+      throw new Error('DeepSeek API key not configured')
     }
 
     const { 
@@ -62,15 +62,15 @@ Instructions:
 
 Génère uniquement la réponse, sans introduction ni explication.`
 
-    // Appel à l'API OpenAI
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Appel à l'API DeepSeek
+    const deepseekResponse = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'deepseek-chat',
         messages: [
           {
             role: 'system',
@@ -86,16 +86,16 @@ Génère uniquement la réponse, sans introduction ni explication.`
       }),
     })
 
-    if (!openaiResponse.ok) {
-      const error = await openaiResponse.json()
-      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
+    if (!deepseekResponse.ok) {
+      const error = await deepseekResponse.json()
+      throw new Error(`DeepSeek API error: ${error.error?.message || 'Unknown error'}`)
     }
 
-    const data = await openaiResponse.json()
+    const data = await deepseekResponse.json()
     const generatedResponse = data.choices[0]?.message?.content?.trim()
 
     if (!generatedResponse) {
-      throw new Error('No response generated from OpenAI')
+      throw new Error('No response generated from DeepSeek')
     }
 
     return new Response(
@@ -113,7 +113,7 @@ Génère uniquement la réponse, sans introduction ni explication.`
     )
 
   } catch (error) {
-    console.error('ChatGPT API error:', error)
+    console.error('DeepSeek API error:', error)
     return new Response(
       JSON.stringify({ 
         success: false,

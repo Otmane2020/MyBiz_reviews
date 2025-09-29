@@ -91,7 +91,7 @@ export const useChatGPT = () => {
       const response = await generateResponse(review, settings, businessName);
       results.push({ review, response });
       
-      // Petit délai pour éviter de surcharger l'API
+      // Petit délai pour éviter de surcharger l'API DeepSeek
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
@@ -104,4 +104,3 @@ export const useChatGPT = () => {
     loading,
     error,
   };
-};
