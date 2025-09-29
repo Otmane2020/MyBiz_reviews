@@ -248,9 +248,9 @@ serve(async (req: Request) => {
               'Content-Type': 'application/json',
             },
           })
-      if (session?.user && !showOnboarding) {
-        setCurrentPage('dashboard');
-      } else if (!session?.user) {
+          
+          accountsData = await accountsResponse.json()
+          console.log('🏢 Legacy accounts data received:', {
             hasAccounts: !!accountsData.accounts,
             accountsCount: accountsData.accounts?.length || 0,
             error: accountsData.error
@@ -275,32 +275,65 @@ serve(async (req: Request) => {
           
           return new Response(
             JSON.stringify({
-    // Check for OAuth callback parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const userParam = urlParams.get('user');
-    
-    if (token && userParam) {
-      try {
-        const userData = JSON.parse(decodeURIComponent(userParam));
-        setAccessToken(token);
-        localStorage.setItem('accessToken', token);
-        localStorage.setItem('googleUser', JSON.stringify(userData));
-        
-        // Clean URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Show onboarding for new users
-        const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
-        if (!hasCompletedOnboarding) {
-          setShowOnboarding(true);
-        } else {
-          setCurrentPage('dashboard');
+              error: errorMessage,
+              success: false,
+              code: accountsData.error?.code || accountsResponse.status
+            }),
+            {
+              status: accountsResponse.status,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            }
+          )
         }
-      } catch (error) {
-        console.error('Error parsing OAuth callback:', error);
-        window.history.replaceState({}, document.title, window.location.pathname);
+
+        console.log('✅ Accounts retrieved successfully')
+        return new Response(
+          JSON.stringify({
+            accounts: accountsData.accounts || [],
+            success: true
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      } catch (fetchError) {
+        console.error('💥 Error during accounts fetch:', fetchError)
+        throw fetchError
+      }
+    }
+
+    if (action === 'get-locations') {
+      const { accessToken, accountId } = requestData
+
+      console.log('🏪 Get locations parameters:', {
+        hasAccessToken: !!accessToken,
+        tokenLength: accessToken?.length || 0,
+        accountId: accountId
       })
+
+      if (!accessToken || !accountId) {
+        console.error('❌ Missing access token or account ID for get-locations')
+        return new Response(
+          JSON.stringify({ 
+            error: 'Access token et account ID requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
+
       console.log('🏪 Getting locations for account:', accountId)
       
       try {
@@ -312,7 +345,11 @@ serve(async (req: Request) => {
         })
 
         console.log('📊 Google My Business Locations API response status:', locationsResponse.status)
-      <Onboarding
+        
+        const locationsData = await locationsResponse.json()
+        console.log('🏪 Locations data received:', {
+          hasLocations: !!locationsData.locations,
+          locationsCount: locationsData.locations?.length || 0,
           error: locationsData.error
         })
         
@@ -320,45 +357,81 @@ serve(async (req: Request) => {
           console.error('❌ Locations API error:', locationsData)
           
           let errorMessage = 'Erreur inconnue'
+          if (locationsData.error) {
+            if (locationsData.error.code === 401) {
+              errorMessage = 'Token d\'accès expiré ou invalide'
             } else if (locationsData.error.code === 403) {
               errorMessage = 'Accès refusé aux établissements'
-            onLogout={handleLogout}
             } else if (locationsData.error.code === 404) {
+              errorMessage = 'Aucun établissement trouvé pour ce compte'
+            } else {
+              errorMessage = locationsData.error.message || `Erreur ${locationsData.error.code}`
             }
-      case 'reviews':
           }
+          
           return new Response(
-            accessToken={accessToken}
             JSON.stringify({
-            selectedLocationId={selectedLocationId}
-                code: locationsData.error?.code || locationsResponse.status
-            setSelectedLocationId={setSelectedLocationId}
-              },
-            selectedAccountId={selectedAccountId}
-              success: false
-            onNavigate={setCurrentPage}
+              error: errorMessage,
+              success: false,
+              code: locationsData.error?.code || locationsResponse.status
             }),
             {
               status: locationsResponse.status,
               headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
             }
           )
         }
 
-  }, []);
+        console.log('✅ Locations retrieved successfully')
+        return new Response(
+          JSON.stringify({
+            locations: locationsData.locations || [],
+            success: true
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      } catch (fetchError) {
+        console.error('💥 Error during locations fetch:', fetchError)
+        throw fetchError
+      }
+    }
+
+    console.error('❌ Unknown action:', action)
+    return new Response(
+      JSON.stringify({ 
+        error: 'Action non reconnue',
+        success: false
+      }),
+      {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    )
+
+  } catch (error) {
     console.error('💥 Unexpected error in google-oauth function:', error)
-  const handleOnboardingComplete = (selectedStores: string[], selectedPlan: string) => {
-    localStorage.removeItem('onboardingCompleted');
-    localStorage.removeItem('selectedStores');
-    localStorage.removeItem('selectedPlan');
-    setAccessToken('');
-    setCurrentPage('landing');
+    return new Response(
+      JSON.stringify({ 
+        error: 'Erreur interne du serveur',
+        success: false
+      }),
       {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-      <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+          ...corsHeaders,
+        },
       }
     )
   }
