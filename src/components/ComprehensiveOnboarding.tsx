@@ -357,10 +357,23 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
         },
+        body: JSON.stringify({
+          action: 'get-accounts',
+          accessToken: accessToken,
+        }),
       });
       const data = await response.json();
       
@@ -378,10 +391,24 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
   const fetchLocations = async (accountId: string) => {
     try {
-      const response = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
         },
+        body: JSON.stringify({
+          action: 'get-locations',
+          accessToken: accessToken,
+          accountId: accountId,
+        }),
       });
       const data = await response.json();
       

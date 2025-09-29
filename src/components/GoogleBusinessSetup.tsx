@@ -48,11 +48,24 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       console.log('🔍 Fetching Google My Business accounts...');
       console.log('🔑 Access token:', accessToken ? 'Present' : 'Missing');
       
-      // Use the correct Google My Business API v4 endpoint
-      const response = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+      // Use Supabase Edge Function as proxy to avoid CORS issues
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
         },
+        body: JSON.stringify({
+          action: 'get-accounts',
+          accessToken: accessToken,
+        }),
       });
       
       console.log('📡 Response status:', response.status);
@@ -94,11 +107,25 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
     try {
       console.log('🏪 Fetching locations for account:', accountId);
       
-      // Use the correct Google My Business API v4 endpoint
-      const response = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+      // Use Supabase Edge Function as proxy to avoid CORS issues
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
         },
+        body: JSON.stringify({
+          action: 'get-locations',
+          accessToken: accessToken,
+          accountId: accountId,
+        }),
       });
       
       console.log('📡 Locations response status:', response.status);

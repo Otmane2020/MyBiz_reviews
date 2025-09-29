@@ -147,6 +147,52 @@ serve(async (req: Request) => {
       )
     }
 
+    if (action === 'get-accounts') {
+      // Récupérer les comptes Google My Business
+      const { accessToken } = body
+
+      const accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      const accountsData = await accountsResponse.json()
+
+      return new Response(
+        JSON.stringify(accountsData),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      )
+    }
+
+    if (action === 'get-locations') {
+      // Récupérer les établissements pour un compte
+      const { accessToken, accountId } = body
+
+      const locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      const locationsData = await locationsResponse.json()
+
+      return new Response(
+        JSON.stringify(locationsData),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      )
+    }
+
     if (action === 'get-reviews') {
       // Récupérer les avis Google My Business
       const { accessToken, locationId } = body
