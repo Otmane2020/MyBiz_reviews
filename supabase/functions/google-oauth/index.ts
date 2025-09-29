@@ -206,6 +206,7 @@ serve(async (req: Request) => {
       try {
         // Essayer d'abord la nouvelle API, puis l'ancienne en fallback
         let accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+          headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
@@ -322,6 +323,7 @@ serve(async (req: Request) => {
       try {
         // Essayer d'abord la nouvelle API, puis l'ancienne en fallback
         let locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
+          headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
