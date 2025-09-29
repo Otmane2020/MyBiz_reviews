@@ -37,10 +37,14 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<'accounts' | 'locations' | 'complete'>('accounts');
+  const [step, setStep] = useState<'connect' | 'accounts' | 'locations' | 'complete'>('connect');
 
   useEffect(() => {
-    fetchAccounts();
+    if (accessToken) {
+      fetchAccounts();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const fetchAccounts = async () => {

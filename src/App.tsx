@@ -201,7 +201,7 @@ function App() {
   const handleEmailAuth = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentView('onboarding');
+    setCurrentView('google-setup');
   };
 
   const handleGetStarted = () => {
