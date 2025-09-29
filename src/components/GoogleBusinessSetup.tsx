@@ -197,6 +197,129 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
     onSetupComplete(selectedAccountId, selectedLocationId);
   };
 
+  const renderStepContent = () => {
+    if (step === 'accounts') {
+      return (
+        <>
+          <div className="text-center mb-6">
+            <Building2 className="w-12 h-12 text-[#4285F4] mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Sélectionnez votre compte
+            </h2>
+            <p className="text-gray-600">
+              Choisissez le compte Google My Business que vous souhaitez gérer
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {accounts.map((account) => (
+              <button
+                key={account.name}
+                onClick={() => handleAccountSelect(account.name)}
+                className="w-full p-4 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {account.name.split('/')[1]}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {account.type} • {account.role}
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-400" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
+      );
+    }
+
+    if (step === 'locations') {
+      return (
+        <>
+          <div className="text-center mb-6">
+            <MapPin className="w-12 h-12 text-[#4285F4] mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Choisissez votre établissement
+            </h2>
+            <p className="text-gray-600">
+              Sélectionnez l'établissement dont vous voulez gérer les avis
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {locations.map((location) => (
+              <button
+                key={location.name}
+                onClick={() => handleLocationSelect(location.name)}
+                className="w-full p-4 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {location.locationName}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {location.primaryCategory?.displayName}
+                    </div>
+                    {location.address && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        {location.address.locality}, {location.address.administrativeArea}
+                      </div>
+                    )}
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-400" />
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setStep('accounts')}
+            className="mt-4 text-[#4285F4] hover:underline text-sm"
+          >
+            ← Retour aux comptes
+          </button>
+        </>
+      );
+    }
+
+    if (step === 'complete') {
+      return (
+        <>
+          <div className="text-center mb-6">
+            <CheckCircle className="w-12 h-12 text-[#34A853] mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Configuration terminée !
+            </h2>
+            <p className="text-gray-600">
+              Votre compte Google My Business est maintenant connecté
+            </p>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <div className="text-sm text-gray-600 mb-2">Établissement sélectionné :</div>
+            <div className="font-medium text-gray-900">
+              {locations.find(l => l.name === selectedLocationId)?.locationName}
+            </div>
+            <div className="text-sm text-gray-500">
+              {locations.find(l => l.name === selectedLocationId)?.primaryCategory?.displayName}
+            </div>
+          </div>
+
+          <button
+            onClick={handleComplete}
+            className="w-full bg-[#4285F4] text-white py-3 px-4 rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 font-medium"
+          >
+            Commencer à gérer mes avis
+          </button>
+        </>
+      );
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05] flex items-center justify-center">
@@ -236,126 +359,6 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
 
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
           {renderStepContent()}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default GoogleBusinessSetup;
-            <>
-              <div className="text-center mb-6">
-                <Building2 className="w-12 h-12 text-[#4285F4] mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Sélectionnez votre compte
-                </h2>
-                <p className="text-gray-600">
-                  Choisissez le compte Google My Business que vous souhaitez gérer
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {accounts.map((account) => (
-                  <button
-                    key={account.name}
-                    onClick={() => handleAccountSelect(account.name)}
-                    className="w-full p-4 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors text-left"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {account.name.split('/')[1]}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {account.type} • {account.role}
-                        </div>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-gray-400" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {step === 'locations' && (
-            <>
-              <div className="text-center mb-6">
-                <MapPin className="w-12 h-12 text-[#4285F4] mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Choisissez votre établissement
-                </h2>
-                <p className="text-gray-600">
-                  Sélectionnez l'établissement dont vous voulez gérer les avis
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {locations.map((location) => (
-                  <button
-                    key={location.name}
-                    onClick={() => handleLocationSelect(location.name)}
-                    className="w-full p-4 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors text-left"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {location.locationName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {location.primaryCategory?.displayName}
-                        </div>
-                        {location.address && (
-                          <div className="text-xs text-gray-400 mt-1">
-                            {location.address.locality}, {location.address.administrativeArea}
-                          </div>
-                        )}
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-gray-400" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setStep('accounts')}
-                className="mt-4 text-[#4285F4] hover:underline text-sm"
-              >
-                ← Retour aux comptes
-              </button>
-            </>
-          )}
-
-          {step === 'complete' && (
-            <>
-              <div className="text-center mb-6">
-                <CheckCircle className="w-12 h-12 text-[#34A853] mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Configuration terminée !
-                </h2>
-                <p className="text-gray-600">
-                  Votre compte Google My Business est maintenant connecté
-                </p>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-2">Établissement sélectionné :</div>
-                <div className="font-medium text-gray-900">
-                  {locations.find(l => l.name === selectedLocationId)?.locationName}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {locations.find(l => l.name === selectedLocationId)?.primaryCategory?.displayName}
-                </div>
-              </div>
-
-              <button
-                onClick={handleComplete}
-                className="w-full bg-[#4285F4] text-white py-3 px-4 rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 font-medium"
-              >
-                Commencer à gérer mes avis
-              </button>
-            </>
-          )}
         </div>
       </div>
     </div>
