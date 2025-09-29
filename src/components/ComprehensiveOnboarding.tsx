@@ -244,17 +244,45 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${clientId}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri + '/')}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
       `response_type=code&` +
       `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage')}&` +
       `access_type=offline&` +
-      `prompt=consent&` +
-      `state=onboarding`;
+      `prompt=consent`;
     
     console.log('GMB Auth URL:', authUrl);
     
-    // Direct redirect instead of popup
-    window.location.href = authUrl;
+    const popup = window.open(
+      authUrl,
+      'google-oauth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+    
+    if (!popup) {
+      alert('Les popups sont bloquées. Veuillez autoriser les popups pour ce site.');
+      setLoading(false);
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        console.log('GMB Received auth code:', event.data.code);
+        handleOAuthCallback(event.data.code);
+        window.removeEventListener('message', handleMessage);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        setLoading(false);
+        window.removeEventListener('message', handleMessage);
+      }
+    }, 1000);
   };
 
   const handleOAuthCallback = async (code: string) => {
