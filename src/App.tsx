@@ -6,6 +6,7 @@ import ComprehensiveOnboarding from './components/ComprehensiveOnboarding';
 import MobileMenu from './components/MobileMenu';
 import Dashboard from './components/Dashboard';
 import GoogleReviews from './pages/GoogleReviews';
+import SettingsPage from './components/SettingsPage';
 import { useReviewsNotifications } from './hooks/useReviewsNotifications';
 
 function App() {
@@ -96,6 +97,20 @@ function App() {
     setCurrentView('app');
   };
 
+  const handleOnboardingCompleteWithData = (selectedStores: string[], selectedPlan: string) => {
+    // Save selected stores and plan
+    localStorage.setItem('selectedStores', JSON.stringify(selectedStores));
+    localStorage.setItem('selectedPlan', selectedPlan);
+    
+    // Set the first selected store as the current location
+    if (selectedStores.length > 0) {
+      setSelectedLocationId(selectedStores[0]);
+      localStorage.setItem('selectedLocationId', selectedStores[0]);
+    }
+    
+    setCurrentView('app');
+  };
+
   const handleLogout = () => {
     setUser(null);
     setAccessToken('');
@@ -135,7 +150,8 @@ function App() {
     return (
       <ComprehensiveOnboarding 
         user={user}
-        onComplete={handleOnboardingComplete} 
+        accessToken={accessToken}
+        onComplete={handleOnboardingCompleteWithData} 
       />
     );
   }
@@ -176,14 +192,7 @@ function App() {
         </div>
       )}
       {currentPage === 'settings' && (
-        <div className="p-4 pt-20">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Paramètres</h1>
-            <div className="bg-white rounded-xl p-6 shadow-sm text-center">
-              <p className="text-gray-600">Fonctionnalité en cours de développement</p>
-            </div>
-          </div>
-        </div>
+        <SettingsPage user={user} onLogout={handleLogout} />
       )}
     </div>
   );

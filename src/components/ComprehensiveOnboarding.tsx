@@ -1,64 +1,289 @@
-import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap } from 'lucide-react';
+
+interface GoogleAccount {
+  name: string;
+  type: string;
+  role: string;
+}
+
+interface GoogleLocation {
+  name: string;
+  locationName: string;
+  primaryCategory: {
+    displayName: string;
+  };
+  address?: {
+    addressLines: string[];
+    locality: string;
+    administrativeArea: string;
+  };
+}
 
 interface ComprehensiveOnboardingProps {
   user: any;
-  onComplete: () => void;
+  accessToken?: string;
+  onComplete: (selectedStores: string[], selectedPlan: string) => void;
 }
 
-const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ user, onComplete }) => {
+const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ 
+  user, 
+  accessToken: initialAccessToken,
+  onComplete 
+}) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [accessToken, setAccessToken] = useState<string>(initialAccessToken || '');
+  const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
+  const [locations, setLocations] = useState<GoogleLocation[]>([]);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<string>('starter');
+  const [loading, setLoading] = useState(false);
+  const [gmbConnected, setGmbConnected] = useState(!!initialAccessToken);
+
+  const plans = [
+    {
+      id: 'starter',
+      name: 'Starter',
+      price: '29€',
+      period: '/mois',
+      description: 'Parfait pour débuter',
+      features: [
+        '1 établissement',
+        '100 réponses IA/mois',
+        'Notifications en temps réel',
+        'Tableau de bord basique'
+      ],
+      icon: <Star className="w-6 h-6" />,
+      color: 'from-[#4285F4] to-[#34A853]',
+      popular: false
+    },
+    {
+      id: 'professional',
+      name: 'Professional',
+      price: '79€',
+      period: '/mois',
+      description: 'Pour les entreprises en croissance',
+      features: [
+        '5 établissements',
+        'Réponses IA illimitées',
+        'Analytics avancés',
+        'Support prioritaire',
+        'Personnalisation des réponses'
+      ],
+      icon: <Crown className="w-6 h-6" />,
+      color: 'from-[#FBBC05] to-[#EA4335]',
+      popular: true
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      price: '199€',
+      period: '/mois',
+      description: 'Pour les grandes entreprises',
+      features: [
+        'Établissements illimités',
+        'IA personnalisée',
+        'API complète',
+        'Support dédié',
+        'Intégrations avancées',
+        'Rapports personnalisés'
+      ],
+      icon: <Zap className="w-6 h-6" />,
+      color: 'from-[#EA4335] to-[#4285F4]',
+      popular: false
+    }
+  ];
 
   const steps = [
     {
       icon: <Star className="w-16 h-16 text-[#FBBC05]" />,
       title: `Bienvenue ${user?.name?.split(' ')[0]} !`,
       description: "Félicitations ! Vous venez de rejoindre Starlinko, la plateforme qui va révolutionner la gestion de vos avis Google My Business.",
-      color: "from-[#4285F4] to-[#34A853]"
+      color: "from-[#4285F4] to-[#34A853]",
+      type: 'welcome'
     },
     {
       icon: <Building2 className="w-16 h-16 text-[#4285F4]" />,
-      title: "Votre établissement connecté",
-      description: "Votre compte Google My Business est maintenant synchronisé. Tous vos avis seront automatiquement importés et organisés.",
-      color: "from-[#34A853] to-[#FBBC05]"
+      title: "Connectez Google My Business",
+      description: gmbConnected 
+        ? "Votre compte Google My Business est connecté ! Sélectionnez les établissements à gérer."
+        : "Connectez votre compte Google My Business pour commencer à gérer vos avis automatiquement.",
+      color: "from-[#34A853] to-[#FBBC05]",
+      type: 'gmb-connection'
     },
     {
-      icon: <MessageSquare className="w-16 h-16 text-[#34A853]" />,
+      icon: <CreditCard className="w-16 h-16 text-[#34A853]" />,
+      title: "Choisissez votre plan",
+      description: "Sélectionnez le plan qui correspond le mieux à vos besoins. Vous pourrez changer à tout moment.",
+      color: "from-[#FBBC05] to-[#EA4335]",
+      type: 'plan-selection'
+    },
+    {
+      icon: <MessageSquare className="w-16 h-16 text-[#EA4335]" />,
       title: "IA de réponse intelligente",
       description: "Notre intelligence artificielle analyse chaque avis et génère des réponses personnalisées et professionnelles en quelques secondes.",
-      color: "from-[#FBBC05] to-[#EA4335]"
+      color: "from-[#EA4335] to-[#4285F4]",
+      type: 'feature'
     },
     {
-      icon: <TrendingUp className="w-16 h-16 text-[#EA4335]" />,
+      icon: <TrendingUp className="w-16 h-16 text-[#4285F4]" />,
       title: "Tableau de bord analytique",
       description: "Suivez l'évolution de votre réputation avec des statistiques détaillées : note moyenne, taux de réponse, tendances.",
-      color: "from-[#EA4335] to-[#4285F4]"
+      color: "from-[#4285F4] to-[#34A853]",
+      type: 'feature'
     },
     {
-      icon: <Smartphone className="w-16 h-16 text-[#4285F4]" />,
+      icon: <Smartphone className="w-16 h-16 text-[#34A853]" />,
       title: "Notifications en temps réel",
       description: "Recevez des alertes instantanées pour chaque nouvel avis et ne manquez jamais une opportunité d'interaction.",
-      color: "from-[#4285F4] to-[#34A853]"
-    },
-    {
-      icon: <Users className="w-16 h-16 text-[#34A853]" />,
-      title: "Gestion multi-établissements",
-      description: "Gérez plusieurs établissements depuis une seule interface. Parfait pour les chaînes et franchises.",
-      color: "from-[#34A853] to-[#FBBC05]"
+      color: "from-[#34A853] to-[#FBBC05]",
+      type: 'feature'
     },
     {
       icon: <Check className="w-16 h-16 text-[#FBBC05]" />,
       title: "Tout est prêt !",
       description: "Votre compte est configuré et prêt à l'emploi. Commencez dès maintenant à améliorer votre réputation en ligne.",
-      color: "from-[#FBBC05] to-[#EA4335]"
+      color: "from-[#FBBC05] to-[#EA4335]",
+      type: 'complete'
     }
   ];
+
+  const connectGoogleMyBusiness = async () => {
+    if (accessToken) {
+      // Already connected, fetch accounts and locations
+      await fetchAccounts();
+      return;
+    }
+
+    setLoading(true);
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&` +
+      `redirect_uri=${encodeURIComponent(window.location.origin)}&` +
+      `response_type=code&` +
+      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&` +
+      `access_type=offline&` +
+      `prompt=consent`;
+    
+    const popup = window.open(
+      authUrl,
+      'google-oauth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+    
+    if (!popup) {
+      alert('Les popups sont bloquées. Veuillez autoriser les popups pour ce site.');
+      setLoading(false);
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        handleOAuthCallback(event.data.code);
+        window.removeEventListener('message', handleMessage);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        setLoading(false);
+        window.removeEventListener('message', handleMessage);
+      }
+    }, 1000);
+  };
+
+  const handleOAuthCallback = async (code: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth?action=exchange-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          code,
+          redirectUri: window.location.origin,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setAccessToken(data.access_token);
+        localStorage.setItem('accessToken', data.access_token);
+        setGmbConnected(true);
+        await fetchAccounts();
+      } else {
+        console.error('OAuth error:', data.error);
+        alert('Erreur lors de la connexion Google');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'échange du code:', error);
+      alert('Erreur lors de la connexion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAccounts = async () => {
+    if (!accessToken) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const data = await response.json();
+      
+      if (data.accounts && data.accounts.length > 0) {
+        setAccounts(data.accounts);
+        // Fetch locations for the first account
+        await fetchLocations(data.accounts[0].name);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des comptes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLocations = async (accountId: string) => {
+    try {
+      const response = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const data = await response.json();
+      
+      if (data.locations && data.locations.length > 0) {
+        setLocations(data.locations);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des établissements:', error);
+    }
+  };
+
+  const toggleStoreSelection = (locationId: string) => {
+    setSelectedStores(prev => 
+      prev.includes(locationId)
+        ? prev.filter(id => id !== locationId)
+        : [...prev, locationId]
+    );
+  };
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      onComplete();
+      onComplete(selectedStores, selectedPlan);
     }
   };
 
@@ -70,6 +295,155 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ user,
 
   const goToStep = (step: number) => {
     setCurrentStep(step);
+  };
+
+  const canProceed = () => {
+    const currentStepData = steps[currentStep];
+    
+    if (currentStepData.type === 'gmb-connection') {
+      return gmbConnected && selectedStores.length > 0;
+    }
+    
+    if (currentStepData.type === 'plan-selection') {
+      return selectedPlan !== '';
+    }
+    
+    return true;
+  };
+
+  const renderStepContent = () => {
+    const currentStepData = steps[currentStep];
+
+    if (currentStepData.type === 'gmb-connection') {
+      return (
+        <div className="space-y-6">
+          {!gmbConnected ? (
+            <button
+              onClick={connectGoogleMyBusiness}
+              disabled={loading}
+              className="w-full flex items-center justify-center px-6 py-4 bg-[#4285F4] text-white rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] disabled:opacity-50 transition-colors duration-200 font-medium"
+            >
+              <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              {loading ? 'Connexion...' : 'Connecter Google My Business'}
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-[#34A853]/10 rounded-lg p-4 text-center">
+                <Check className="w-8 h-8 text-[#34A853] mx-auto mb-2" />
+                <p className="text-[#34A853] font-medium">Google My Business connecté !</p>
+              </div>
+              
+              {locations.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">
+                    Sélectionnez vos établissements ({selectedStores.length} sélectionné{selectedStores.length > 1 ? 's' : ''})
+                  </h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {locations.map((location) => (
+                      <label
+                        key={location.name}
+                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedStores.includes(location.name)}
+                          onChange={() => toggleStoreSelection(location.name)}
+                          className="mr-3 h-4 w-4 text-[#4285F4] focus:ring-[#4285F4] border-gray-300 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 text-sm">
+                            {location.locationName}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {location.primaryCategory?.displayName}
+                          </div>
+                          {location.address && (
+                            <div className="text-xs text-gray-400">
+                              {location.address.locality}, {location.address.administrativeArea}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (currentStepData.type === 'plan-selection') {
+      return (
+        <div className="space-y-4">
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                selectedPlan === plan.id
+                  ? 'border-[#4285F4] bg-[#4285F4]/5'
+                  : 'border-gray-200 hover:border-gray-300'
+              } ${plan.popular ? 'ring-2 ring-[#FBBC05] ring-opacity-50' : ''}`}
+              onClick={() => setSelectedPlan(plan.id)}
+            >
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-[#FBBC05] text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Populaire
+                  </span>
+                </div>
+              )}
+              
+              <div className="flex items-start justify-between">
+                <div className="flex items-center">
+                  <div className={`p-2 rounded-lg bg-gradient-to-r ${plan.color} text-white mr-3`}>
+                    {plan.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{plan.name}</h3>
+                    <p className="text-sm text-gray-600">{plan.description}</p>
+                  </div>
+                </div>
+                
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-gray-900">{plan.price}</div>
+                  <div className="text-sm text-gray-500">{plan.period}</div>
+                </div>
+              </div>
+              
+              <ul className="mt-3 space-y-1">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-center text-sm text-gray-600">
+                    <Check className="w-4 h-4 text-[#34A853] mr-2 flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              
+              <div className="mt-3 flex items-center justify-center">
+                <div className={`w-4 h-4 rounded-full border-2 ${
+                  selectedPlan === plan.id
+                    ? 'border-[#4285F4] bg-[#4285F4]'
+                    : 'border-gray-300'
+                }`}>
+                  {selectedPlan === plan.id && (
+                    <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -125,12 +499,15 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ user,
             </div>
           )}
 
-          {/* Features highlight for middle steps */}
-          {currentStep >= 2 && currentStep <= 5 && (
+          {/* Step-specific content */}
+          {renderStepContent()}
+
+          {/* Features highlight for feature steps */}
+          {steps[currentStep].type === 'feature' && (
             <div className="bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 rounded-xl p-4 mb-6">
               <div className="flex items-center justify-center text-sm text-gray-600">
                 <Check className="w-4 h-4 text-[#34A853] mr-2" />
-                Fonctionnalité incluse dans votre compte
+                Fonctionnalité incluse dans votre plan
               </div>
             </div>
           )}
@@ -156,7 +533,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ user,
 
             <button
               onClick={nextStep}
-              className="flex items-center px-6 py-3 bg-[#4285F4] text-white rounded-full hover:bg-[#3367D6] transition-all transform hover:scale-105"
+              disabled={!canProceed()}
+              className="flex items-center px-6 py-3 bg-[#4285F4] text-white rounded-full hover:bg-[#3367D6] transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {currentStep === steps.length - 1 ? 'Commencer' : 'Suivant'}
               <ChevronRight className="w-5 h-5 ml-1" />
@@ -168,7 +546,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ user,
         {currentStep < steps.length - 1 && (
           <div className="text-center mt-6">
             <button
-              onClick={onComplete}
+              onClick={() => onComplete(selectedStores, selectedPlan)}
               className="text-white/80 hover:text-white transition-colors text-sm underline"
             >
               Passer l'introduction
