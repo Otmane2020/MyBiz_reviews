@@ -321,8 +321,7 @@ serve(async (req: Request) => {
       console.log('🏪 Getting locations for account:', accountId)
       
       try {
-        // Essayer d'abord la nouvelle API, puis l'ancienne en fallback
-        let locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
+        const locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -330,31 +329,12 @@ serve(async (req: Request) => {
         })
 
         console.log('📊 Google My Business Locations API response status:', locationsResponse.status)
-        let locationsData = await locationsResponse.json()
+        const locationsData = await locationsResponse.json()
         console.log('🏪 Locations data received:', {
           hasLocations: !!locationsData.locations,
           locationsCount: locationsData.locations?.length || 0,
           error: locationsData.error
         })
-        
-        // Si la nouvelle API échoue, essayer l'ancienne
-        if (!locationsResponse.ok && locationsResponse.status === 403) {
-          console.log('🔄 Trying legacy locations API...')
-          locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          
-          locationsData = await locationsResponse.json()
-          console.log('🏪 Legacy locations API response:', {
-            status: locationsResponse.status,
-            hasLocations: !!locationsData.locations,
-            locationsCount: locationsData.locations?.length || 0,
-            error: locationsData.error
-          })
-        }
         
         if (!locationsResponse.ok) {
           console.error('❌ Locations API error:', locationsData)
