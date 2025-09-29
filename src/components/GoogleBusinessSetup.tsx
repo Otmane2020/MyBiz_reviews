@@ -73,8 +73,20 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       
       if (!response.ok) {
         const text = await response.text();
-        console.error('Non-JSON response received from google-oauth function:', text);
-        throw new Error('La fonction Supabase google-oauth n\'est pas déployée ou retourne une erreur HTML. Vérifiez les logs Supabase.');
+        console.error('❌ HTTP Error from google-oauth function:', response.status, text);
+        
+        // Try to parse as JSON first
+        try {
+          const errorData = JSON.parse(text);
+          throw new Error(`Erreur API: ${errorData.error || 'Erreur inconnue'}`);
+        } catch (parseError) {
+          // If not JSON, it's likely an HTML error page
+          if (text.includes('<!DOCTYPE') || text.includes('<html>')) {
+            throw new Error('La fonction Supabase google-oauth n\'est pas déployée correctement. Vérifiez que la fonction Edge est active dans votre projet Supabase.');
+          } else {
+            throw new Error(`Erreur HTTP ${response.status}: ${text.substring(0, 100)}...`);
+          }
+        }
       }
       
       const data = await response.json();
@@ -139,6 +151,13 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       });
       
       console.log('📡 Locations response status:', response.status);
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('❌ HTTP Error from locations API:', response.status, text);
+        throw new Error(`Erreur HTTP ${response.status} lors de la récupération des établissements`);
+      }
+      
       const data = await response.json();
       console.log('🏢 Locations response:', data);
       
