@@ -21,16 +21,16 @@ serve(async (req: Request) => {
   }
 
   try {
-    console.log('🚀 Auth-login function called', {
+    console.log('🚀 Auth-login function called:', {
       method: req.method,
       url: req.url,
-      headers: Object.fromEntries(req.headers.entries())
+      hasAuthHeader: !!req.headers.get('authorization'),
+      contentType: req.headers.get('content-type')
     })
     
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
     // Vérifier les variables d'environnement
     console.log('🔑 Environment check:', {
@@ -38,14 +38,20 @@ serve(async (req: Request) => {
       hasClientSecret: !!GOOGLE_CLIENT_SECRET,
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseKey: !!supabaseServiceKey,
-      clientIdLength: GOOGLE_CLIENT_ID?.length || 0
+      clientIdLength: GOOGLE_CLIENT_ID?.length || 0,
+      clientIdPreview: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'MISSING'
     })
 
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       console.error('❌ Missing Google OAuth credentials')
       return new Response(
         JSON.stringify({ 
-          error: 'Configuration Google OAuth manquante',
+          error: 'Configuration Google OAuth manquante. Vérifiez GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET dans les variables d\'environnement Supabase.',
+          details: {
+            hasClientId: !!GOOGLE_CLIENT_ID,
+            hasClientSecret: !!GOOGLE_CLIENT_SECRET,
+            clientIdPreview: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'MISSING'
+          },
           success: false
         }),
         {
@@ -58,11 +64,14 @@ serve(async (req: Request) => {
       )
     }
 
+    // Initialize Supabase client after env check
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
     // Parse request body
     let requestData;
     try {
       const bodyText = await req.text()
-      console.log('📥 Raw request body:', bodyText.substring(0, 200))
+      console.log('📥 Request body length:', bodyText.length)
       requestData = JSON.parse(bodyText)
       console.log('📋 Parsed request data:', {
         action: requestData.action,
@@ -76,7 +85,8 @@ serve(async (req: Request) => {
       console.error('❌ Error parsing request body:', parseError)
       return new Response(
         JSON.stringify({ 
-          error: 'Invalid JSON in request body',
+          error: 'Corps de requête JSON invalide',
+          details: parseError.message,
           success: false
         }),
         {

@@ -99,10 +99,8 @@ Pour obtenir votre Client ID:
         url: `${supabaseUrl}/functions/v1/auth-login`,
         code: code ? `${code.substring(0, 20)}...` : 'MISSING',
         redirectUri: window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        }
+        hasSupabaseUrl: !!supabaseUrl,
+        hasSupabaseKey: !!supabaseKey
       });
       
       const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
@@ -110,7 +108,6 @@ Pour obtenir votre Client ID:
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
-          'apikey': supabaseKey,
         },
         body: JSON.stringify({
           action: 'exchange-code',
@@ -123,30 +120,35 @@ Pour obtenir votre Client ID:
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
+        contentType: response.headers.get('content-type')
       });
-      const contentType = response.headers.get('content-type');
-      console.log('📄 Content-Type:', contentType);
       
-      let data;
+      const contentType = response.headers.get('content-type')
+      let data
       
       if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-        console.log('📊 JSON Response data:', data);
+        data = await response.json()
+        console.log('📊 JSON Response data:', {
+          success: data.success,
+          hasUser: !!data.user,
+          hasAccessToken: !!data.access_token,
+          error: data.error,
+          details: data.details
+        })
       } else {
         // Si ce n'est pas du JSON, c'est probablement une erreur HTML
-        const text = await response.text();
+        const text = await response.text()
         console.error('❌ Non-JSON response received:', {
           status: response.status,
           statusText: response.statusText,
           contentType,
           textPreview: text.substring(0, 500)
-        });
+        })
         
         if (text.includes('<!DOCTYPE')) {
-          throw new Error('Erreur de configuration Supabase. Vérifiez que la fonction auth-login est déployée.');
+          throw new Error('Erreur de configuration Supabase. Vérifiez que la fonction auth-login est déployée.')
         } else {
-          throw new Error(`Réponse inattendue du serveur: ${text.substring(0, 100)}...`);
+          throw new Error(`Réponse inattendue du serveur: ${text.substring(0, 100)}...`)
         }
       }
       
