@@ -57,6 +57,18 @@ function App() {
 
   // Listen for OAuth popup messages
   useEffect(() => {
+    // Handle OAuth callback directly in main window (not popup)
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code && !user) {
+      console.log('OAuth callback detected with code:', code);
+      handleDirectOAuthCallback(code);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       
@@ -68,6 +80,51 @@ function App() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  const handleDirectOAuthCallback = async (code: string) => {
+    try {
+      console.log('Processing OAuth callback...');
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Supabase configuration missing');
+        alert('Configuration Supabase manquante');
+        return;
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          action: 'exchange-code',
+          code,
+          redirectUri: window.location.origin,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.user && data.access_token) {
+        console.log('OAuth success, setting user data');
+        setUser(data.user);
+        setAccessToken(data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('accessToken', data.access_token);
+        setCurrentView('google-setup');
+      } else {
+        console.error('OAuth error:', data);
+        alert(`Erreur lors de la connexion: ${data.error || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error('Error processing OAuth callback:', error);
+      alert(`Erreur lors de la connexion: ${error.message}`);
+    }
+  };
 
   // Check if we're in OAuth popup
   useEffect(() => {

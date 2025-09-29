@@ -31,6 +31,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
 
     setLoading(true);
     
+    // Use direct redirect instead of popup for better compatibility
     const redirectUri = window.location.origin;
     console.log('Redirect URI:', redirectUri);
     
@@ -44,39 +45,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     
     console.log('Auth URL:', authUrl);
     
-    const popup = window.open(
-      authUrl,
-      'google-oauth',
-      'width=500,height=600,scrollbars=yes,resizable=yes'
-    );
-    
-    if (!popup) {
-      alert('Les popups sont bloquées. Veuillez autoriser les popups pour ce site.');
-      setLoading(false);
-      return;
-    }
-
-    // Listen for popup messages
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
-        console.log('Received auth code:', event.data.code);
-        handleOAuthCallback(event.data.code);
-        window.removeEventListener('message', handleMessage);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    
-    // Check if popup is closed manually
-    const checkClosed = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(checkClosed);
-        setLoading(false);
-        window.removeEventListener('message', handleMessage);
-      }
-    }, 1000);
+    // Direct redirect instead of popup
+    window.location.href = authUrl;
   };
 
   const handleOAuthCallback = async (code: string) => {
