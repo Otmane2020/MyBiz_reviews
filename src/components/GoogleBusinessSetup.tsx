@@ -58,7 +58,7 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
 
   const handleGoogleConnect = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = window.location.origin;
+    const redirectUri = window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro';
     
     const scope = [
       'https://www.googleapis.com/auth/business.manage',
@@ -68,6 +68,8 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${clientId}&` +
+      // Ajout d'un log pour vérifier l'URI de redirection envoyée à Google
+      console.log('GMB Connect: Using redirectUri:', redirectUri);
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
       `scope=${encodeURIComponent(scope)}&` +
       `response_type=code&` +
@@ -239,6 +241,9 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
       console.log('🔄 Processing OAuth callback...');
       
       const response = await supabase.functions.invoke('auth-login', {
+        // Assurer la cohérence de l'URI de redirection pour la fonction Supabase
+        const redirectUri = window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro';
+
         body: {
           action: 'exchange-code',
           code,
