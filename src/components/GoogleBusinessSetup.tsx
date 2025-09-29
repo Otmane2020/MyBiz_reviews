@@ -62,14 +62,21 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
-        console.error('Non-JSON response received from google-oauth function:', text);
+        },
         body: JSON.stringify({
           action: 'get-accounts',
-          throw new Error('La fonction Supabase google-oauth n\'est pas déployée ou retourne une erreur HTML. Vérifiez les logs Supabase.');
+          accessToken: accessToken,
         }),
       });
       
       console.log('📡 Response status:', response.status);
+      
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('Non-JSON response received from google-oauth function:', text);
+        throw new Error('La fonction Supabase google-oauth n\'est pas déployée ou retourne une erreur HTML. Vérifiez les logs Supabase.');
+      }
+      
       const data = await response.json();
       console.log('📊 Accounts response:', data);
       
