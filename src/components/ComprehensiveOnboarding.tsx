@@ -381,9 +381,18 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         setAccounts(data.accounts);
         // Fetch locations for the first account
         await fetchLocations(data.accounts[0].name);
+      } else {
+        console.error('❌ Aucun compte trouvé dans onboarding:', data);
+        if (data.error) {
+          console.error('🚨 Erreur API onboarding:', data.error);
+          alert(`Erreur API Google: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
+        } else {
+          alert('Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google.');
+        }
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des comptes:', error);
+      alert(`Erreur lors de la récupération des comptes: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -414,9 +423,18 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       
       if (data.locations && data.locations.length > 0) {
         setLocations(data.locations);
+      } else {
+        console.error('❌ Aucun établissement trouvé dans onboarding:', data);
+        if (data.error) {
+          console.error('🚨 Erreur API établissements onboarding:', data.error);
+          alert(`Erreur lors de la récupération des établissements: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
+        } else {
+          alert('Aucun établissement trouvé. Assurez-vous d\'avoir créé au moins un établissement dans votre profil Google My Business.');
+        }
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des établissements:', error);
+      alert(`Erreur lors de la récupération des établissements: ${error.message}`);
     }
   };
 

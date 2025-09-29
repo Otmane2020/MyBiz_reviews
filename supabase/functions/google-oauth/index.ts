@@ -151,16 +151,42 @@ serve(async (req: Request) => {
       // Récupérer les comptes Google My Business
       const { accessToken } = body
 
+      console.log('🔍 Getting accounts with token:', accessToken ? 'Present' : 'Missing')
+      
       const accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       })
 
+      console.log('📡 Accounts API response status:', accountsResponse.status)
+      console.log('📡 Accounts API response headers:', Object.fromEntries(accountsResponse.headers.entries()))
+      
       const accountsData = await accountsResponse.json()
+      console.log('📊 Accounts API response data:', JSON.stringify(accountsData, null, 2))
+      
+      if (!accountsResponse.ok) {
+        console.error('❌ Accounts API error:', accountsData)
+        return new Response(
+          JSON.stringify({
+            error: accountsData.error || { message: `HTTP ${accountsResponse.status}: ${accountsResponse.statusText}` },
+            success: false
+          }),
+          {
+            status: accountsResponse.status,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
 
       return new Response(
-        JSON.stringify(accountsData),
+        JSON.stringify({
+          ...accountsData,
+          success: true
+        }),
         {
           headers: {
             'Content-Type': 'application/json',
@@ -174,16 +200,43 @@ serve(async (req: Request) => {
       // Récupérer les établissements pour un compte
       const { accessToken, accountId } = body
 
+      console.log('🏪 Getting locations for account:', accountId)
+      console.log('🔑 Using token:', accessToken ? 'Present' : 'Missing')
+      
       const locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       })
 
+      console.log('📡 Locations API response status:', locationsResponse.status)
+      console.log('📡 Locations API response headers:', Object.fromEntries(locationsResponse.headers.entries()))
+      
       const locationsData = await locationsResponse.json()
+      console.log('🏢 Locations API response data:', JSON.stringify(locationsData, null, 2))
+      
+      if (!locationsResponse.ok) {
+        console.error('❌ Locations API error:', locationsData)
+        return new Response(
+          JSON.stringify({
+            error: locationsData.error || { message: `HTTP ${locationsResponse.status}: ${locationsResponse.statusText}` },
+            success: false
+          }),
+          {
+            status: locationsResponse.status,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
 
       return new Response(
-        JSON.stringify(locationsData),
+        JSON.stringify({
+          ...locationsData,
+          success: true
+        }),
         {
           headers: {
             'Content-Type': 'application/json',
