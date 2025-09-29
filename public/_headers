@@ -10,4 +10,7 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   
   # Content Security Policy
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://mybusiness.googleapis.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co wss://*.supabase.co; frame-src https://accounts.google.com;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://bolt.new; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://mybusiness.googleapis.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co wss://*.supabase.co; frame-src https://accounts.google.com;
+  
+  # Cross-Origin-Opener-Policy pour les popups OAuth
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
