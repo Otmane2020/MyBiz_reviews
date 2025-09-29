@@ -45,15 +45,19 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
 
   const fetchAccounts = async () => {
     try {
+      console.log('🔍 Fetching Google My Business accounts...');
+      console.log('🔑 Access token:', accessToken ? 'Present' : 'Missing');
+      
       // Use the correct Google My Business API v4 endpoint
       const response = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      const data = await response.json();
       
-      console.log('Accounts response:', data);
+      console.log('📡 Response status:', response.status);
+      const data = await response.json();
+      console.log('📊 Accounts response:', data);
       
       if (data.accounts && data.accounts.length > 0) {
         setAccounts(data.accounts);
@@ -63,9 +67,9 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
           fetchLocations(data.accounts[0].name);
         }
       } else {
-        console.error('Aucun compte Google My Business trouvé:', data);
+        console.error('❌ Aucun compte Google My Business trouvé:', data);
         if (data.error) {
-          console.error('Erreur API:', data.error);
+          console.error('🚨 Erreur API:', data.error);
           if (data.error.code === 401) {
             alert('Token d\'accès expiré. Veuillez vous reconnecter.');
           } else if (data.error.code === 403) {
@@ -78,7 +82,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des comptes:', error);
+      console.error('💥 Erreur lors de la récupération des comptes:', error);
       alert('Erreur de connexion à Google My Business. Vérifiez votre connexion internet et réessayez.');
     } finally {
       setLoading(false);
@@ -88,30 +92,33 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   const fetchLocations = async (accountId: string) => {
     setLoading(true);
     try {
+      console.log('🏪 Fetching locations for account:', accountId);
+      
       // Use the correct Google My Business API v4 endpoint
       const response = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      const data = await response.json();
       
-      console.log('Locations response:', data);
+      console.log('📡 Locations response status:', response.status);
+      const data = await response.json();
+      console.log('🏢 Locations response:', data);
       
       if (data.locations && data.locations.length > 0) {
         setLocations(data.locations);
         setStep('locations');
       } else {
         if (data.error) {
-          console.error('Erreur API locations:', data.error);
+          console.error('🚨 Erreur API locations:', data.error);
           alert(`Erreur lors de la récupération des établissements: ${data.error.message}`);
         } else {
-          console.error('Aucun établissement trouvé:', data);
+          console.error('❌ Aucun établissement trouvé:', data);
           alert('Aucun établissement trouvé pour ce compte. Vérifiez votre configuration Google My Business.');
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des établissements:', error);
+      console.error('💥 Erreur lors de la récupération des établissements:', error);
       alert('Erreur de réseau lors de la récupération des établissements. Vérifiez votre connexion.');
     } finally {
       setLoading(false);
