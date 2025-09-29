@@ -126,21 +126,20 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
     try {
       console.log('🚀 Fetching accounts with token:', accessToken ? 'Present' : 'Missing');
       
-      const response = await supabase.functions.invoke('auth-login', {
+      const { data, error } = await supabase.functions.invoke('auth-login', {
         body: {
           action: 'get-accounts',
           accessToken: accessToken
         }
       });
 
-      console.log('📡 Supabase function response:', response);
+      console.log('📡 Supabase function response:', { data, error });
       
-      if (response.error) {
-        console.error('❌ Supabase function error:', response.error);
-        throw new Error(`Erreur fonction: ${response.error.message || JSON.stringify(response.error)}`);
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        throw new Error(`Erreur fonction: ${error.message || JSON.stringify(error)}`);
       }
 
-      const data = response.data;
       console.log('📊 Function data:', data);
       
       if (data?.success) {
@@ -189,7 +188,7 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
     try {
       console.log('🏪 Fetching locations for account:', accountId);
       
-      const response = await supabase.functions.invoke('auth-login', {
+      const { data, error } = await supabase.functions.invoke('auth-login', {
         body: {
           action: 'get-locations',
           accessToken: accessToken,
@@ -197,14 +196,13 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
         }
       });
 
-      console.log('📡 Locations response:', response);
+      console.log('📡 Locations response:', { data, error });
       
-      if (response.error) {
-        console.error('❌ Locations function error:', response.error);
-        throw new Error(`Erreur fonction: ${response.error.message || JSON.stringify(response.error)}`);
+      if (error) {
+        console.error('❌ Locations function error:', error);
+        throw new Error(`Erreur fonction: ${error.message || JSON.stringify(error)}`);
       }
 
-      const data = response.data;
       console.log('📊 Locations data:', data);
       
       if (data?.success) {
@@ -280,7 +278,7 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
       
       const redirectUri = window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro';
       
-      const response = await supabase.functions.invoke('auth-login', {
+      const { data, error } = await supabase.functions.invoke('auth-login', {
         body: {
           action: 'exchange-code',
           code,
@@ -288,14 +286,13 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
         }
       });
 
-      console.log('📡 OAuth callback response:', response);
+      console.log('📡 OAuth callback response:', { data, error });
       
-      if (response.error) {
-        throw new Error(`Erreur fonction: ${response.error.message || JSON.stringify(response.error)}`);
+      if (error) {
+        console.error('❌ OAuth callback error:', error);
+        throw new Error(`Erreur fonction: ${error.message || JSON.stringify(error)}`);
       }
 
-      const data = response.data;
-      
       if (data?.success && data.access_token) {
         console.log('✅ OAuth success, got access token');
         // Update the access token and proceed
