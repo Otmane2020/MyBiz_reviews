@@ -31,8 +31,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
 
     setLoading(true);
     
-    // Use direct redirect - no popup to avoid Google's security restrictions
-    const redirectUri = window.location.origin + '/';
+    // Use direct redirect instead of popup for better compatibility
+    const redirectUri = window.location.origin;
     console.log('Redirect URI:', redirectUri);
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -45,7 +45,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     
     console.log('Auth URL:', authUrl);
     
-    // Direct redirect - this avoids Google's popup restrictions
+    // Direct redirect instead of popup
     window.location.href = authUrl;
   };
 
@@ -86,7 +86,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
         body: JSON.stringify({
           action: 'exchange-code',
           code,
-          redirectUri: window.location.origin + '/',
+          redirectUri: window.location.origin,
         }),
       });
 

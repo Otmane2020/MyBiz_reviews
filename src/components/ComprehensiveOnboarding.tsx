@@ -239,20 +239,21 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       return;
     }
     
-    const redirectUri = window.location.origin + '/';
+    const redirectUri = window.location.origin;
     console.log('GMB Redirect URI:', redirectUri);
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${clientId}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri + '/')}&` +
       `response_type=code&` +
       `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage')}&` +
       `access_type=offline&` +
-      `prompt=consent`;
+      `prompt=consent&` +
+      `state=onboarding`;
     
     console.log('GMB Auth URL:', authUrl);
     
-    // Direct redirect - no popup to avoid Google's security restrictions
+    // Direct redirect instead of popup
     window.location.href = authUrl;
   };
 
@@ -283,7 +284,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         body: JSON.stringify({
           action: 'exchange-code',
           code,
-          redirectUri: window.location.origin + '/',
+          redirectUri: window.location.origin,
         }),
       });
 

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://starlinko.pro",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 }
@@ -45,81 +45,11 @@ serve(async (req: Request) => {
     }
 
     // Parse request body
-    let requestData
-    try {
-      requestData = await req.json()
-    } catch (error) {
-      console.error('❌ Failed to parse request body:', error)
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid JSON in request body',
-          success: false
-        }),
-        {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      )
-    }
-    
+    const requestData = await req.json()
     const { action } = requestData
     
     console.log('🎯 Action requested:', action)
 
-    // --- get-auth-url ---
-    if (action === 'get-auth-url') {
-      const { redirectUri } = requestData
-
-      if (!redirectUri) {
-        return new Response(
-          JSON.stringify({
-            error: 'redirectUri requis',
-            success: false
-          }),
-          {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
-
-      const scopes = [
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/business.manage'
-      ].join(' ')
-
-      const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        new URLSearchParams({
-          client_id: GOOGLE_CLIENT_ID!,
-          redirect_uri: redirectUri,
-          response_type: 'code',
-          scope: scopes,
-          access_type: 'offline',
-          prompt: 'consent'
-        })
-
-      return new Response(
-        JSON.stringify({
-          authUrl: url,
-          success: true
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        }
-      )
-    }
-
-    // --- exchange-code ---
     if (action === 'exchange-code') {
       const { code, redirectUri } = requestData
 
@@ -141,55 +71,19 @@ serve(async (req: Request) => {
 
       console.log('🔄 Exchanging code for tokens')
 
-      let tokenResponse
-      try {
-        tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: GOOGLE_CLIENT_ID,
-            client_secret: GOOGLE_CLIENT_SECRET,
-            code: code,
-            grant_type: "authorization_code",
-            redirect_uri: redirectUri,
-          }),
-        })
-      } catch (error) {
-        console.error('❌ Token request failed:', error)
-        return new Response(
-          JSON.stringify({ 
-            error: `Token request failed: ${error.message}`,
-            success: false
-          }),
-          {
-            status: 500,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
+      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          code: code,
+          grant_type: "authorization_code",
+          redirect_uri: redirectUri,
+        }),
+      })
 
-      let tokens
-      try {
-        tokens = await tokenResponse.json()
-      } catch (error) {
-        console.error('❌ Failed to parse token response:', error)
-        return new Response(
-          JSON.stringify({ 
-            error: `Failed to parse token response: ${error.message}`,
-            success: false
-          }),
-          {
-            status: 500,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
+      const tokens = await tokenResponse.json()
 
       if (!tokenResponse.ok) {
         console.error('❌ Token exchange error:', tokens)
@@ -209,49 +103,13 @@ serve(async (req: Request) => {
       }
 
       // Get user info
-      let userResponse
-      try {
-        userResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
-          headers: {
-            Authorization: `Bearer ${tokens.access_token}`,
-          },
-        })
-      } catch (error) {
-        console.error('❌ User info request failed:', error)
-        return new Response(
-          JSON.stringify({ 
-            error: `User info request failed: ${error.message}`,
-            success: false
-          }),
-          {
-            status: 500,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
+      const userResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+      })
 
-      let userData
-      try {
-        userData = await userResponse.json()
-      } catch (error) {
-        console.error('❌ Failed to parse user response:', error)
-        return new Response(
-          JSON.stringify({ 
-            error: `Failed to parse user response: ${error.message}`,
-            success: false
-          }),
-          {
-            status: 500,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
+      const userData = await userResponse.json()
       
       if (!userResponse.ok) {
         console.error('❌ User info error:', userData)
@@ -288,7 +146,6 @@ serve(async (req: Request) => {
       )
     }
 
-    // --- get-accounts ---
     if (action === 'get-accounts') {
       const { accessToken } = requestData
 
@@ -308,99 +165,43 @@ serve(async (req: Request) => {
         )
       }
 
-      console.log('🏢 Getting Google Business Profile accounts')
+      console.log('🏢 Getting Google My Business accounts')
       
-      // Use the new Google Business Profile API
-      let accountsResponse
-      try {
-        accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        })
-      } catch (error) {
-        console.error('❌ Accounts request failed:', error)
-        return new Response(
-          JSON.stringify({
-            error: {
-              message: `Accounts request failed: ${error.message}`,
-              code: 500
-            },
-            success: false
-          }),
-          {
-            status: 500,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
+      const accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
+      const accountsData = await accountsResponse.json()
+      
       if (!accountsResponse.ok) {
-        let errorData
-        try {
-          const responseText = await accountsResponse.text()
-          try {
-            errorData = JSON.parse(responseText)
-          } catch (parseError) {
-            errorData = { message: responseText, code: accountsResponse.status }
-          }
-        } catch (e) {
-          errorData = { message: 'Unable to read response', code: accountsResponse.status }
-        }
-        console.error('❌ Accounts API error:', errorData)
-
+        console.error('❌ Accounts API error:', accountsData)
+        
         let errorMessage = 'Erreur inconnue'
-        if (errorData.error) {
-          if (errorData.error.code === 401) {
+        if (accountsData.error) {
+          if (accountsData.error.code === 401) {
             errorMessage = 'Token d\'accès expiré ou invalide'
-          } else if (errorData.error.code === 403) {
-            errorMessage = 'Accès refusé. Vérifiez que l\'API Google Business Profile est activée'
-          } else if (errorData.error.code === 404) {
-            errorMessage = 'Aucun compte Google Business Profile trouvé'
+          } else if (accountsData.error.code === 403) {
+            errorMessage = 'Accès refusé. Vérifiez que l\'API Google My Business est activée'
+          } else if (accountsData.error.code === 404) {
+            errorMessage = 'Aucun compte Google My Business trouvé'
           } else {
-            errorMessage = errorData.error.message || `Erreur ${errorData.error.code}`
+            errorMessage = accountsData.error.message || `Erreur ${accountsData.error.code}`
           }
-        } else if (errorData.message) {
-            errorMessage = `Erreur HTTP ${errorData.code}: ${errorData.message.substring(0, 100)}...`
         }
-
+        
         return new Response(
           JSON.stringify({
             error: {
               message: errorMessage,
-              code: errorData.error?.code || accountsResponse.status
+              code: accountsData.error?.code || accountsResponse.status
             },
             success: false
           }),
           {
             status: accountsResponse.status,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
-
-      let accountsData
-      try {
-        accountsData = await accountsResponse.json()
-      } catch (error) {
-        console.error('❌ Failed to parse accounts response:', error)
-        return new Response(
-          JSON.stringify({
-            error: {
-              message: `Failed to parse accounts response: ${error.message}`,
-              code: 500
-            },
-            success: false
-          }),
-          {
-            status: 500,
             headers: {
               'Content-Type': 'application/json',
               ...corsHeaders,
@@ -424,7 +225,6 @@ serve(async (req: Request) => {
       )
     }
 
-    // --- get-locations ---
     if (action === 'get-locations') {
       const { accessToken, accountId } = requestData
 
@@ -446,97 +246,41 @@ serve(async (req: Request) => {
 
       console.log('🏪 Getting locations for account:', accountId)
       
-      // Use the new Google Business Profile API for locations
-      let locationsResponse
-      try {
-        locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        })
-      } catch (error) {
-        console.error('❌ Locations request failed:', error)
-        return new Response(
-          JSON.stringify({
-            error: {
-              message: `Locations request failed: ${error.message}`,
-              code: 500
-            },
-            success: false
-          }),
-          {
-            status: 500,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
+      const locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
+      const locationsData = await locationsResponse.json()
+      
       if (!locationsResponse.ok) {
-        let errorData
-        try {
-          const responseText = await locationsResponse.text()
-          try {
-            errorData = JSON.parse(responseText)
-          } catch (parseError) {
-            errorData = { message: responseText, code: locationsResponse.status }
-          }
-        } catch (e) {
-          errorData = { message: 'Unable to read response', code: locationsResponse.status }
-        }
-        console.error('❌ Locations API error:', errorData)
-
+        console.error('❌ Locations API error:', locationsData)
+        
         let errorMessage = 'Erreur inconnue'
-        if (errorData.error) {
-          if (errorData.error.code === 401) {
+        if (locationsData.error) {
+          if (locationsData.error.code === 401) {
             errorMessage = 'Token d\'accès expiré ou invalide'
-          } else if (errorData.error.code === 403) {
+          } else if (locationsData.error.code === 403) {
             errorMessage = 'Accès refusé aux établissements'
-          } else if (errorData.error.code === 404) {
+          } else if (locationsData.error.code === 404) {
             errorMessage = 'Aucun établissement trouvé pour ce compte'
           } else {
-            errorMessage = errorData.error.message || `Erreur ${errorData.error.code}`
+            errorMessage = locationsData.error.message || `Erreur ${locationsData.error.code}`
           }
-        } else if (errorData.message) {
-            errorMessage = `Erreur HTTP ${errorData.code}: ${errorData.message.substring(0, 100)}...`
         }
-
+        
         return new Response(
           JSON.stringify({
             error: {
               message: errorMessage,
-              code: errorData.error?.code || locationsResponse.status
+              code: locationsData.error?.code || locationsResponse.status
             },
             success: false
           }),
           {
             status: locationsResponse.status,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          }
-        )
-      }
-
-      let locationsData
-      try {
-        locationsData = await locationsResponse.json()
-      } catch (error) {
-        console.error('❌ Failed to parse locations response:', error)
-        return new Response(
-          JSON.stringify({
-            error: {
-              message: `Failed to parse locations response: ${error.message}`,
-              code: 500
-            },
-            success: false
-          }),
-          {
-            status: 500,
             headers: {
               'Content-Type': 'application/json',
               ...corsHeaders,

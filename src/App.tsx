@@ -68,6 +68,17 @@ function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        // This will be handled by AuthPage component
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   const handleDirectOAuthCallback = async (code: string) => {
@@ -103,7 +114,7 @@ function App() {
         body: JSON.stringify({
           action: 'exchange-code',
           code,
-          redirectUri: window.location.origin + '/',
+          redirectUri: window.location.origin,
         }),
       });
 
@@ -131,7 +142,14 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     
-    // No longer using popups - all OAuth is handled via direct redirects
+    if (code && window.opener) {
+      // We're in a popup, send code to parent
+      window.opener.postMessage({
+        type: 'GOOGLE_AUTH_SUCCESS',
+        code: code
+      }, window.location.origin);
+      window.close();
+    }
   }, []);
 
   const handleGoogleAuth = (userData: any, token: string) => {
