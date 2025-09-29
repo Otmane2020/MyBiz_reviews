@@ -94,7 +94,7 @@ Pour obtenir votre Client ID:
         return;
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ Pour obtenir votre Client ID:
         console.error('Non-JSON response received:', text);
         
         if (text.includes('<!DOCTYPE')) {
-          throw new Error('Erreur de configuration Supabase. Vérifiez que la fonction google-oauth est déployée.');
+          throw new Error('Erreur de configuration Supabase. Vérifiez que la fonction auth-login est déployée.');
         } else {
           throw new Error(`Réponse inattendue du serveur: ${text.substring(0, 100)}...`);
         }
