@@ -23,9 +23,26 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
 
   const handleGoogleAuth = () => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
+    console.log('Environment variables:', {
+      VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL ? 'Present' : 'Missing',
+      VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Present' : 'Missing'
+    });
     
     if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your_google_client_id_here') {
-      alert('Configuration Google OAuth manquante ou invalide. Client ID: ' + GOOGLE_CLIENT_ID);
+      alert(`Configuration Google OAuth manquante ou invalide. 
+      
+Client ID reçu: "${GOOGLE_CLIENT_ID}"
+
+SOLUTION:
+1. Ouvrez le fichier .env à la racine du projet
+2. Remplacez la ligne VITE_GOOGLE_CLIENT_ID par votre vrai Client ID Google
+3. Redémarrez le serveur de développement (npm run dev)
+
+Pour obtenir votre Client ID:
+- Allez sur https://console.cloud.google.com/apis/credentials
+- Créez des identifiants OAuth 2.0
+- Copiez le Client ID`);
       return;
     }
 
