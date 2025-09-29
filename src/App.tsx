@@ -1,5 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
+import SuperAdmin from './pages/SuperAdmin';
 import AuthPage from './components/AuthPage';
 import GoogleBusinessSetup from './components/GoogleBusinessSetup';
 import ComprehensiveOnboarding from './components/ComprehensiveOnboarding';
@@ -16,6 +17,9 @@ function App() {
   const [accessToken, setAccessToken] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+
+  // Check if current path is /superadmin
+  const isSupeAdminRoute = window.location.pathname === '/superadmin';
 
   // Notifications hook
   const {
@@ -123,6 +127,11 @@ function App() {
     localStorage.removeItem('selectedLocationId');
     setCurrentView('auth');
   };
+
+  // Handle Super Admin route
+  if (isSupeAdminRoute) {
+    return <SuperAdmin />;
+  }
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);

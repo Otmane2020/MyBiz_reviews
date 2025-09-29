@@ -617,6 +617,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
+
+              <button 
+                onClick={handleSuperAdminAccess}
+                className="w-full flex items-center justify-between p-4 border-2 border-[#EA4335] rounded-lg hover:bg-[#EA4335]/5 transition-colors bg-gradient-to-r from-[#EA4335]/5 to-[#4285F4]/5"
+              >
+                <div className="flex items-center">
+                  <Shield className="w-5 h-5 text-[#EA4335] mr-3" />
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">Accès Super Admin</div>
+                    <div className="text-sm text-gray-500">Ouvrir le panneau d'administration complet</div>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <span className="bg-[#EA4335] text-white text-xs px-2 py-1 rounded-full mr-2">
+                    Admin
+                  </span>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                </div>
+              </button>
             </div>
           </div>
         );
@@ -629,6 +648,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
   // Only show admin tab for specific users (you can add your logic here)
   const isAdmin = user?.email === 'admin@starlinko.com' || user?.email === 'oben.rockman@gmail.com';
   const filteredTabs = isAdmin ? tabs : tabs.filter(tab => tab.id !== 'admin');
+
+  const handleSuperAdminAccess = () => {
+    window.open('/superadmin', '_blank');
+  };
 
   return (
     <div className="min-h-screen bg-[#F1F3F4] pt-20">
