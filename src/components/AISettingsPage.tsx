@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, MessageSquare, Settings, Save, RefreshCw, Zap, Volume2, Smile, Heart, Coffee, User, FileText, Signature, TestTube, Send } from 'lucide-react';
+import { Bot, MessageSquare, Settings, Save, RefreshCw, Zap, Volume2, Smile, Heart, Coffee, User, FileText, Ligature as Signature, TestTube, Send } from 'lucide-react';
 import { useChatGPT } from '../hooks/useChatGPT';
 
 interface AISettingsPageProps {
@@ -425,13 +425,6 @@ const AISettingsPage: React.FC<AISettingsPageProps> = ({ user }) => {
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                     <h4 className="text-sm font-medium text-gray-900 mb-2">Réponse générée:</h4>
                     <p className="text-sm text-gray-700 whitespace-pre-line">{generatedResponse}</p>
-                  </div>
-                )}
-                
-                {generationError && (
-                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <h4 className="text-sm font-medium text-red-800 mb-2">Erreur:</h4>
-                    <p className="text-sm text-red-600">{generationError}</p>
                   </div>
                 )}
               </div>
