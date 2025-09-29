@@ -24,12 +24,11 @@ serve(async (req: Request) => {
       throw new Error('Google OAuth credentials not configured in environment variables')
     }
 
-    const url = new URL(req.url)
-    const action = url.searchParams.get('action')
+    const { action, ...body } = await req.json()
 
     if (action === 'exchange-code') {
       // Échanger le code d'autorisation contre des tokens
-      const { code, redirectUri } = await req.json()
+      const { code, redirectUri } = body
 
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
@@ -83,7 +82,7 @@ serve(async (req: Request) => {
 
     if (action === 'refresh-token') {
       // Rafraîchir le token d'accès
-      const { refreshToken } = await req.json()
+      const { refreshToken } = body
 
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
@@ -118,7 +117,7 @@ serve(async (req: Request) => {
 
     if (action === 'get-reviews') {
       // Récupérer les avis Google My Business
-      const { accessToken, locationId } = await req.json()
+      const { accessToken, locationId } = body
 
       const reviewsResponse = await fetch(
         `https://mybusiness.googleapis.com/v4/${locationId}/reviews`,
@@ -144,7 +143,7 @@ serve(async (req: Request) => {
 
     if (action === 'reply-review') {
       // Répondre à un avis
-      const { accessToken, locationId, reviewId, comment } = await req.json()
+      const { accessToken, locationId, reviewId, comment } = body
 
       const replyResponse = await fetch(
         `https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/reply`,

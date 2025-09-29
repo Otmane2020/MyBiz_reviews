@@ -245,13 +245,14 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     try {
       console.log('GMB Exchanging code for token...');
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth?action=exchange-code`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
+          action: 'exchange-code',
           code,
           redirectUri: window.location.origin,
         }),

@@ -207,6 +207,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          action: 'reply-review',
           accessToken,
           locationId: selectedLocationId,
           reviewId,
@@ -237,6 +238,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          action: 'refresh-token',
           refreshToken,
         }),
       });
