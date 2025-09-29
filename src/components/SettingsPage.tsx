@@ -563,6 +563,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
               )}
             </div>
           </div>
+        ))}
+      </div>
+    </div>
         );
 
       case 'notifications':
