@@ -3,6 +3,8 @@ import { Building2, MapPin, Star, ArrowRight, CheckCircle } from 'lucide-react';
 
 // Hardcode temporairement pour debug
 const GOOGLE_CLIENT_ID = '395527284495-g1re11jn5e1oe1r5dfs6joe9gn285c2l.apps.googleusercontent.com';
+
+interface GoogleAccount {
   name: string;
   type: string;
   role: string;
