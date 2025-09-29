@@ -439,3 +439,14 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
                   {replyingTo === review.reviewId ? 'Envoi...' : 'Répondre'}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default GoogleReviews;
