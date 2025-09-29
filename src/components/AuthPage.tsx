@@ -56,6 +56,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
+      console.log('AuthPage - Environment variables check:', {
+        supabaseUrl: supabaseUrl || 'MISSING',
+        supabaseKey: supabaseKey ? 'Present' : 'MISSING'
+      });
+      
       if (!supabaseUrl || !supabaseKey) {
         console.error('Supabase configuration missing:', {
           hasUrl: !!supabaseUrl,
@@ -63,7 +68,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           url: supabaseUrl ? 'Present' : 'Missing',
           key: supabaseKey ? 'Present' : 'Missing'
         });
-        alert('Configuration Supabase manquante. Veuillez vérifier les variables d\'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.');
+        alert(`Configuration Supabase manquante. URL: ${supabaseUrl || 'MISSING'}, Key: ${supabaseKey ? 'Present' : 'MISSING'}`);
+        return;
+      }
+      
+      if (supabaseUrl.includes('your-project-id')) {
+        alert('ERREUR: Fichier .env manquant ou mal configuré. Créez un fichier .env à la racine avec vos vraies valeurs Supabase.');
         return;
       }
       

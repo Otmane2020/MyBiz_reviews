@@ -88,9 +88,20 @@ function App() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
+      console.log('Environment variables check:', {
+        supabaseUrl: supabaseUrl || 'MISSING',
+        supabaseKey: supabaseKey ? 'Present' : 'MISSING',
+        allEnvVars: import.meta.env
+      });
+      
       if (!supabaseUrl || !supabaseKey) {
         console.error('Supabase configuration missing');
-        alert('Configuration Supabase manquante');
+        alert(`Configuration Supabase manquante. URL: ${supabaseUrl || 'MISSING'}, Key: ${supabaseKey ? 'Present' : 'MISSING'}`);
+        return;
+      }
+      
+      if (supabaseUrl.includes('your-project-id')) {
+        alert('ERREUR: Les variables d\'environnement ne sont pas configurées. Veuillez créer un fichier .env avec vos vraies valeurs Supabase.');
         return;
       }
       
