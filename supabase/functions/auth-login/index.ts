@@ -20,6 +20,25 @@ serve(async (req: Request) => {
     })
   }
 
+  // Handle GET requests for health check
+  if (req.method === "GET") {
+    return new Response(
+      JSON.stringify({ 
+        status: "OK",
+        message: "Auth-login function is running",
+        timestamp: new Date().toISOString(),
+        availableActions: ["exchange-code", "get-accounts", "get-locations", "get-reviews"]
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    )
+  }
+
   try {
     console.log('🚀 Auth-login function called:', {
       method: req.method,

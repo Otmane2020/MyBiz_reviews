@@ -123,6 +123,9 @@ Pour obtenir votre Client ID:
         contentType: response.headers.get('content-type')
       });
       
+      // Log response headers for debugging
+      console.log('📋 Response headers:', Object.fromEntries(response.headers.entries()))
+      
       const contentType = response.headers.get('content-type')
       let data
       
@@ -146,7 +149,7 @@ Pour obtenir votre Client ID:
         })
         
         if (text.includes('<!DOCTYPE')) {
-          throw new Error('Erreur de configuration Supabase. Vérifiez que la fonction auth-login est déployée.')
+          throw new Error('Fonction auth-login non disponible. Vérifiez le déploiement Supabase.')
         } else {
           throw new Error(`Réponse inattendue du serveur: ${text.substring(0, 100)}...`)
         }
