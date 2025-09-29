@@ -73,27 +73,57 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('auth-login', {
+      console.log('🚀 Fetching accounts with token:', accessToken ? 'Present' : 'Missing');
+      
+      const response = await supabase.functions.invoke('auth-login', {
         body: {
           action: 'get-accounts',
           accessToken: accessToken
         }
       });
 
-      if (error) throw error;
+      console.log('📡 Supabase function response:', response);
+      
+      if (response.error) {
+        console.error('❌ Supabase function error:', response.error);
+        throw new Error(`Erreur fonction: ${response.error.message || JSON.stringify(response.error)}`);
+      }
 
-      if (data.success) {
+      const data = response.data;
+      console.log('📊 Function data:', data);
+      
+      if (data?.success) {
+        console.log('✅ Accounts retrieved:', data.accounts?.length || 0);
         setAccounts(data.accounts || []);
         if (data.accounts?.length === 1) {
           setSelectedAccount(data.accounts[0].name);
           fetchLocations(data.accounts[0].name);
         }
       } else {
-        throw new Error(data.error?.message || 'Erreur lors de la récupération des comptes');
+        const errorMsg = data?.error?.message || data?.error || 'Erreur lors de la récupération des comptes';
+        console.error('❌ API Error:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (err: any) {
       console.error('Error fetching accounts:', err);
-      setError(err.message || 'Erreur lors de la récupération des comptes');
+      
+      let errorMessage = 'Erreur lors de la récupération des comptes';
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      // Messages d'erreur plus explicites
+      if (errorMessage.includes('401')) {
+        errorMessage = 'Token d\'accès expiré. Veuillez vous reconnecter.';
+      } else if (errorMessage.includes('403')) {
+        errorMessage = 'Accès refusé. Vérifiez que vous avez un profil d\'entreprise Google et les permissions nécessaires.';
+      } else if (errorMessage.includes('404')) {
+        errorMessage = 'Aucun compte Google My Business trouvé. Créez d\'abord un profil d\'entreprise.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -106,7 +136,9 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
     setError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('auth-login', {
+      console.log('🏪 Fetching locations for account:', accountId);
+      
+      const response = await supabase.functions.invoke('auth-login', {
         body: {
           action: 'get-locations',
           accessToken: accessToken,
@@ -114,17 +146,34 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
         }
       });
 
-      if (error) throw error;
+      console.log('📡 Locations response:', response);
+      
+      if (response.error) {
+        console.error('❌ Locations function error:', response.error);
+        throw new Error(`Erreur fonction: ${response.error.message || JSON.stringify(response.error)}`);
+      }
 
-      if (data.success) {
+      const data = response.data;
+      console.log('📊 Locations data:', data);
+      
+      if (data?.success) {
+        console.log('✅ Locations retrieved:', data.locations?.length || 0);
         setLocations(data.locations || []);
         setStep('locations');
       } else {
-        throw new Error(data.error?.message || 'Erreur lors de la récupération des établissements');
+        const errorMsg = data?.error?.message || data?.error || 'Erreur lors de la récupération des établissements';
+        console.error('❌ Locations API Error:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (err: any) {
       console.error('Error fetching locations:', err);
-      setError(err.message || 'Erreur lors de la récupération des établissements');
+      
+      let errorMessage = 'Erreur lors de la récupération des établissements';
+      if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -223,7 +272,16 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <p className="text-red-700">{error}</p>
+              <div className="text-red-700">
+                <p className="font-medium">Erreur de configuration</p>
+                <p className="text-sm mt-1">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="text-xs text-red-600 hover:text-red-800 underline mt-2"
+                >
+                  Fermer
+                </button>
+              </div>
             </div>
           )}
 
