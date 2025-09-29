@@ -58,7 +58,15 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
 
   const handleGoogleConnect = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro';
+    const redirectUri = window.location.origin;
+    
+    console.log('GMB Connect: Using redirectUri:', redirectUri);
+    console.log('GMB Connect: Client ID:', clientId);
+    
+    if (!clientId || clientId === 'your_google_client_id_here') {
+      alert('Configuration Google OAuth manquante. Vérifiez VITE_GOOGLE_CLIENT_ID dans les variables d\'environnement.');
+      return;
+    }
     
     const scope = [
       'https://www.googleapis.com/auth/business.manage',
@@ -68,15 +76,45 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${clientId}&` +
-      // Ajout d'un log pour vérifier l'URI de redirection envoyée à Google
-      console.log('GMB Connect: Using redirectUri:', redirectUri);
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
       `scope=${encodeURIComponent(scope)}&` +
       `response_type=code&` +
       `access_type=offline&` +
       `prompt=consent`;
 
-    window.location.href = authUrl;
+    console.log('GMB Connect: Auth URL:', authUrl);
+    
+    // Utiliser une popup au lieu d'une redirection directe
+    const popup = window.open(
+      authUrl,
+      'google-oauth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+    
+    if (!popup) {
+      alert('Les popups sont bloquées. Veuillez autoriser les popups pour ce site.');
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        console.log('GMB Received auth code:', event.data.code);
+        handleOAuthCallback(event.data.code);
+        window.removeEventListener('message', handleMessage);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        setLoading(false);
+        window.removeEventListener('message', handleMessage);
+      }
+    }, 1000);
   };
 
   const fetchAccounts = async () => {
