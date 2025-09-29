@@ -39,11 +39,12 @@ const StarlinkoLogo: React.FC<StarlinkoLogoProps> = ({
         <svg viewBox="0 0 40 40" className="w-full h-full">
           <defs>
             <linearGradient id="googleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#4285F4" />
-              <stop offset="25%" stopColor="#4285F4" />
-              <stop offset="45%" stopColor="#DB4437" />
-              <stop offset="70%" stopColor="#F4B400" />
-              <stop offset="100%" stopColor="#0F9D58" />
+              <stop offset="0%" stopColor="#DB4437" />
+              <stop offset="20%" stopColor="#F4B400" />
+              <stop offset="40%" stopColor="#4285F4" />
+              <stop offset="60%" stopColor="#4285F4" />
+              <stop offset="80%" stopColor="#0F9D58" />
+              <stop offset="100%" stopColor="#4285F4" />
             </linearGradient>
           </defs>
           {/* Étoile avec dégradé Google */}
