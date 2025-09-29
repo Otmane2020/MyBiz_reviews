@@ -94,6 +94,13 @@ Pour obtenir votre Client ID:
         return;
       }
       
+      console.log('🚀 Making request to auth-login function...');
+      console.log('Request details:', {
+        url: `${supabaseUrl}/functions/v1/auth-login`,
+        code: code ? `${code.substring(0, 20)}...` : 'MISSING',
+        redirectUri: window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro'
+      });
+      
       const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
@@ -107,15 +114,29 @@ Pour obtenir votre Client ID:
         }),
       });
 
+      console.log('📡 Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
       const contentType = response.headers.get('content-type');
+      console.log('📄 Content-Type:', contentType);
+      
       let data;
       
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
+        console.log('📊 JSON Response data:', data);
       } else {
         // Si ce n'est pas du JSON, c'est probablement une erreur HTML
         const text = await response.text();
-        console.error('Non-JSON response received:', text);
+        console.error('❌ Non-JSON response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType,
+          textPreview: text.substring(0, 500)
+        });
         
         if (text.includes('<!DOCTYPE')) {
           throw new Error('Erreur de configuration Supabase. Vérifiez que la fonction auth-login est déployée.');
@@ -124,18 +145,49 @@ Pour obtenir votre Client ID:
         }
       }
       
-      console.log('OAuth response:', data);
-      
       if (response.ok) {
-        console.log('OAuth success, calling onGoogleAuth');
+        console.log('✅ OAuth success, calling onGoogleAuth with:', {
+          hasUser: !!data.user,
+          hasAccessToken: !!data.access_token,
+          userEmail: data.user?.email
+        });
         onGoogleAuth(data.user, data.access_token);
       } else {
-        console.error('OAuth error:', data.error);
-        alert(`Erreur lors de la connexion Google: ${data.error || 'Erreur inconnue'}`);
+        console.error('❌ OAuth error:', {
+          error: data.error,
+          success: data.success,
+          fullResponse: data
+        });
+        
+        let errorMessage = 'Erreur inconnue';
+        if (data.error) {
+          if (typeof data.error === 'string') {
+            errorMessage = data.error;
+          } else if (data.error.message) {
+            errorMessage = data.error.message;
+          } else {
+            errorMessage = JSON.stringify(data.error);
+          }
+        }
+        
+        alert(`Erreur lors de la connexion Google: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('Erreur lors de l\'échange du code:', error);
-      alert(`Erreur lors de la connexion: ${error.message}`);
+      console.error('💥 Erreur lors de l\'échange du code:', {
+        error: error,
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      
+      let errorMessage = 'Erreur inconnue';
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion internet et la configuration Supabase.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Erreur lors de la connexion: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

@@ -83,12 +83,12 @@ function App() {
 
   const handleDirectOAuthCallback = async (code: string) => {
     try {
-      console.log('Processing OAuth callback...');
+      console.log('🔄 Processing OAuth callback in App.tsx...');
       
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
-      console.log('Environment variables check:', {
+      console.log('🔧 App.tsx - Environment variables check:', {
         supabaseUrl: supabaseUrl || 'MISSING',
         supabaseKey: supabaseKey ? 'Present' : 'MISSING',
         allEnvVars: import.meta.env
@@ -100,10 +100,12 @@ function App() {
         return;
       }
       
-      if (supabaseUrl.includes('your-project-id')) {
+      if (supabaseUrl.includes('your-project-id') || supabaseUrl.includes('votre-projet-id')) {
         alert('ERREUR: Les variables d\'environnement ne sont pas configurées. Veuillez créer un fichier .env avec vos vraies valeurs Supabase.');
         return;
       }
+      
+      console.log('📡 App.tsx - Making request to auth-login...');
       
       const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
@@ -118,22 +120,57 @@ function App() {
         }),
       });
 
+      console.log('📊 App.tsx - Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ App.tsx - HTTP Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText.substring(0, 500)
+        });
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
+      console.log('✅ App.tsx - Response data:', {
+        success: data.success,
+        hasUser: !!data.user,
+        hasAccessToken: !!data.access_token,
+        error: data.error
+      });
       
       if (response.ok && data.user && data.access_token) {
-        console.log('OAuth success, setting user data');
+        console.log('🎉 App.tsx - OAuth success, setting user data');
         setUser(data.user);
         setAccessToken(data.access_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('accessToken', data.access_token);
         setCurrentView('google-setup');
       } else {
-        console.error('OAuth error:', data);
-        alert(`Erreur lors de la connexion: ${data.error || 'Erreur inconnue'}`);
+        console.error('❌ App.tsx - OAuth error:', data);
+        
+        let errorMessage = 'Erreur inconnue';
+        if (data.error) {
+          errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+        }
+        
+        alert(`Erreur lors de la connexion: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('Error processing OAuth callback:', error);
-      alert(`Erreur lors de la connexion: ${error.message}`);
+      console.error('💥 App.tsx - Error processing OAuth callback:', {
+        error: error,
+        message: error.message,
+        stack: error.stack
+      });
+      
+      let errorMessage = 'Erreur inconnue';
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        errorMessage = 'Impossible de contacter le serveur Supabase. Vérifiez la configuration.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Erreur lors de la connexion: ${errorMessage}`);
     }
   };
 

@@ -21,7 +21,11 @@ serve(async (req: Request) => {
   }
 
   try {
-    console.log('🚀 Auth-login function called')
+    console.log('🚀 Auth-login function called', {
+      method: req.method,
+      url: req.url,
+      headers: Object.fromEntries(req.headers.entries())
+    })
     
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -55,8 +59,34 @@ serve(async (req: Request) => {
     }
 
     // Parse request body
-    console.log('📥 Parsing request body...')
-    const requestData = await req.json()
+    let requestData;
+    try {
+      const bodyText = await req.text()
+      console.log('📥 Raw request body:', bodyText.substring(0, 200))
+      requestData = JSON.parse(bodyText)
+      console.log('📋 Parsed request data:', {
+        action: requestData.action,
+        hasCode: !!requestData.code,
+        codeLength: requestData.code?.length || 0,
+        redirectUri: requestData.redirectUri
+      })
+    } catch (parseError) {
+      console.error('❌ Error parsing request body:', parseError)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          success: false
+        }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      )
+    }
+    
     const { action } = requestData
     
     console.log('🎯 Action requested:', action)
