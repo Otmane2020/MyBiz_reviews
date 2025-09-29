@@ -156,41 +156,6 @@ const SuperAdmin: React.FC = () => {
     }
   };
 
-  const handleMessageFormChange = (field: string, value: string) => {
-    setMessageForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSendMessage = () => {
-    if (!messageForm.subject || !messageForm.message) {
-      alert('Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    const newMessage = {
-      id: Date.now(),
-      recipient: messageForm.recipient === 'all' ? 'Tous les utilisateurs' : messageForm.recipient,
-      subject: messageForm.subject,
-      message: messageForm.message,
-      type: messageForm.type,
-      sentAt: new Date().toISOString(),
-      status: 'sent',
-      openRate: '0%'
-    };
-
-    setSentMessages(prev => [newMessage, ...prev]);
-    setMessageForm({
-      recipient: 'all',
-      subject: '',
-      message: '',
-      type: 'notification'
-    });
-
-    alert('Message envoyé avec succès !');
-  };
-
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -506,6 +471,7 @@ const SuperAdmin: React.FC = () => {
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'plans' && renderPlans()}
+        {activeTab === 'messaging' && renderMessaging()}
         {activeTab === 'analytics' && (
           <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200 text-center">
             <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
