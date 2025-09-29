@@ -87,7 +87,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
       if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Configuration Supabase manquante');
+        console.error('Supabase configuration missing:', {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey,
+          url: supabaseUrl ? 'Present' : 'Missing',
+          key: supabaseKey ? 'Present' : 'Missing'
+        });
+        alert('Configuration Supabase manquante. Veuillez vérifier les variables d\'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.');
+        return;
       }
       
       const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {

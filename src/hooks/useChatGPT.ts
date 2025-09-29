@@ -43,7 +43,11 @@ export const useChatGPT = () => {
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
       if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Configuration Supabase manquante');
+        console.error('Supabase configuration missing in ChatGPT hook:', {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey
+        });
+        throw new Error('Configuration Supabase manquante. Vérifiez les variables d\'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.');
       }
 
       const response = await fetch(`${supabaseUrl}/functions/v1/chatgpt-api`, {
