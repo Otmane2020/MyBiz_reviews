@@ -229,9 +229,14 @@ serve(async (req: Request) => {
       if (!accountsResponse.ok) {
         let errorData
         try {
-          errorData = await accountsResponse.json()
+          const responseText = await accountsResponse.text()
+          try {
+            errorData = JSON.parse(responseText)
+          } catch (parseError) {
+            errorData = { message: responseText, code: accountsResponse.status }
+          }
         } catch (e) {
-          errorData = { message: await accountsResponse.text(), code: accountsResponse.status }
+          errorData = { message: 'Unable to read response', code: accountsResponse.status }
         }
         console.error('❌ Accounts API error:', errorData)
 
@@ -317,9 +322,14 @@ serve(async (req: Request) => {
       if (!locationsResponse.ok) {
         let errorData
         try {
-          errorData = await locationsResponse.json()
+          const responseText = await locationsResponse.text()
+          try {
+            errorData = JSON.parse(responseText)
+          } catch (parseError) {
+            errorData = { message: responseText, code: locationsResponse.status }
+          }
         } catch (e) {
-          errorData = { message: await locationsResponse.text(), code: locationsResponse.status }
+          errorData = { message: 'Unable to read response', code: locationsResponse.status }
         }
         console.error('❌ Locations API error:', errorData)
 
