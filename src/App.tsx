@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import GoogleReviews from './pages/GoogleReviews';
 import SettingsPage from './components/SettingsPage';
 import SuccessPage from './pages/SuccessPage';
+import AISettingsPage from './components/AISettingsPage';
 import { useReviewsNotifications } from './hooks/useReviewsNotifications';
 
 function App() {
@@ -208,6 +209,9 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+      {currentPage === 'ai' && (
+        <AISettingsPage user={user} />
       )}
       {currentPage === 'settings' && (
         <SettingsPage user={user} onLogout={handleLogout} />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Home, Star, MessageSquare, Settings, User, LogOut } from 'lucide-react';
+import { Menu, X, Home, Star, MessageSquare, Settings, User, LogOut, Bot } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import NotificationCenter from './NotificationCenter';
 
@@ -32,6 +32,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
     { id: 'dashboard', label: 'Tableau de bord', icon: Home },
     { id: 'reviews', label: 'Avis', icon: Star },
     { id: 'responses', label: 'Réponses', icon: MessageSquare },
+    { id: 'ai', label: 'IA', icon: Bot },
     { id: 'settings', label: 'Paramètres', icon: Settings },
   ];
 

@@ -289,11 +289,18 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     try {
       console.log('GMB Exchanging code for token...');
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseKey}`,
         },
         body: JSON.stringify({
           action: 'exchange-code',
@@ -302,7 +309,15 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        const text = await response.text();
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('GMB Response parsing error:', parseError);
+        throw new Error('Réponse invalide du serveur GMB');
+      }
+      
       console.log('GMB OAuth response:', data);
       
       if (response.ok) {
