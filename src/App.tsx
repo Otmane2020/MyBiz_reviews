@@ -213,7 +213,26 @@ serve(async (req: Request) => {
         })
 
         console.log('📊 Google My Business Accounts API response status:', accountsResponse.status)
-        let accountsData = await accountsResponse.json()
+        
+        // Vérifier le type de contenu avant de parser en JSON
+        const contentType = accountsResponse.headers.get('content-type')
+        console.log('📋 Response content-type:', contentType)
+        
+        let accountsData
+        if (contentType && contentType.includes('application/json')) {
+          accountsData = await accountsResponse.json()
+        } else {
+          // Si ce n'est pas du JSON, lire comme texte pour diagnostiquer
+          const textResponse = await accountsResponse.text()
+          console.error('❌ Non-JSON response from Google API:', {
+            status: accountsResponse.status,
+            contentType,
+            responsePreview: textResponse.substring(0, 500)
+          })
+          
+          throw new Error(`Google API a renvoyé une réponse non-JSON (${accountsResponse.status}). Cela indique généralement un problème d'authentification ou de configuration. Vérifiez que votre token d'accès est valide et que l'API Google My Business est activée.`)
+        }
+        
         console.log('🏢 Accounts data received:', {
           hasAccounts: !!accountsData.accounts,
           accountsCount: accountsData.accounts?.length || 0,
