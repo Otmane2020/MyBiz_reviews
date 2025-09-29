@@ -8,6 +8,7 @@ import MobileMenu from './components/MobileMenu';
 import Dashboard from './components/Dashboard';
 import GoogleReviews from './pages/GoogleReviews';
 import SettingsPage from './components/SettingsPage';
+import SuccessPage from './pages/SuccessPage';
 import { useReviewsNotifications } from './hooks/useReviewsNotifications';
 
 function App() {
@@ -20,6 +21,9 @@ function App() {
 
   // Check if current path is /superadmin
   const isSuperAdminRoute = window.location.pathname === '/superadmin';
+  
+  // Check if current path is /success
+  const isSuccessRoute = window.location.pathname === '/success';
 
   // Notifications hook
   const {
@@ -131,6 +135,11 @@ function App() {
   // Handle Super Admin route
   if (isSuperAdminRoute) {
     return <SuperAdmin />;
+  }
+  
+  // Handle Success route
+  if (isSuccessRoute) {
+    return <SuccessPage />;
   }
 
   const handleNavigate = (page: string) => {

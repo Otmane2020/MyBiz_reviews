@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap, Gift, Shield } from 'lucide-react';
+import { useStripe } from '../hooks/useStripe';
 
 interface GoogleAccount {
   name: string;
@@ -40,6 +41,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(false);
   const [gmbConnected, setGmbConnected] = useState(!!initialAccessToken);
+  
+  const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
 
   const plans = [
     {
@@ -175,6 +178,47 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       type: 'complete'
     }
   ];
+
+  const handleSubscribe = async (planId: string, billingCycle: 'monthly' | 'annual') => {
+    if (!user?.id || !user?.email) {
+      alert('Informations utilisateur manquantes');
+      return;
+    }
+
+    try {
+      // Find the corresponding Stripe product and price
+      const stripeProduct = products.find(p => p.id === `starlinko_${planId}`);
+      if (!stripeProduct) {
+        // If products not loaded yet, proceed with onboarding
+        console.warn('Stripe products not loaded, proceeding with onboarding');
+        onComplete(selectedStores, selectedPlan);
+        return;
+      }
+
+      const price = stripeProduct.prices.find(p => 
+        p.metadata.billing_cycle === billingCycle
+      );
+      
+      if (!price) {
+        console.warn('Price not found, proceeding with onboarding');
+        onComplete(selectedStores, selectedPlan);
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      await redirectToCheckout(
+        price.id,
+        user.id,
+        user.email,
+        planId,
+        billingCycle
+      );
+    } catch (error) {
+      console.error('Error subscribing:', error);
+      // Fallback to completing onboarding
+      onComplete(selectedStores, selectedPlan);
+    }
+  };
 
   const connectGoogleMyBusiness = async () => {
     if (accessToken) {
@@ -331,7 +375,12 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      onComplete(selectedStores, selectedPlan);
+      // If user selected a plan, redirect to Stripe checkout
+      if (selectedPlan && user?.id && user?.email) {
+        handleSubscribe(selectedPlan, billingCycle);
+      } else {
+        onComplete(selectedStores, selectedPlan);
+      }
     }
   };
 
@@ -536,6 +585,13 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
               </div>
             </div>
           ))}
+          
+          {stripeLoading && (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4285F4] mx-auto"></div>
+              <p className="text-sm text-gray-500 mt-2">Chargement des plans...</p>
+            </div>
+          )}
         </div>
       );
     }
@@ -637,7 +693,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
               disabled={!canProceed()}
               className="flex items-center px-6 py-3 bg-[#4285F4] text-white rounded-full hover:bg-[#3367D6] transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {currentStep === steps.length - 1 ? 'Commencer l\'essai' : 'Suivant'}
+              {currentStep === steps.length - 1 ? 
+                (stripeLoading ? 'Chargement...' : 'Commencer l\'essai') : 
+                'Suivant'
+              }
               <ChevronRight className="w-5 h-5 ml-1" />
             </button>
           </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, CreditCard, Building2, Bell, Shield, LogOut, Check, Crown, Star, Zap, Gift, Users, Settings, TrendingUp, X, ChevronRight } from 'lucide-react';
+import { useStripe } from '../hooks/useStripe';
 
 interface SettingsPageProps {
   user: any;
@@ -21,6 +22,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
     country: 'France',
     vatNumber: ''
   });
+
+  const { products, loading: stripeLoading, error: stripeError, fetchProducts, redirectToCheckout } = useStripe();
 
   const plans = [
     {
@@ -100,6 +103,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
     }
   ];
 
+  // Fetch Stripe products on component mount
+  useEffect(() => {
+    fetchProducts().catch(console.error);
+  }, []);
+
   const tabs = [
     { id: 'profile', label: 'Profil', icon: User },
     { id: 'billing', label: 'Facturation', icon: CreditCard },
@@ -135,7 +143,43 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
   const handlePlanChange = (planId: string) => {
     setSelectedPlan(planId);
     localStorage.setItem('selectedPlan', planId);
-    // Here you would integrate with Stripe to change the subscription
+  };
+
+  const handleSubscribe = async (planId: string, billingCycle: 'monthly' | 'annual') => {
+    if (!user?.id || !user?.email) {
+      alert('Informations utilisateur manquantes');
+      return;
+    }
+
+    try {
+      // Find the corresponding Stripe product and price
+      const stripeProduct = products.find(p => p.id === `starlinko_${planId}`);
+      if (!stripeProduct) {
+        alert('Plan non trouvé dans Stripe. Veuillez contacter le support.');
+        return;
+      }
+
+      const price = stripeProduct.prices.find(p => 
+        p.metadata.billing_cycle === billingCycle
+      );
+      
+      if (!price) {
+        alert('Prix non trouvé pour ce plan. Veuillez contacter le support.');
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      await redirectToCheckout(
+        price.id,
+        user.id,
+        user.email,
+        planId,
+        billingCycle
+      );
+    } catch (error) {
+      console.error('Error subscribing:', error);
+      alert('Erreur lors de la redirection vers le paiement. Veuillez réessayer.');
+    }
   };
 
   const handleBillingInfoChange = (field: string, value: string) => {
@@ -491,11 +535,31 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                           </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              {selectedPlan === plan.id ? (
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm text-[#34A853]">
+                    <Check className="w-4 h-4 mr-2" />
+                    {isTrialActive ? 'Plan sélectionné (essai gratuit)' : 'Plan actuel'}
+                  </div>
+                  <button
+                    onClick={() => handleSubscribe(plan.id, billingCycle)}
+                    disabled={stripeLoading}
+                    className="w-full bg-[#4285F4] text-white py-2 px-4 rounded-lg hover:bg-[#3367D6] transition-colors disabled:opacity-50"
+                  >
+                    {stripeLoading ? 'Chargement...' : 'S\'abonner maintenant'}
+                  </button>
                 </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setSelectedPlan(plan.id);
+                    handleSubscribe(plan.id, billingCycle);
+                  }}
+                  disabled={stripeLoading}
+                  className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  {stripeLoading ? 'Chargement...' : 'Choisir ce plan'}
+                </button>
               )}
             </div>
           </div>
@@ -745,6 +809,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Paramètres</h1>
           <p className="text-gray-600">Gérez votre compte et vos préférences</p>
+          
+          {stripeError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+              <p className="text-red-600 text-sm">
+                Erreur Stripe: {stripeError}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
