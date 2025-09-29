@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, CreditCard, TrendingUp, Building2, Star, MessageSquare, Settings, Shield, Search, Filter, Download, CreditCard as Edit, Trash2, Plus, Eye, ChevronRight, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Building2, Star, MessageSquare, Settings, Shield, Search, Filter, Download, CreditCard as Edit, Trash2, Plus, Eye, ChevronRight, AlertTriangle, CheckCircle, XCircle, Clock, Send, Mail, UserCheck, Calendar } from 'lucide-react';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 interface User {
@@ -31,6 +31,13 @@ const SuperAdmin: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [users, setUsers] = useState<User[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [messageForm, setMessageForm] = useState({
+    recipient: 'all',
+    subject: '',
+    message: '',
+    type: 'notification'
+  });
+  const [sentMessages, setSentMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Mock data - In real app, this would come from your backend
@@ -124,6 +131,7 @@ const SuperAdmin: React.FC = () => {
     { id: 'overview', label: 'Vue d\'ensemble', icon: TrendingUp },
     { id: 'users', label: 'Utilisateurs', icon: Users },
     { id: 'plans', label: 'Plans', icon: CreditCard },
+    { id: 'messaging', label: 'Messagerie', icon: Mail },
     { id: 'analytics', label: 'Analytics', icon: Star },
     { id: 'settings', label: 'Paramètres', icon: Settings }
   ];
