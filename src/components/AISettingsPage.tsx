@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, MessageSquare, Settings, Save, RefreshCw, Zap, Volume2, Smile, Heart, Coffee, User, FileText, Ligature as Signature, TestTube, Send } from 'lucide-react';
+import { Bot, MessageSquare, Settings, Save, RefreshCw, Zap, Volume2, Smile, Heart, Coffee, User, FileText, Ligature as Signature, TestTube, Send, TrendingUp } from 'lucide-react';
 import { useChatGPT } from '../hooks/useChatGPT';
 
 interface AISettingsPageProps {

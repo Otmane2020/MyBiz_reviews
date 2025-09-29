@@ -31,6 +31,38 @@ serve(async (req: Request) => {
       throw new Error('Review and settings are required')
     }
 
+    // Construire les éléments SEO si activés
+    let seoElements = '';
+    if (settings.seoEnabled) {
+      const seoTerms = [];
+      
+      if (settings.businessCategory) {
+        seoTerms.push(`secteur ${settings.businessCategory.toLowerCase()}`);
+      }
+      
+      if (settings.includeLocation && settings.locationName) {
+        seoTerms.push(`à ${settings.locationName}`);
+      }
+      
+      if (settings.keywords && settings.keywords.length > 0) {
+        const randomKeywords = settings.keywords
+          .sort(() => 0.5 - Math.random())
+          .slice(0, Math.min(2, settings.keywords.length));
+        seoTerms.push(...randomKeywords);
+      }
+      
+      if (settings.localSeoTerms && settings.localSeoTerms.length > 0) {
+        const randomLocalTerms = settings.localSeoTerms
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 1);
+        seoTerms.push(...randomLocalTerms);
+      }
+      
+      if (seoTerms.length > 0) {
+        seoElements = `\n\nÉléments SEO à intégrer naturellement (sans forcer) : ${seoTerms.join(', ')}`;
+      }
+    }
+
     // Construire le prompt selon les paramètres
     let prompt = `Tu es un assistant IA qui génère des réponses professionnelles aux avis Google My Business.
 
@@ -44,7 +76,7 @@ Paramètres de réponse:
 - Longueur: ${getLengthDescription(settings.responseLength)}
 - Entreprise: ${businessName}
 
-${settings.customTemplate ? `Template personnalisé: ${settings.customTemplate}` : ''}
+${settings.customTemplate ? `Template personnalisé: ${settings.customTemplate}` : ''}${seoElements}
 
 Instructions:
 1. Réponds de manière ${settings.tone === 'professional' ? 'professionnelle et formelle' : 
@@ -59,6 +91,7 @@ Instructions:
 5. Ne mentionne pas que tu es une IA
 6. Écris en français
 7. ${settings.includeSignature ? `Termine par: "${settings.signature.replace('{business_name}', businessName)}"` : 'Pas de signature'}
+${settings.seoEnabled ? '8. Si possible, intègre naturellement quelques éléments SEO mentionnés ci-dessus (sans forcer ni paraître artificiel)' : ''}
 
 Génère uniquement la réponse, sans introduction ni explication.`
 
