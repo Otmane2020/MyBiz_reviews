@@ -1,343 +1,445 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
-import SuperAdmin from './pages/SuperAdmin';
-import AuthPage from './components/AuthPage';
-import LandingPage from './components/LandingPage';
-import GoogleBusinessSetup from './components/GoogleBusinessSetup';
-import ComprehensiveOnboarding from './components/ComprehensiveOnboarding';
-import MobileMenu from './components/MobileMenu';
-import Dashboard from './components/Dashboard';
-import GoogleReviews from './pages/GoogleReviews';
-import SettingsPage from './components/SettingsPage';
-import SuccessPage from './pages/SuccessPage';
-import AISettingsPage from './components/AISettingsPage';
-import { useReviewsNotifications } from './hooks/useReviewsNotifications';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [user, setUser] = useState<any>(null);
-  const [accessToken, setAccessToken] = useState<string>('');
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
-
-  // Check if current path is /superadmin
-  const isSuperAdminRoute = window.location.pathname === '/superadmin';
-  
-  // Check if current path is /success
-  const isSuccessRoute = window.location.pathname === '/success';
-
-  // Notifications hook
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    clearNotifications,
-  } = useReviewsNotifications(selectedLocationId);
-
-  // Check for existing session
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const savedToken = localStorage.getItem('accessToken');
-    const savedAccountId = localStorage.getItem('selectedAccountId');
-    const savedLocationId = localStorage.getItem('selectedLocationId');
-
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      if (savedToken) setAccessToken(savedToken);
-      if (savedAccountId) setSelectedAccountId(savedAccountId);
-      if (savedLocationId) setSelectedLocationId(savedLocationId);
-      setCurrentView('app');
-    } else {
-      // Show landing page for new users
-      setCurrentView('landing');
-    }
-  }, []);
-
-  // Listen for OAuth popup messages
-  useEffect(() => {
-    // Handle OAuth callback directly in main window (not popup)
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    if (code && !user) {
-      console.log('OAuth callback detected with code:', code);
-      handleDirectOAuthCallback(code);
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
-        // This will be handled by AuthPage component
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  const handleDirectOAuthCallback = async (code: string) => {
-    try {
-      console.log('🔄 Processing OAuth callback in App.tsx...');
-      
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      console.log('🔧 App.tsx - Environment variables check:', {
-        supabaseUrl: supabaseUrl || 'MISSING',
-        supabaseKey: supabaseKey ? 'Present' : 'MISSING',
-        allEnvVars: import.meta.env
-      });
-      
-      if (!supabaseUrl || !supabaseKey) {
-        console.error('Supabase configuration missing');
-        alert(`Configuration Supabase manquante. URL: ${supabaseUrl || 'MISSING'}, Key: ${supabaseKey ? 'Present' : 'MISSING'}`);
-        return;
-      }
-      
-      if (supabaseUrl.includes('your-project-id') || supabaseUrl.includes('votre-projet-id')) {
-        alert('ERREUR: Les variables d\'environnement ne sont pas configurées. Veuillez créer un fichier .env avec vos vraies valeurs Supabase.');
-        return;
-      }
-      
-      console.log('📡 App.tsx - Making request to auth-login...');
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-          'apikey': supabaseKey,
-        },
-        body: JSON.stringify({
-          action: 'exchange-code',
-          code,
-          redirectUri: window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro',
-        }),
-      });
-
-      console.log('📊 App.tsx - Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ App.tsx - HTTP Error:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText.substring(0, 500)
-        });
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      const data = await response.json();
-      console.log('✅ App.tsx - Response data:', {
-        success: data.success,
-        hasUser: !!data.user,
-        hasAccessToken: !!data.access_token,
-        error: data.error
-      });
-      
-      if (response.ok && data.user && data.access_token) {
-        console.log('🎉 App.tsx - OAuth success, setting user data');
-        setUser(data.user);
-        setAccessToken(data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('accessToken', data.access_token);
-        setCurrentView('google-setup');
-      } else {
-        console.error('❌ App.tsx - OAuth error:', data);
-        
-        let errorMessage = 'Erreur inconnue';
-        if (data.error) {
-          errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
-        }
-        
-        alert(`Erreur lors de la connexion: ${errorMessage}`);
-      }
-    } catch (error) {
-      console.error('💥 App.tsx - Error processing OAuth callback:', {
-        error: error,
-        message: error.message,
-        stack: error.stack
-      });
-      
-      let errorMessage = 'Erreur inconnue';
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        errorMessage = 'Impossible de contacter le serveur Supabase. Vérifiez la configuration.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      alert(`Erreur lors de la connexion: ${errorMessage}`);
-    }
-  };
-
-  // Check if we're in OAuth popup
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    if (code && window.opener) {
-      // We're in a popup, send code to parent
-      window.opener.postMessage({
-        type: 'GOOGLE_AUTH_SUCCESS',
-        code: code
-      }, window.location.origin);
-      window.close();
-    }
-  }, []);
-
-  const handleGoogleAuth = (userData: any, token: string) => {
-    setUser(userData);
-    setAccessToken(token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('accessToken', token);
-    setCurrentView('google-setup');
-  };
-
-  const handleEmailAuth = (userData: any) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentView('google-setup');
-  };
-
-  const handleGetStarted = () => {
-    setCurrentView('auth');
-  };
-
-  const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
-    setSelectedAccountId(accountId);
-    setSelectedLocationId(locationId);
-    localStorage.setItem('selectedAccountId', accountId);
-    localStorage.setItem('selectedLocationId', locationId);
-    setCurrentView('onboarding');
-  };
-
-  const handleOnboardingComplete = () => {
-    setCurrentView('app');
-  };
-
-  const handleOnboardingCompleteWithData = (selectedStores: string[], selectedPlan: string) => {
-    // Save selected stores and plan
-    localStorage.setItem('selectedStores', JSON.stringify(selectedStores));
-    localStorage.setItem('selectedPlan', selectedPlan);
-    
-    // Set the first selected store as the current location
-    if (selectedStores.length > 0) {
-      setSelectedLocationId(selectedStores[0]);
-      localStorage.setItem('selectedLocationId', selectedStores[0]);
-    }
-    
-    setCurrentView('app');
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setAccessToken('');
-    setSelectedAccountId('');
-    setSelectedLocationId('');
-    setCurrentPage('dashboard');
-    localStorage.removeItem('user');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('selectedAccountId');
-    localStorage.removeItem('selectedLocationId');
-    setCurrentView('landing');
-  };
-
-  // Handle Super Admin route
-  if (isSuperAdminRoute) {
-    return <SuperAdmin />;
-  }
-  
-  // Handle Success route
-  if (isSuccessRoute) {
-    return <SuccessPage />;
-  }
-
-  const handleNavigate = (page: string) => {
-    setCurrentPage(page);
-  };
-
-  if (currentView === 'landing') {
-    return (
-      <LandingPage onGetStarted={handleGetStarted} />
-    );
-  }
-
-  if (currentView === 'auth') {
-    return (
-      <AuthPage 
-        onGoogleAuth={handleGoogleAuth}
-        onEmailAuth={handleEmailAuth}
-      />
-    );
-  }
-
-  if (currentView === 'google-setup') {
-    return (
-      <GoogleBusinessSetup
-        accessToken={accessToken}
-        onSetupComplete={handleGoogleSetupComplete}
-      />
-    );
-  }
-
-  if (currentView === 'onboarding') {
-    return (
-      <ComprehensiveOnboarding 
-        user={user}
-        accessToken={accessToken}
-        onComplete={handleOnboardingCompleteWithData} 
-      />
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#F1F3F4]">
-      <MobileMenu
-        user={user}
-        currentPage={currentPage}
-        onNavigate={handleNavigate}
-        onLogout={handleLogout}
-        notifications={notifications}
-        unreadCount={unreadCount}
-        onMarkAsRead={markAsRead}
-        onMarkAllAsRead={markAllAsRead}
-        onClearAll={clearNotifications}
-      />
-      
-      {currentPage === 'dashboard' && <Dashboard user={user} />}
-      {currentPage === 'reviews' && (
-        <GoogleReviews 
-          user={user} 
-          accessToken={accessToken}
-          selectedLocationId={selectedLocationId}
-          setSelectedLocationId={setSelectedLocationId}
-          onNavigate={handleNavigate}
-          selectedAccountId={selectedAccountId}
-        />
-      )}
-      {currentPage === 'responses' && (
-        <div className="p-4 pt-20">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Réponses</h1>
-            <div className="bg-white rounded-xl p-6 shadow-sm text-center">
-              <p className="text-gray-600">Fonctionnalité en cours de développement</p>
-            </div>
-          </div>
-        </div>
-      )}
-      {currentPage === 'avis-ia' && (
-        <AISettingsPage user={user} />
-      )}
-      {currentPage === 'settings' && (
-        <SettingsPage user={user} onLogout={handleLogout} />
-      )}
-    </div>
-  );
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 }
 
-export default App;
+serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    })
+  }
+
+  try {
+    console.log('🚀 Google OAuth function called')
+    
+    // Get environment variables
+    const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')
+    const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
+    
+    console.log('🔑 Environment check:', {
+      hasClientId: !!GOOGLE_CLIENT_ID,
+      hasClientSecret: !!GOOGLE_CLIENT_SECRET,
+      clientIdLength: GOOGLE_CLIENT_ID?.length || 0
+    })
+
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      console.error('❌ Missing Google OAuth credentials')
+      return new Response(
+        JSON.stringify({ 
+          error: 'Configuration Google OAuth manquante',
+          success: false
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      )
+    }
+
+    // Parse request body
+    console.log('📥 Parsing request body...')
+    const requestData = await req.json()
+    const { action } = requestData
+    
+    console.log('🎯 Action requested:', action)
+
+    if (action === 'exchange-code') {
+      const { code, redirectUri } = requestData
+
+      console.log('📋 Exchange code parameters:', {
+        hasCode: !!code,
+        codeLength: code?.length || 0,
+        redirectUri: redirectUri
+      })
+
+      if (!code || !redirectUri) {
+        console.error('❌ Missing code or redirectUri')
+        return new Response(
+          JSON.stringify({ 
+            error: 'Code et redirectUri requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
+
+      console.log('🔄 Exchanging code for tokens with Google...')
+
+      try {
+        const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: GOOGLE_CLIENT_ID,
+            client_secret: GOOGLE_CLIENT_SECRET,
+            code: code,
+            grant_type: "authorization_code",
+            redirect_uri: redirectUri,
+          }),
+        })
+
+        console.log('📊 Google Token API response status:', tokenResponse.status)
+        
+        const tokens = await tokenResponse.json()
+        console.log('📄 Google Token API response:', {
+          hasAccessToken: !!tokens.access_token,
+          hasRefreshToken: !!tokens.refresh_token,
+          expiresIn: tokens.expires_in,
+          error: tokens.error,
+          errorDescription: tokens.error_description
+        })
+
+        if (!tokenResponse.ok) {
+          console.error('❌ Token exchange error:', tokens)
+          return new Response(
+            JSON.stringify({ 
+              error: `Token exchange failed: ${tokens.error_description || tokens.error}`,
+              success: false
+            }),
+            {
+              status: 400,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            }
+          )
+        }
+
+        console.log('👤 Fetching user info from Google...')
+        const userResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+          },
+        })
+
+        console.log('📊 Google User Info API response status:', userResponse.status)
+        const userData = await userResponse.json()
+        console.log('👤 User data received:', {
+          hasId: !!userData.id,
+          hasEmail: !!userData.email,
+          hasName: !!userData.name,
+          error: userData.error
+        })
+        
+        if (!userResponse.ok) {
+          console.error('❌ User info error:', userData)
+          return new Response(
+            JSON.stringify({ 
+              error: `Failed to get user info: ${userData.error}`,
+              success: false
+            }),
+            {
+              status: 400,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            }
+          )
+        }
+
+        console.log('✅ OAuth exchange successful')
+        return new Response(
+          JSON.stringify({
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            expires_in: tokens.expires_in,
+            user: userData,
+            success: true
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      } catch (fetchError) {
+        console.error('💥 Error during token exchange fetch:', fetchError)
+        throw fetchError
+      }
+    }
+
+    if (action === 'get-accounts') {
+      const { accessToken } = requestData
+
+      console.log('🏢 Get accounts parameters:', {
+        hasAccessToken: !!accessToken,
+        tokenLength: accessToken?.length || 0
+      })
+
+      if (!accessToken) {
+        console.error('❌ Missing access token for get-accounts')
+        return new Response(
+          JSON.stringify({ 
+            error: 'Access token requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
+
+      console.log('🏢 Getting Google My Business accounts...')
+      
+      try {
+        // Essayer d'abord la nouvelle API, puis l'ancienne en fallback
+        let accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        console.log('📊 Google My Business Accounts API response status:', accountsResponse.status)
+        
+        // Vérifier le type de contenu avant de parser en JSON
+        const contentType = accountsResponse.headers.get('content-type')
+        console.log('📋 Response content-type:', contentType)
+        
+        let accountsData
+        if (contentType && contentType.includes('application/json')) {
+          accountsData = await accountsResponse.json()
+        } else {
+          // Si ce n'est pas du JSON, lire comme texte pour diagnostiquer
+          const textResponse = await accountsResponse.text()
+          console.error('❌ Non-JSON response from Google API:', {
+            status: accountsResponse.status,
+            contentType,
+            responsePreview: textResponse.substring(0, 500)
+          })
+          
+          throw new Error(`Google API a renvoyé une réponse non-JSON (${accountsResponse.status}). Cela indique généralement un problème d'authentification ou de configuration. Vérifiez que votre token d'accès est valide et que l'API Google My Business est activée.`)
+        }
+        
+        console.log('🏢 Accounts data received:', {
+          hasAccounts: !!accountsData.accounts,
+          accountsCount: accountsData.accounts?.length || 0,
+          error: accountsData.error
+        })
+        
+        // Si la nouvelle API échoue, essayer l'ancienne
+        if (!accountsResponse.ok && accountsResponse.status === 403) {
+          console.log('🔄 Trying legacy API...')
+          accountsResponse = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          accountsData = await accountsResponse.json()
+          console.log('🏢 Legacy API response:', {
+            status: accountsResponse.status,
+            hasAccounts: !!accountsData.accounts,
+            accountsCount: accountsData.accounts?.length || 0,
+            error: accountsData.error
+          })
+        }
+        
+        if (!accountsResponse.ok) {
+          console.error('❌ Accounts API error:', accountsData)
+          
+          let errorMessage = 'Erreur inconnue'
+          if (accountsData.error) {
+            if (accountsData.error.code === 401) {
+              errorMessage = 'Token d\'accès expiré ou invalide'
+            } else if (accountsData.error.code === 403) {
+              errorMessage = 'Accès refusé. Vérifiez que l\'API Google My Business est activée et que vous avez un profil d\'entreprise Google'
+            } else if (accountsData.error.code === 404) {
+              errorMessage = 'Aucun compte Google My Business trouvé'
+            } else {
+              errorMessage = accountsData.error.message || `Erreur ${accountsData.error.code}`
+            }
+          }
+          
+          return new Response(
+            JSON.stringify({
+              error: {
+                message: errorMessage,
+                code: accountsData.error?.code || accountsResponse.status
+              },
+              success: false
+            }),
+            {
+              status: accountsResponse.status,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            }
+          )
+        }
+
+        console.log('✅ Accounts retrieved successfully')
+        return new Response(
+          JSON.stringify({
+            accounts: accountsData.accounts || [],
+            success: true
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      } catch (fetchError) {
+        console.error('💥 Error during accounts fetch:', fetchError)
+        throw fetchError
+      }
+    }
+
+    if (action === 'get-locations') {
+      const { accessToken, accountId } = requestData
+
+      console.log('🏪 Get locations parameters:', {
+        hasAccessToken: !!accessToken,
+        hasAccountId: !!accountId,
+        accountId: accountId
+      })
+
+      if (!accessToken || !accountId) {
+        console.error('❌ Missing access token or account ID for get-locations')
+        return new Response(
+          JSON.stringify({ 
+            error: 'Access token et account ID requis',
+            success: false
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      }
+
+      console.log('🏪 Getting locations for account:', accountId)
+      
+      try {
+        const locationsResponse = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        console.log('📊 Google My Business Locations API response status:', locationsResponse.status)
+        const locationsData = await locationsResponse.json()
+        console.log('🏪 Locations data received:', {
+          hasLocations: !!locationsData.locations,
+          locationsCount: locationsData.locations?.length || 0,
+          error: locationsData.error
+        })
+        
+        if (!locationsResponse.ok) {
+          console.error('❌ Locations API error:', locationsData)
+          
+          let errorMessage = 'Erreur inconnue'
+          if (locationsData.error) {
+            if (locationsData.error.code === 401) {
+              errorMessage = 'Token d\'accès expiré ou invalide'
+            } else if (locationsData.error.code === 403) {
+              errorMessage = 'Accès refusé aux établissements'
+            } else if (locationsData.error.code === 404) {
+              errorMessage = 'Aucun établissement trouvé pour ce compte'
+            } else {
+              errorMessage = locationsData.error.message || `Erreur ${locationsData.error.code}`
+            }
+          }
+          
+          return new Response(
+            JSON.stringify({
+              error: {
+                message: errorMessage,
+                code: locationsData.error?.code || locationsResponse.status
+              },
+              success: false
+            }),
+            {
+              status: locationsResponse.status,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            }
+          )
+        }
+
+        console.log('✅ Locations retrieved successfully')
+        return new Response(
+          JSON.stringify({
+            locations: locationsData.locations || [],
+            success: true
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        )
+      } catch (fetchError) {
+        console.error('💥 Error during locations fetch:', fetchError)
+        throw fetchError
+      }
+    }
+
+    // Action non supportée
+    console.error('❌ Unsupported action:', action)
+    return new Response(
+      JSON.stringify({ 
+        error: `Action non supportée: ${action}`,
+        success: false
+      }),
+      {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    )
+
+  } catch (error) {
+    console.error('💥 Unexpected error in google-oauth function:', error)
+    console.error('Error stack:', error.stack)
+    
+    return new Response(
+      JSON.stringify({ 
+        error: error.message || 'Erreur interne du serveur',
+        success: false
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    )
+  }
+})
