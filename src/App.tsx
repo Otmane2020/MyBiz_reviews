@@ -2,6 +2,7 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import SuperAdmin from './pages/SuperAdmin';
 import AuthPage from './components/AuthPage';
+import LandingPage from './components/LandingPage';
 import GoogleBusinessSetup from './components/GoogleBusinessSetup';
 import ComprehensiveOnboarding from './components/ComprehensiveOnboarding';
 import MobileMenu from './components/MobileMenu';
@@ -13,7 +14,7 @@ import AISettingsPage from './components/AISettingsPage';
 import { useReviewsNotifications } from './hooks/useReviewsNotifications';
 
 function App() {
-  const [currentView, setCurrentView] = useState<'auth' | 'google-setup' | 'onboarding' | 'app'>('auth');
+  const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [user, setUser] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string>('');
@@ -42,12 +43,15 @@ function App() {
     const savedAccountId = localStorage.getItem('selectedAccountId');
     const savedLocationId = localStorage.getItem('selectedLocationId');
 
-    if (savedUser && savedToken && savedAccountId && savedLocationId) {
+    if (savedUser) {
       setUser(JSON.parse(savedUser));
-      setAccessToken(savedToken);
-      setSelectedAccountId(savedAccountId);
-      setSelectedLocationId(savedLocationId);
+      if (savedToken) setAccessToken(savedToken);
+      if (savedAccountId) setSelectedAccountId(savedAccountId);
+      if (savedLocationId) setSelectedLocationId(savedLocationId);
       setCurrentView('app');
+    } else {
+      // Show landing page for new users
+      setCurrentView('landing');
     }
   }, []);
 
@@ -94,6 +98,10 @@ function App() {
     setCurrentView('onboarding');
   };
 
+  const handleGetStarted = () => {
+    setCurrentView('auth');
+  };
+
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
     setSelectedAccountId(accountId);
     setSelectedLocationId(locationId);
@@ -130,7 +138,7 @@ function App() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('selectedAccountId');
     localStorage.removeItem('selectedLocationId');
-    setCurrentView('auth');
+    setCurrentView('landing');
   };
 
   // Handle Super Admin route
@@ -146,6 +154,12 @@ function App() {
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
+
+  if (currentView === 'landing') {
+    return (
+      <LandingPage onGetStarted={handleGetStarted} />
+    );
+  }
 
   if (currentView === 'auth') {
     return (
