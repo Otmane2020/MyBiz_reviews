@@ -210,7 +210,7 @@ function App() {
           </div>
         </div>
       )}
-      {currentPage === 'ai' && (
+      {currentPage === 'avis-ia' && (
         <AISettingsPage user={user} />
       )}
       {currentPage === 'settings' && (
