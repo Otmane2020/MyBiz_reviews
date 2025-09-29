@@ -22,7 +22,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
 
   const handleGoogleAuth = () => {
     if (!GOOGLE_CLIENT_ID) {
-      alert('Configuration Google OAuth manquante');
+      alert('Configuration Google OAuth manquante. Veuillez configurer VITE_GOOGLE_CLIENT_ID dans les variables d\'environnement.');
       return;
     }
 
@@ -32,7 +32,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       `client_id=${GOOGLE_CLIENT_ID}&` +
       `redirect_uri=${encodeURIComponent(window.location.origin)}&` +
       `response_type=code&` +
-      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/plus.business.manage')}&` +
+      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&` +
       `access_type=offline&` +
       `prompt=consent`;
     

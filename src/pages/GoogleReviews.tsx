@@ -64,8 +64,8 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
   const fetchAccounts = async (token: string) => {
     try {
-      // Use the new Google My Business API endpoint
-      const response = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+      // Use the correct Google My Business API v4 endpoint
+      const response = await fetch('https://mybusiness.googleapis.com/v4/accounts', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -84,16 +84,20 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
             fetchLocations(token, selectedAccountId);
           }
         }
+      } else if (data.error) {
+        console.error('Erreur API comptes:', data.error);
+        alert(`Erreur Google API: ${data.error.message}`);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des comptes:', error);
+      alert('Erreur de connexion à Google My Business. Vérifiez votre token d\'accès.');
     }
   };
 
   const fetchLocations = async (token: string, accountId: string) => {
     try {
-      // Use the new API endpoint
-      const response = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
+      // Use the correct Google My Business API v4 endpoint
+      const response = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/locations`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -109,9 +113,13 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
             setSelectedLocationId(data.locations[0].name);
           }
         }
+      } else if (data.error) {
+        console.error('Erreur API locations:', data.error);
+        alert(`Erreur lors de la récupération des établissements: ${data.error.message}`);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des établissements:', error);
+      alert('Erreur de réseau lors de la récupération des établissements.');
     }
   };
 
