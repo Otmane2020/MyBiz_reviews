@@ -1,26 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  CreditCard, 
-  TrendingUp, 
-  Building2, 
-  Star, 
-  MessageSquare, 
-  Settings, 
-  Shield, 
-  Search,
-  Filter,
-  Download,
-  Edit,
-  Trash2,
-  Plus,
-  Eye,
-  ChevronRight,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Clock
-} from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Building2, Star, MessageSquare, Settings, Shield, Search, Filter, Download, CreditCard as Edit, Trash2, Plus, Eye, ChevronRight, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 interface User {
