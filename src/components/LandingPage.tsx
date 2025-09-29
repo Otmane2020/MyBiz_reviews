@@ -11,24 +11,32 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05]">
       {/* Header */}
-      <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
+      <header className="bg-white/10 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <StarlinkoLogo size="md" showGoogleIcon={true} className="text-white" />
             </div>
-            <button
-              onClick={onGetStarted}
-              className="bg-white text-[#4285F4] px-4 py-2 rounded-full font-medium hover:bg-gray-100 transition-colors"
-            >
-              Commencer
-            </button>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={onGetStarted}
+                className="hidden md:block bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
+              >
+                Se connecter
+              </button>
+              <button
+                onClick={onGetStarted}
+                className="bg-white text-[#4285F4] px-4 py-2 rounded-full font-medium hover:bg-gray-100 transition-colors"
+              >
+                Commencer
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-16 px-4">
+      <section className="pt-20 pb-16 px-4 min-h-screen flex items-center">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
             Connectez vos avis Google
@@ -38,12 +46,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             Starlinko vous aide à gérer et répondre automatiquement à vos avis Google My Business avec l'IA. 
             Boostez votre réputation en ligne facilement.
           </p>
-          <button
-            onClick={onGetStarted}
-            className="bg-white text-[#4285F4] px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
-          >
-            Commencer gratuitement
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={onGetStarted}
+              className="bg-white text-[#4285F4] px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
+            >
+              Commencer gratuitement
+            </button>
+            <div className="text-white/80 text-sm">
+              ✨ 14 jours d'essai gratuit • Aucune carte requise
+            </div>
+          </div>
         </div>
       </section>
 
@@ -53,7 +66,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           <h2 className="text-3xl font-bold text-white text-center mb-12">
             Pourquoi choisir Starlinko ?
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
             <div className="text-center">
               <div className="bg-white/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="w-8 h-8 text-white" />
@@ -82,12 +95,37 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </p>
             </div>
           </div>
+          
+          {/* Additional Features */}
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-white/10 rounded-xl p-6">
+              <div className="flex items-center mb-4">
+                <Shield className="w-8 h-8 text-[#34A853] mr-3" />
+                <h3 className="text-xl font-semibold text-white">Sécurisé & Fiable</h3>
+              </div>
+              <p className="text-white/80">
+                Connexion sécurisée avec Google OAuth 2.0. Vos données sont protégées et chiffrées.
+              </p>
+            </div>
+            <div className="bg-white/10 rounded-xl p-6">
+              <div className="flex items-center mb-4">
+                <Users className="w-8 h-8 text-[#FBBC05] mr-3" />
+                <h3 className="text-xl font-semibold text-white">Support Expert</h3>
+              </div>
+              <p className="text-white/80">
+                Équipe support dédiée pour vous accompagner dans l'optimisation de votre réputation.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Stats */}
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-white text-center mb-8">
+            Ils nous font confiance
+          </h2>
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div>
               <div className="text-4xl font-bold text-white mb-2">10k+</div>
@@ -114,14 +152,31 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           <p className="text-xl text-white/90 mb-8">
             Rejoignez des centaines d'entreprises qui font confiance à Starlinko
           </p>
-          <button
-            onClick={onGetStarted}
-            className="bg-[#EA4335] text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#d33b2c] transition-all transform hover:scale-105 shadow-lg"
-          >
-            Commencer maintenant
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={onGetStarted}
+              className="bg-[#EA4335] text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#d33b2c] transition-all transform hover:scale-105 shadow-lg"
+            >
+              Commencer maintenant
+            </button>
+            <div className="text-white/80 text-sm">
+              🚀 Configuration en 2 minutes
+            </div>
+          </div>
         </div>
       </section>
+      
+      {/* Footer */}
+      <footer className="bg-black/20 backdrop-blur-md py-8">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <div className="flex items-center justify-center mb-4">
+            <StarlinkoLogo size="md" showText={true} className="text-white" />
+          </div>
+          <p className="text-white/60 text-sm">
+            © 2024 Starlinko. Tous droits réservés. Gérez vos avis Google My Business avec l'IA.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };

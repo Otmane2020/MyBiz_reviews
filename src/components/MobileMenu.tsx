@@ -47,7 +47,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   return (
     <>
       {/* Header avec menu burger */}
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40 block md:block">
         <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center">
             <StarlinkoLogo 
