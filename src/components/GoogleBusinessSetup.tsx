@@ -363,7 +363,13 @@ export default function GoogleBusinessSetup({ accessToken, onSetupComplete }: Go
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
               <div className="text-red-700">
                 <p className="font-medium">Erreur de configuration</p>
-                <p className="text-sm mt-1">{error}</p>
+                <p className="text-sm mt-1">{error?.message || error}</p>
+                <details className="mt-2">
+                  <summary className="text-xs cursor-pointer hover:underline">Détails techniques</summary>
+                  <div className="mt-1 p-2 bg-red-100 rounded text-xs font-mono whitespace-pre-wrap">
+                    {JSON.stringify(error?.details || error, null, 2)}
+                  </div>
+                </details>
                 <button
                   onClick={() => setError(null)}
                   className="text-xs text-red-600 hover:text-red-800 underline mt-2"
