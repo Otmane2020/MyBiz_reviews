@@ -37,14 +37,10 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<'connect' | 'accounts' | 'locations' | 'complete'>('connect');
+  const [step, setStep] = useState<'accounts' | 'locations' | 'complete'>('accounts');
 
   useEffect(() => {
-    if (accessToken) {
-      fetchAccounts();
-    } else {
-      setLoading(false);
-    }
+    fetchAccounts();
   }, []);
 
   const fetchAccounts = async () => {
@@ -219,7 +215,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         <div className="flex justify-center mb-8">
           <div className="flex items-center space-x-4">
             <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              step === 'accounts' ? 'bg-white text-[#4285F4]' : 'bg-white/30 text-white'
+              step === 'connect' || step === 'accounts' ? 'bg-white text-[#4285F4]' : 'bg-white/30 text-white'
             }`}>
               1
             </div>
@@ -239,7 +235,14 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         </div>
 
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
-          {step === 'accounts' && (
+          {renderStepContent()}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GoogleBusinessSetup;
             <>
               <div className="text-center mb-6">
                 <Building2 className="w-12 h-12 text-[#4285F4] mx-auto mb-4" />
