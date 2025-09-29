@@ -72,7 +72,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -438,15 +438,4 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
                   className="inline-flex items-center px-4 py-2 bg-[#4285F4] text-white text-sm font-medium rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
-                  {replyingTo === review.reviewId ? 'Envoi...' : 'Répondre avec IA'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default GoogleReviews;
+                  {replyingTo === review.reviewId ? 'Envoi...' : 'Ré
