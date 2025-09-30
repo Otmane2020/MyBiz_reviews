@@ -21,24 +21,11 @@ serve(async (req) => {
   }
 
   try {
-    // Log de debug pour les headers
-    const debugTokenLength = req.headers.get('X-Debug-Token-Length');
-    if (debugTokenLength) {
-      console.log(`Debug: Token length from client: ${debugTokenLength}`);
-    }
-
     // Vérifier que les variables d'environnement sont configurées
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_API_KEY) {
       console.error('Google credentials not configured');
       throw new Error('Google credentials not configured in environment variables');
     }
-
-    console.log('Environment check:', {
-      hasClientId: !!GOOGLE_CLIENT_ID,
-      hasClientSecret: !!GOOGLE_CLIENT_SECRET,
-      hasApiKey: !!GOOGLE_API_KEY,
-      clientIdLength: GOOGLE_CLIENT_ID?.length || 0
-    });
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -150,22 +137,11 @@ serve(async (req) => {
           console.log('Fetching Google Business Profile accounts using v1 API...');
           console.log('Access token (first 20 chars):', accessToken.substring(0, 20) + '...');
           
-          // Vérifier le format du token
-          if (!accessToken.startsWith('ya29.') && !accessToken.startsWith('1//')) {
-            console.error('Invalid token format:', accessToken.substring(0, 10) + '...');
-            throw new Error('Format de token invalide. Le token doit commencer par "ya29." ou "1//"');
-          }
-
           // NOUVEL ENDPOINT V1 (Account Management API)
           const accountsResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts?key=${GOOGLE_API_KEY}`, {
             headers: {
               Authorization: `Bearer ${accessToken}`
             }
-          });
-
-          console.log('Google API request details:', {
-            url: `https://mybusinessaccountmanagement.googleapis.com/v1/accounts?key=${GOOGLE_API_KEY}`,
-            tokenPrefix: accessToken.substring(0, 10) + '...'
           });
 
           console.log('Accounts API response status:', accountsResponse.status);
@@ -176,16 +152,6 @@ serve(async (req) => {
           if (!accountsResponse.ok) {
             console.error('Get accounts failed:', accountsData);
             
-            // Log détaillé de l'erreur
-            console.error('Detailed error info:', {
-              status: accountsResponse.status,
-              statusText: accountsResponse.statusText,
-              error: accountsData.error,
-              tokenUsed: accessToken.substring(0, 20) + '...',
-              apiKeyUsed: GOOGLE_API_KEY ? GOOGLE_API_KEY.substring(0, 10) + '...' : 'N/A',
-              headers: Object.fromEntries(accountsResponse.headers.entries())
-            });
-
             // Messages d'erreur plus détaillés
             if (accountsResponse.status === 403) {
               if (accountsData.error?.message?.includes('My Business Account Management API')) {
@@ -198,9 +164,7 @@ serve(async (req) => {
             }
             
             if (accountsResponse.status === 401) {
-              throw new Error(`Token d'accès invalide ou expiré (401). Détails: ${
-                accountsData.error?.message || 'Token rejeté par Google'
-              }. Reconnectez-vous.`);
+              throw new Error(`Token d'accès invalide ou expiré (401). Reconnectez-vous.`);
             }
             
             if (accountsResponse.status === 404) {
