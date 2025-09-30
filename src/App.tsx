@@ -42,33 +42,6 @@ function App() {
 
   // Check if current path is /dashboard
   const isDashboardRoute = window.location.pathname === '/dashboard';
-
-  // Function to initiate Google OAuth with trial flag
-  const initiateGoogleOAuth = async (isTrial: boolean = false) => {
-    try {
-      // Set trial flag if this is a trial signup
-      if (isTrial) {
-        localStorage.setItem('isTrialSignup', 'true');
-      }
-
-      // Initiate Google OAuth sign-in with Supabase
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-    } catch (error) {
-      console.error('Error during Google OAuth:', error);
-      alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
-    }
-  };
-
   // Consolidated session handling function
   const handleSession = (session: any) => {
     if (session) {
@@ -103,18 +76,13 @@ function App() {
       
       // Check onboarding status
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
-      const isTrialSignup = localStorage.getItem('isTrialSignup');
       
-      if (isTrialSignup) {
-        // Remove the trial flag and go to onboarding
-        localStorage.removeItem('isTrialSignup');
-        setCurrentView('onboarding');
-      } else if (completedOnboarding || isDashboardRoute) {
+      if (completedOnboarding || isDashboardRoute) {
         setHasCompletedOnboarding(true);
         setCurrentView('app');
       } else {
-        // For existing users without trial flag, go to auth page
-        setCurrentView('auth');
+        // Pour les nouveaux utilisateurs, aller directement à l'onboarding
+        setCurrentView('onboarding');
       }
     } else {
       // No session - clear everything
@@ -129,7 +97,6 @@ function App() {
       localStorage.removeItem('selectedAccountId');
       localStorage.removeItem('selectedLocationId');
       localStorage.removeItem('onboardingCompleted');
-      localStorage.removeItem('isTrialSignup');
       // Si on est sur /dashboard, rediriger vers auth, sinon landing
       setCurrentView(isDashboardRoute ? 'auth' : 'landing');
     }
@@ -155,8 +122,8 @@ function App() {
 
 
   const handleGoogleAuth = (userData: any, token: string) => {
-    // This function is kept for compatibility but not used anymore
-    // The new flow uses initiateGoogleOAuth directly
+    // Mark as trial signup to go directly to onboarding
+    localStorage.setItem('isTrialSignup', 'true');
   };
 
   const handleEmailAuth = (userData: any) => {
@@ -204,8 +171,7 @@ function App() {
   };
 
   const handleGetStarted = () => {
-    // Directly initiate Google OAuth for trial signup
-    initiateGoogleOAuth(true);
+    setCurrentView('auth');
   };
 
   const handleGoogleTokenExpired = async () => {
@@ -284,14 +250,14 @@ function App() {
 
   if (currentView === 'landing') {
     return (
-      <LandingPage onGetStarted={handleGetStarted} initiateGoogleOAuth={initiateGoogleOAuth} />
+      <LandingPage onGetStarted={handleGetStarted} />
     );
   }
 
   if (currentView === 'auth') {
     return (
       <AuthPage 
-        initiateGoogleOAuth={initiateGoogleOAuth}
+        onGoogleAuth={handleGoogleAuth}
         onEmailAuth={handleEmailAuth}
       />
     );
