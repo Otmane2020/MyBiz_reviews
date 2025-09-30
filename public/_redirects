@@ -2,8 +2,5 @@
 http://starlinko.pro/* https://starlinko.pro/:splat 301!
 http://www.starlinko.pro/* https://starlinko.pro/:splat 301!
 
-# Handle OAuth callback
-/auth/callback /index.html 200
-
 # SPA fallback - CRITICAL for OAuth redirects
 /*    /index.html   200
