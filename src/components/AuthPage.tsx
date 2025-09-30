@@ -1,20 +1,3 @@
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
@@ -32,49 +15,12 @@ const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
   });
 
   useEffect(() => {
-    // Check for OAuth callback
+    // Just clean up URL parameters without triggering any auth flows
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    if (code) {
-      // Exchange code for tokens
-      fetch('/api/auth/google/callback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Create user data and call onGoogleAuth
-          const userData = {
-            id: data.user.id,
-            name: data.user.name,
-            email: data.user.email,
-            picture: data.user.picture,
-            authMethod: 'google'
-          };
-          
-          onGoogleAuth(userData, data.access_token);
-          
-          // Clear URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-          console.error('OAuth exchange failed:', data.error);
-          alert('Erreur lors de l\'échange du code OAuth');
-        }
-      })
-      .catch(error => {
-        console.error('Error exchanging OAuth code:', error);
-        alert('Erreur lors de l\'authentification');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    if (urlParams.has('code') || urlParams.has('error')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [onGoogleAuth]);
+  }, []);
 
   const handleGoogleAuth = async () => {
     setLoading(true);
