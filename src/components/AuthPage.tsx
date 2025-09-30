@@ -112,10 +112,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
           email,
           password,
           options: {
-            emailRedirectTo: undefined,
-            data: {
-              email_confirm: false
-            }
+            emailRedirectTo: `${window.location.origin}`,
           }
         });
 
@@ -123,17 +120,40 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
           throw error;
         }
 
-        setMessage('Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
+        // Automatically sign in after successful signup
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         
-        // Basculer automatiquement vers le mode connexion après inscription réussie
-        setTimeout(() => {
-          setIsLogin(true);
-          setMessage(null);
-        }, 2000);
+        if (signInError) {
+          setMessage('Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
+          setTimeout(() => {
+            setIsLogin(true);
+            setMessage(null);
+          }, 2000);
+        }
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      setError(err.message || 'Erreur lors de l\'authentification');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Erreur lors de l\'authentification';
+      
+      if (err.message?.includes('Invalid login credentials')) {
+        errorMessage = isLogin 
+          ? 'Email ou mot de passe incorrect. Vérifiez vos identifiants ou créez un compte.'
+          : 'Erreur lors de la création du compte';
+      } else if (err.message?.includes('User already registered')) {
+        errorMessage = 'Un compte existe déjà avec cet email. Essayez de vous connecter.';
+        setIsLogin(true);
+      } else if (err.message?.includes('Password should be at least')) {
+        errorMessage = 'Le mot de passe doit contenir au moins 6 caractères';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
