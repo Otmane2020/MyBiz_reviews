@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Home, Star, MessageSquare, Settings, User, LogOut, Bot } from 'lucide-react';
+import { Menu, X, Home, Star, MessageSquare, Settings, User, LogOut, Bot, Building2 } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import NotificationCenter from './NotificationCenter';
 
