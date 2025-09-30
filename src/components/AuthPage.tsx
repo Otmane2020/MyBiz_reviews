@@ -1,11 +1,25 @@
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -15,15 +29,35 @@ const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
   });
 
   useEffect(() => {
-    // Just clean up URL parameters without triggering any auth flows
+    // Check for OAuth callback
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('code') || urlParams.has('error')) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
-
-  const handleGoogleAuth = async () => {
-    setLoading(true);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      // Exchange code for tokens
+      fetch('/api/auth/google/callback', {
+        method: 'POST',
+        },
+        body: JSON.stringify({ code })
+      })
+      // Use Supabase native Google OAuth with specific configuration
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
     
     try {
       // Use Supabase native Google OAuth with specific configuration
@@ -77,7 +111,11 @@ const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
       onEmailAuth(userData);
     } catch (error) {
       console.error('Erreur d\'authentification:', error);
-      alert('Erreur lors de la connexion');
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+        setError('Le mot de passe doit contenir au moins 6 caractères');
+      } else {
+        setError(error.message || 'Erreur lors de la connexion');
+      }
     } finally {
       setLoading(false);
     }
@@ -109,6 +147,13 @@ const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
               {isLogin ? 'Connectez-vous à votre compte' : 'Rejoignez Starlinko aujourd\'hui'}
             </p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
 
           {/* Google Auth Button */}
           <button
