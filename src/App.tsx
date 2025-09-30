@@ -24,6 +24,15 @@ function App() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
 
+  // Notifications hook - must be at top level
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    clearNotifications,
+  } = useReviewsNotifications(selectedLocationId);
+
   // Check if current path is /superadmin
   const isSuperAdminRoute = window.location.pathname === '/superadmin';
   
@@ -106,14 +115,6 @@ function App() {
         setCurrentView('landing');
       }
     });
-  // Notifications hook
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    clearNotifications,
-  } = useReviewsNotifications(selectedLocationId);
 
     return () => subscription.unsubscribe();
   }, []);

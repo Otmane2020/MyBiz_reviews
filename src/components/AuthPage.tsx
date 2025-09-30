@@ -25,7 +25,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const handleGoogleAuth = () => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
     
-    setLoading(true);
+    try {
     
     try {
       // Use Supabase native Google OAuth
