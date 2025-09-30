@@ -100,15 +100,17 @@ function App() {
       
       if (!supabaseUrl || !supabaseKey) {
         console.error('Supabase configuration missing');
-        alert(`Configuration Supabase manquante. URL: ${supabaseUrl || 'MISSING'}, Key: ${supabaseKey ? 'Present' : 'MISSING'}`);
+        const errorMsg = `❌ Configuration Supabase manquante:\n• URL: ${supabaseUrl || 'MANQUANTE'}\n• Clé: ${supabaseKey ? 'Présente' : 'MANQUANTE'}\n\nVeuillez configurer les variables d'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY`;
+        alert(errorMsg);
         return;
       }
       
       if (supabaseUrl.includes('your-project-id')) {
-        alert('ERREUR: Les variables d\'environnement ne sont pas configurées. Veuillez créer un fichier .env avec vos vraies valeurs Supabase.');
+        alert('❌ ERREUR: Variables d\'environnement non configurées\n\nLes variables contiennent encore des valeurs par défaut.\nVeuillez créer un fichier .env avec vos vraies valeurs Supabase.');
         return;
       }
       
+      console.log('🔄 Calling Supabase Edge Function for OAuth...');
       const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
@@ -122,22 +124,80 @@ function App() {
         }),
       });
 
-      const data = await response.json();
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const textResponse = await response.text();
+        console.error('❌ Non-JSON response received:', textResponse);
+        
+        if (textResponse.includes('<!DOCTYPE') || textResponse.includes('<html>')) {
+          alert('❌ ERREUR: Fonction Supabase non disponible\n\nLa fonction Edge "google-oauth" n\'est pas déployée ou accessible.\n\nVérifiez:\n• Que la fonction est déployée dans Supabase\n• Que l\'URL Supabase est correcte\n• Les logs de la fonction dans le dashboard Supabase');
+          return;
+        } else {
+          alert(`❌ ERREUR: Réponse inattendue du serveur\n\nType de contenu: ${contentType || 'inconnu'}\nRéponse: ${textResponse.substring(0, 200)}...`);
+          return;
+        }
+      }
       
       if (response.ok && data.user && data.access_token) {
-        console.log('OAuth success, setting user data');
+        console.log('✅ OAuth success, setting user data');
         setUser(data.user);
         setAccessToken(data.access_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('accessToken', data.access_token);
         setCurrentView('google-setup');
       } else {
-        console.error('OAuth error:', data);
-        alert(`Erreur lors de la connexion: ${data.error || 'Erreur inconnue'}`);
+        console.error('❌ OAuth error:', data);
+        
+        let errorMessage = '❌ ERREUR de connexion Google My Business\n\n';
+        
+        if (data.error) {
+          if (typeof data.error === 'string') {
+            errorMessage += `Détails: ${data.error}`;
+          } else if (data.error.message) {
+            errorMessage += `Message: ${data.error.message}`;
+            if (data.error.code) {
+              errorMessage += `\nCode: ${data.error.code}`;
+            }
+          } else {
+            errorMessage += `Erreur: ${JSON.stringify(data.error)}`;
+          }
+        } else {
+          errorMessage += 'Erreur inconnue - Vérifiez les logs de la console';
+        }
+        
+        errorMessage += '\n\n🔍 Vérifications suggérées:';
+        errorMessage += '\n• Variables d\'environnement Google configurées';
+        errorMessage += '\n• Fonction Edge "google-oauth" déployée';
+        errorMessage += '\n• Client ID Google valide';
+        errorMessage += '\n• API Google My Business activée';
+        
+        alert(errorMessage);
       }
     } catch (error) {
-      console.error('Error processing OAuth callback:', error);
-      alert(`Erreur lors de la connexion: ${error.message}`);
+      console.error('💥 Error processing OAuth callback:', error);
+      
+      let errorMessage = '❌ ERREUR CRITIQUE lors de la connexion\n\n';
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage += 'Problème de réseau ou URL Supabase incorrecte\n\n';
+        errorMessage += `URL utilisée: ${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth\n\n`;
+        errorMessage += '🔍 Vérifiez:\n';
+        errorMessage += '• Connexion internet\n';
+        errorMessage += '• URL Supabase correcte\n';
+        errorMessage += '• Fonction Edge déployée';
+      } else {
+        errorMessage += `Détails: ${error.message}\n\n`;
+        errorMessage += '🔍 Consultez la console pour plus de détails';
+      }
+      
+      alert(errorMessage);
     }
   };
 
