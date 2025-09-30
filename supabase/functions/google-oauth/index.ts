@@ -127,9 +127,7 @@ serve(async (req) => {
             }
           });
         }
-// ----------------------------------------------------------------------
-// CAS CORRIGÉS : Utilisation de la nouvelle API Business Profile (v1)
-// ----------------------------------------------------------------------
+
       case 'get-accounts':
         {
           if (!accessToken) {
@@ -195,9 +193,6 @@ serve(async (req) => {
           });
         }
 
-// ----------------------------------------------------------------------
-// CAS V4 CONSERVÉ : L'API Reviews n'a pas été migrée vers un service v1 séparé
-// ----------------------------------------------------------------------
       case 'reply-review':
         {
           if (!accessToken || !locationId || !reviewId || !comment) {
