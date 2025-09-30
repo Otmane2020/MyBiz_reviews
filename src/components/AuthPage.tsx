@@ -20,9 +20,6 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -35,6 +32,14 @@ const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
     setLoading(true);
     
     try {
+      // Use Supabase native Google OAuth with specific configuration
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
       // Use Supabase native Google OAuth with specific configuration
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -53,31 +58,6 @@ const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
         throw error;
       }
       
-    } catch (error) {
-      console.error('Error during Google OAuth:', error);
-      alert('Erreur lors de l\'authentification Google');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // Check for OAuth callback
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    if (code) {
-      setLoading(true);
-      
-      fetch('/api/oauth/exchange', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'exchange-code',
-          code: code,
-          redirectUri: window.location.origin
         }),
       })
       .then(response => response.json())
@@ -137,7 +117,7 @@ const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
       alert('Erreur lors de la connexion');
     } finally {
       setLoading(false);
-    }
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
   };
 
   const handleInputChange = (e) => {
