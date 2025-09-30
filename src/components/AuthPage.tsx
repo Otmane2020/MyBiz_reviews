@@ -105,10 +105,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
         });
 
         if (error) {
+         console.error('Login error details:', {
+           message: error.message,
+           status: error.status,
+           email: email,
+           errorCode: error.name
+         });
           throw error;
         }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -125,8 +131,26 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
           email,
           password,
         });
-        
-        if (signInError) {
+
+        console.log('Signup response:', { data, error });
+        // Check if user was created successfully
+        if (data.user) {
+          console.log('User created successfully:', data.user.id);
+          // Try to sign in automatically
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (signInError) {
+            console.log('Auto sign-in failed, manual login required:', signInError.message);
+            setMessage('Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
+            setTimeout(() => {
+              setIsLogin(true);
+              setMessage(null);
+            }, 2000);
+          }
+        } else {
           setMessage('Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
           setTimeout(() => {
             setIsLogin(true);
@@ -140,13 +164,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
       // Provide more specific error messages
       let errorMessage = 'Erreur lors de l\'authentification';
       
-      if (err.message?.includes('Invalid login credentials')) {
+      if (err.message?.includes('Invalid login credentials') || err.message?.includes('invalid_credentials')) {
         errorMessage = isLogin 
-          ? 'Email ou mot de passe incorrect. Vérifiez vos identifiants ou créez un compte.'
+          ? `Email ou mot de passe incorrect pour ${email}. Vérifiez vos identifiants ou créez un compte si vous n'en avez pas.`
           : 'Erreur lors de la création du compte';
       } else if (err.message?.includes('User already registered')) {
         errorMessage = 'Un compte existe déjà avec cet email. Essayez de vous connecter.';
         setIsLogin(true);
+      } else if (err.message?.includes('Email not confirmed')) {
+        errorMessage = 'Votre email n\'est pas confirmé. Vérifiez votre boîte mail ou contactez le support.';
+      } else if (err.message?.includes('User not found')) {
+        errorMessage = `Aucun compte trouvé pour ${email}. Créez d'abord un compte.`;
+        setIsLogin(false);
       } else if (err.message?.includes('Password should be at least')) {
         errorMessage = 'Le mot de passe doit contenir au moins 6 caractères';
       } else if (err.message) {
