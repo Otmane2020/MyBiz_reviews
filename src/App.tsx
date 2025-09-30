@@ -457,6 +457,7 @@ function App() {
           setSelectedLocationId={setSelectedLocationId}
           onNavigate={handleNavigate}
           selectedAccountId={selectedAccountId}
+          onTokenExpired={handleGoogleTokenExpired}
         />
       )}
       {currentPage === 'google-my-business' && (

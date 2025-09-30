@@ -88,6 +88,12 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       debugLog('fetchAccounts response data', data);
 
       if (!data.success) {
+        // Check if it's a token expiration error
+        if (data.error && (data.error.includes('401') || data.error.includes('invalide') || data.error.includes('expiré'))) {
+          debugLog('Token expired, calling onTokenExpired');
+          onTokenExpired();
+          return;
+        }
         throw new Error(data.error || 'Échec de récupération des comptes');
       }
 
