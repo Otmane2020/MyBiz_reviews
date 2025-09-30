@@ -43,17 +43,26 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   useEffect(() => {
     // Check if user has Google access token from Supabase session
     const initializeWithSupabaseSession = async () => {
+      console.log('🚀 [DEBUG] Initializing GoogleBusinessSetup...');
+      
       const { data: { session } } = await supabase.auth.getSession();
+      
+      console.log('📋 [DEBUG] Supabase session present:', !!session);
+      console.log('📋 [DEBUG] Provider token present:', !!session?.provider_token);
+      console.log('📋 [DEBUG] Fallback accessToken present:', !!accessToken);
       
       if (session && session.provider_token) {
         // Use the access token from Supabase session
+        console.log('✅ [DEBUG] Using provider token from Supabase session');
         fetchAccounts(session.provider_token);
       } else if (accessToken) {
         // Fallback to provided access token
+        console.log('✅ [DEBUG] Using fallback accessToken from props');
         fetchAccounts(accessToken);
       } else {
+        console.error('❌ [DEBUG] No access token available from any source');
         setLoading(false);
-        alert('Aucun token d\'accès Google trouvé. Veuillez vous reconnecter.');
+        alert('Aucun token d\'accès Google trouvé.\n\nCauses possibles:\n• Session Supabase expirée\n• Token non fourni en props\n• Problème d\'authentification\n\nVeuillez vous reconnecter.');
       }
     };
     
@@ -62,34 +71,50 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
 
   const fetchAccounts = async (token: string = accessToken) => {
     try {
+      console.log('🔍 [DEBUG] Starting fetchAccounts...');
+      console.log('🔑 [DEBUG] Access token present:', !!token);
+      console.log('🔑 [DEBUG] Access token (first 20 chars):', token ? token.substring(0, 20) + '...' : 'MISSING');
+      console.log('🌐 [DEBUG] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+      console.log('🔐 [DEBUG] Supabase Key present:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+      
       console.log('🔍 Fetching Google My Business accounts via Supabase Edge Function...');
-      console.log('🔑 Access token:', token ? 'Present' : 'Missing');
       
       // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
       console.log('📡 Calling Supabase Edge Function for accounts...');
+      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`;
+      console.log('🎯 [DEBUG] Edge Function URL:', edgeFunctionUrl);
+      
+      const requestBody = {
+        action: 'get-accounts',
+        accessToken: token,
+      };
+      console.log('📤 [DEBUG] Request body:', { ...requestBody, accessToken: token ? token.substring(0, 20) + '...' : 'MISSING' });
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          action: 'get-accounts',
-          accessToken: token,
-        }),
+        body: JSON.stringify(requestBody),
       });
       
-      console.log('📡 Response status:', response.status);
+      console.log('📡 [DEBUG] Response status:', response.status);
+      console.log('📡 [DEBUG] Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📡 [DEBUG] Response ok:', response.ok);
       
       if (!response.ok) {
         const text = await response.text();
-        console.error('❌ HTTP Error from google-oauth function:', response.status, text);
+        console.error('❌ [DEBUG] HTTP Error from google-oauth function:', response.status, text);
+        console.error('❌ [DEBUG] Full response text:', text);
         
         // Try to parse as JSON first
         try {
           const errorData = JSON.parse(text);
+          console.error('❌ [DEBUG] Parsed error data:', errorData);
           throw new Error(`Erreur API: ${errorData.error || 'Erreur inconnue'}`);
         } catch (parseError) {
+          console.error('❌ [DEBUG] Failed to parse error as JSON:', parseError);
           // If not JSON, it's likely an HTML error page
           if (text.includes('<!DOCTYPE') || text.includes('<html>')) {
             throw new Error('La fonction Supabase google-oauth n\'est pas déployée correctement. Vérifiez que la fonction Edge est active dans votre projet Supabase.');
@@ -100,34 +125,57 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       }
       
       const data = await response.json();
-      console.log('📊 Accounts response:', data);
+      console.log('📊 [DEBUG] Raw accounts response:', data);
+      console.log('📊 [DEBUG] Response success:', data.success);
+      console.log('📊 [DEBUG] Response accounts count:', data.accounts ? data.accounts.length : 0);
+      console.log('📊 [DEBUG] Response error:', data.error);
       
       if (data && data.success && data.accounts && data.accounts.length > 0) {
+        console.log('✅ [DEBUG] Accounts loaded successfully:', data.accounts.length);
         setAccounts(data.accounts);
         if (data.accounts.length === 1) {
           // Auto-select if only one account
+          console.log('🎯 [DEBUG] Auto-selecting single account:', data.accounts[0].name);
           setSelectedAccountId(data.accounts[0].name);
           fetchLocations(data.accounts[0].name);
         }
       } else if (data && data.error) {
-        console.error('❌ Aucun compte Google My Business trouvé:', data);
-        console.error('🚨 Erreur API:', data.error);
+        console.error('❌ [DEBUG] No GMB accounts found:', data);
+        console.error('🚨 [DEBUG] API error details:', data.error);
+        
+        // Show detailed error to user
+        let userErrorMessage = 'Erreur lors de la récupération des comptes Google My Business:\n\n';
+        
         if (data.error.code === 401 || data.error.status === 401) {
-          alert('Token d\'accès expiré. Veuillez vous reconnecter.');
+          userErrorMessage += '🔑 Token d\'accès expiré. Veuillez vous reconnecter.';
         } else if (data.error.code === 403 || data.error.status === 403) {
-          alert('Accès refusé. Vérifiez que l\'API Google My Business est activée et que vous avez les permissions nécessaires.');
+          userErrorMessage += '🚫 Accès refusé. Vérifiez que l\'API "My Business Account Management API" est activée dans Google Cloud Console et que vous avez les permissions nécessaires.';
         } else if (data.error.code === 404 || data.error.status === 404) {
-          alert('Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google.');
+          userErrorMessage += '🔍 Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google.';
         } else {
-          alert(`Erreur API Google: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
+          userErrorMessage += `⚠️ Erreur API Google: ${data.error.message || data.error.code || 'Erreur inconnue'}`;
         }
+        
+        userErrorMessage += '\n\n🔍 Détails techniques dans la console (F12)';
+        alert(userErrorMessage);
       } else {
-        console.error('❌ Réponse inattendue:', data);
-        alert('Réponse inattendue du serveur. Vérifiez les logs de la console.');
+        console.error('❌ [DEBUG] Unexpected response structure:', data);
+        alert('Réponse inattendue du serveur. Vérifiez les logs de la console (F12) pour plus de détails.');
       }
     } catch (error) {
-      console.error('💥 Erreur lors de la récupération des comptes:', error);
-      alert(`Erreur de connexion à Google My Business: ${error.message}. Vérifiez votre connexion internet et réessayez.`);
+      console.error('💥 [DEBUG] Fatal error in fetchAccounts:', error);
+      console.error('💥 [DEBUG] Error stack:', error.stack);
+      
+      let userErrorMessage = 'Erreur critique lors de la récupération des comptes:\n\n';
+      userErrorMessage += `📝 Message: ${error.message}\n\n`;
+      userErrorMessage += '🔍 Vérifications suggérées:\n';
+      userErrorMessage += '• Variables d\'environnement Supabase configurées\n';
+      userErrorMessage += '• Fonction Edge "google-oauth" déployée\n';
+      userErrorMessage += '• APIs Google activées dans Cloud Console\n';
+      userErrorMessage += '• Token d\'accès valide avec les bons scopes\n\n';
+      userErrorMessage += '🔍 Détails techniques dans la console (F12)';
+      
+      alert(userErrorMessage);
     } finally {
       setLoading(false);
     }
@@ -136,51 +184,97 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   const fetchLocations = async (accountId: string) => {
     setLoading(true);
     try {
+      console.log('🏪 [DEBUG] Starting fetchLocations...');
+      console.log('🏪 [DEBUG] Account ID:', accountId);
+      
       // Get current access token
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.provider_token || accessToken;
+      
+      console.log('🔑 [DEBUG] Token for locations present:', !!token);
+      console.log('🔑 [DEBUG] Token source:', session?.provider_token ? 'Supabase session' : 'Props');
       
       console.log('🏪 Fetching locations for account via Supabase Edge Function:', accountId);
       
       // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
       console.log('📡 Calling Supabase Edge Function for locations...');
+      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`;
+      console.log('🎯 [DEBUG] Edge Function URL:', edgeFunctionUrl);
+      
+      const requestBody = {
+        action: 'get-locations',
+        accessToken: token,
+        accountId: accountId,
+      };
+      console.log('📤 [DEBUG] Request body:', { ...requestBody, accessToken: token ? token.substring(0, 20) + '...' : 'MISSING' });
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          action: 'get-locations',
-          accessToken: token,
-          accountId: accountId,
-        }),
+        body: JSON.stringify(requestBody),
       });
       
-      console.log('📡 Locations response status:', response.status);
+      console.log('📡 [DEBUG] Locations response status:', response.status);
+      console.log('📡 [DEBUG] Locations response ok:', response.ok);
       
       if (!response.ok) {
         const text = await response.text();
-        console.error('❌ HTTP Error from locations API:', response.status, text);
+        console.error('❌ [DEBUG] HTTP Error from locations API:', response.status, text);
+        console.error('❌ [DEBUG] Full locations response text:', text);
         throw new Error(`Erreur HTTP ${response.status} lors de la récupération des établissements`);
       }
       
       const data = await response.json();
-      console.log('🏢 Locations response:', data);
+      console.log('🏢 [DEBUG] Raw locations response:', data);
+      console.log('🏢 [DEBUG] Locations success:', data.success);
+      console.log('🏢 [DEBUG] Locations count:', data.locations ? data.locations.length : 0);
+      console.log('🏢 [DEBUG] Locations error:', data.error);
       
       if (data && data.success && data.locations && data.locations.length > 0) {
+        console.log('✅ [DEBUG] Locations loaded successfully:', data.locations.length);
         setLocations(data.locations);
         setStep('locations');
       } else if (data && data.error) {
-        console.error('🚨 Erreur API locations:', data.error);
-        alert(`Erreur lors de la récupération des établissements: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
+        console.error('🚨 [DEBUG] Locations API error:', data.error);
+        
+        let userErrorMessage = 'Erreur lors de la récupération des établissements:\n\n';
+        
+        if (data.error.code === 403 || data.error.status === 403) {
+          if (data.error.message?.includes('My Business Business Information API')) {
+            userErrorMessage += '🚫 L\'API "My Business Business Information API" n\'est pas activée.\n';
+            userErrorMessage += 'Activez-la sur: https://console.cloud.google.com/apis/library/mybusinessbusinessinformation.googleapis.com';
+          } else {
+            userErrorMessage += '🚫 Accès refusé aux établissements. Vérifiez vos permissions Google My Business.';
+          }
+        } else if (data.error.code === 401 || data.error.status === 401) {
+          userErrorMessage += '🔑 Token d\'accès invalide ou expiré. Reconnectez-vous.';
+        } else {
+          userErrorMessage += `⚠️ ${data.error.message || data.error.code || 'Erreur inconnue'}`;
+        }
+        
+        userErrorMessage += '\n\n🔍 Détails techniques dans la console (F12)';
+        alert(userErrorMessage);
       } else {
-        console.error('❌ Aucun établissement trouvé:', data);
-        alert('Aucun établissement trouvé pour ce compte. Assurez-vous d\'avoir créé au moins un établissement dans votre profil Google My Business.');
+        console.error('❌ [DEBUG] No locations found or unexpected response:', data);
+        alert('Aucun établissement trouvé pour ce compte.\n\nAssurez-vous d\'avoir créé au moins un établissement dans votre profil Google My Business.\n\n🔍 Détails techniques dans la console (F12)');
       }
     } catch (error) {
-      console.error('💥 Erreur lors de la récupération des établissements:', error);
-      alert(`Erreur lors de la récupération des établissements: ${error.message}. Vérifiez votre connexion.`);
+      console.error('💥 [DEBUG] Fatal error in fetchLocations:', error);
+      console.error('💥 [DEBUG] Error stack:', error.stack);
+      
+      let userErrorMessage = 'Erreur critique lors de la récupération des établissements:\n\n';
+      userErrorMessage += `📝 Message: ${error.message}\n\n`;
+      userErrorMessage += '🔍 Vérifications suggérées:\n';
+      userErrorMessage += '• Connexion internet stable\n';
+      userErrorMessage += '• APIs Google activées\n';
+      userErrorMessage += '• Token d\'accès valide\n';
+      userErrorMessage += '• Fonction Edge déployée\n\n';
+      userErrorMessage += '🔍 Détails techniques dans la console (F12)';
+      
+      alert(userErrorMessage);
     } finally {
       setLoading(false);
     }
@@ -206,6 +300,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         <div className="text-center text-white">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p>Chargement de vos comptes Google My Business...</p>
+          <p className="text-sm text-white/70 mt-2">Vérifiez la console (F12) pour les détails</p>
         </div>
       </div>
     );
