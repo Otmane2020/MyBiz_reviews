@@ -15,6 +15,21 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  const handleDirectOnboarding = () => {
+    console.log('🎯 Direct onboarding access - bypassing auth');
+    localStorage.setItem('isTrialSignup', 'true');
+    localStorage.setItem('directOnboarding', 'true');
+    // Simulate a basic user for onboarding
+    const mockUser = {
+      id: 'demo-user-' + Date.now(),
+      name: 'Demo User',
+      email: 'demo@example.com',
+      picture: 'https://ui-avatars.com/api/?name=Demo+User&background=4285F4&color=fff',
+      authMethod: 'demo'
+    };
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    window.location.reload();
+  };
   const handleGoogleAuth = (isTrial: boolean = false) => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
     console.log('Is trial signup:', isTrial);
@@ -95,6 +110,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           </div>
         </div>
 
+        {/* Direct Onboarding Button */}
+        <div className="mb-6">
+          <button
+            onClick={handleDirectOnboarding}
+            className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-[#FBBC05] to-[#EA4335] text-white rounded-lg hover:from-[#F9AB00] hover:to-[#D33B2C] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FBBC05] transition-all duration-200 shadow-lg transform hover:scale-105 font-medium"
+          >
+            <TrendingUp className="w-5 h-5 mr-3" />
+            🚀 Accès direct à l'onboarding
+          </button>
+          <div className="text-center text-xs text-white/70 mt-2">
+            ⚡ Mode démo pour tester l'onboarding
+          </div>
+        </div>
         {/* Auth Card */}
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-6">

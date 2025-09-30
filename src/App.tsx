@@ -89,9 +89,11 @@ function App() {
       
       // Check trial signup flag and onboarding status
       const isTrialSignup = localStorage.getItem('isTrialSignup') === 'true';
+      const isDirectOnboarding = localStorage.getItem('directOnboarding') === 'true';
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
       
       console.log('🔍 Session handling - isTrialSignup:', isTrialSignup);
+      console.log('🔍 Session handling - isDirectOnboarding:', isDirectOnboarding);
       console.log('🔍 Session handling - completedOnboarding:', completedOnboarding);
       console.log('🔍 Session handling - isDashboardRoute:', isDashboardRoute);
       console.log('📝 All localStorage keys:', Object.keys(localStorage));
@@ -100,10 +102,12 @@ function App() {
      
      // Clear the trial signup flag after reading it
      localStorage.removeItem('isTrialSignup');
+     localStorage.removeItem('directOnboarding');
      console.log('🧹 Cleared isTrialSignup from localStorage');
+     console.log('🧹 Cleared directOnboarding from localStorage');
      
      // Priority 1: If user clicked "Essayer gratuitement", always go to onboarding
-     if (isTrialSignup) {
+     if (isTrialSignup || isDirectOnboarding) {
        console.log('✅ Trial signup detected - redirecting to onboarding');
        console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
@@ -130,6 +134,19 @@ function App() {
      }
     } else {
       console.log('❌ No session found - user not authenticated');
+      
+      // Check for direct onboarding access with demo user
+      const isDirectOnboarding = localStorage.getItem('directOnboarding') === 'true';
+      const demoUser = localStorage.getItem('user');
+      
+      if (isDirectOnboarding && demoUser) {
+        console.log('🎯 Direct onboarding access with demo user');
+        const userData = JSON.parse(demoUser);
+        setUser(userData);
+        setCurrentView('onboarding');
+        return;
+      }
+      
       // No session - clear everything
       setUser(null);
       setAccessToken('');
@@ -144,6 +161,7 @@ function App() {
       localStorage.removeItem('selectedLocationId');
       localStorage.removeItem('onboardingCompleted');
       localStorage.removeItem('isTrialSignup');
+      localStorage.removeItem('directOnboarding');
       // Si on est sur /dashboard, rediriger vers auth, sinon landing
       const targetView = isDashboardRoute ? 'auth' : 'landing';
       console.log('🎯 Setting currentView to:', targetView);
