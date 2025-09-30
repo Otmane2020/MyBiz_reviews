@@ -5,12 +5,25 @@ import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
 import LandingPage from './components/LandingPage';
 import Onboarding from './components/Onboarding';
+import MobileMenu from './components/MobileMenu';
+import ComprehensiveOnboarding from './components/ComprehensiveOnboarding';
+import AISettingsPage from './components/AISettingsPage';
+import SettingsPage from './components/SettingsPage';
+import GoogleReviews from './pages/GoogleReviews';
+import { useReviewsNotifications } from './hooks/useReviewsNotifications';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [accessToken, setAccessToken] = useState<string>('');
+  
+  // Notifications
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useReviewsNotifications(selectedLocationId);
 
   useEffect(() => {
     // Get initial session
@@ -41,6 +54,7 @@ function App() {
         try {
           const userData = JSON.parse(decodeURIComponent(userParam));
           setUser(userData);
+          setAccessToken(token);
           // Clean up URL
           window.history.replaceState({}, document.title, window.location.pathname);
         } catch (error) {
@@ -52,6 +66,22 @@ function App() {
     handleOAuthCallback();
   }, []);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setCurrentPage('dashboard');
+    setAccessToken('');
+    setSelectedLocationId('');
+    setSelectedAccountId('');
+  };
+
+  const handleOnboardingComplete = (selectedStores: string[], selectedPlan: string) => {
+    setShowOnboarding(false);
+    if (selectedStores.length > 0) {
+      setSelectedLocationId(selectedStores[0]);
+    }
+    setCurrentPage('dashboard');
+  };
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -65,17 +95,61 @@ function App() {
   }
 
   if (showOnboarding) {
-    return <Onboarding onComplete={() => setShowOnboarding(false)} />;
+    return (
+      <ComprehensiveOnboarding 
+        user={user} 
+        accessToken={accessToken}
+        onComplete={handleOnboardingComplete} 
+      />
+    );
   }
 
   if (user) {
-    return <Dashboard />;
+    const renderCurrentPage = () => {
+      switch (currentPage) {
+        case 'dashboard':
+          return <Dashboard user={user} />;
+        case 'reviews':
+          return (
+            <GoogleReviews
+              user={user}
+              accessToken={accessToken}
+              selectedLocationId={selectedLocationId}
+              setSelectedLocationId={setSelectedLocationId}
+              selectedAccountId={selectedAccountId}
+              onNavigate={setCurrentPage}
+            />
+          );
+        case 'avis-ia':
+          return <AISettingsPage user={user} />;
+        case 'settings':
+          return <SettingsPage user={user} onLogout={handleLogout} />;
+        default:
+          return <Dashboard user={user} />;
+      }
+    };
+
+    return (
+      <>
+        <MobileMenu
+          user={user}
+          currentPage={currentPage}
+          onNavigate={setCurrentPage}
+          onLogout={handleLogout}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+          onClearAll={clearNotifications}
+        />
+        {renderCurrentPage()}
+      </>
+    );
   }
 
   return (
     <LandingPage 
       onGetStarted={() => setShowAuth(true)}
-      onLogin={() => setShowAuth(true)}
     />
   );
 }
