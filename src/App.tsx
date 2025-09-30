@@ -117,7 +117,7 @@ function App() {
 
 
   const handleGoogleAuth = () => {
-    // Pour les utilisateurs existants qui se connectent
+    // Pour les utilisateurs existants - connexion Google directe
     try {
       supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -137,9 +137,8 @@ function App() {
   };
 
   const handleEmailAuth = (userData: any) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentView('onboarding');
+    // Cette fonction n'est plus utilisée car on a supprimé l'auth email
+    console.log('Email auth deprecated');
   };
 
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
@@ -181,7 +180,7 @@ function App() {
   };
 
   const handleGetStarted = () => {
-    // Pour les nouveaux utilisateurs, aller directement à l'onboarding
+    // Pour les nouveaux utilisateurs, aller directement à l'onboarding sans authentification
     setCurrentView('onboarding');
   };
 

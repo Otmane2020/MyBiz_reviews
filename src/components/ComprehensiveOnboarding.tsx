@@ -23,9 +23,10 @@ interface GoogleLocation {
 }
 
 interface ComprehensiveOnboardingProps {
-  user: any;
+  user?: any;
   accessToken?: string;
   onComplete: (selectedStores: string[], selectedPlan: string) => void;
+  onTokenExpired?: () => void;
 }
 
 const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ 
