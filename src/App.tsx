@@ -1,30 +1,17 @@
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-const AuthPage = () => {
+interface AuthPageProps {
+  onGoogleAuth: (userData: any, token: string) => void;
+  onEmailAuth: (userData: any) => void;
+}
+
+const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -32,32 +19,10 @@ const AuthPage = () => {
     confirmPassword: ''
   });
 
-  useEffect(() => {
-    // Check for OAuth callback
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
+  const handleGoogleAuth = () => {
+    setLoading(true);
     
-    if (code) {
-      // Exchange code for tokens
-      fetch('/api/auth/google/callback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Handle successful authentication
-          window.location.href = '/dashboard';
-        } else {
-          console.error('OAuth callback error:', data.error);
-        }
-      })
-      .catch(error => {
-        console.error('OAuth callback error:', error);
-      });
+    try {
       // Use Supabase native Google OAuth with specific configuration
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -70,12 +35,6 @@ const AuthPage = () => {
           scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
       });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
       
       if (error) {
         console.error('Error during Google OAuth:', error);
@@ -83,59 +42,92 @@ const AuthPage = () => {
       }
       
     } catch (error) {
-      console.error('Erreur d\'authentification Google:', error);
-      alert('Erreur lors de la connexion avec Google');
+      console.error('Error signing in with Google:', error);
       setLoading(false);
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-      }
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-        alert('Erreur de configuration OAuth. Veuillez contacter le support.');
-      }
-    }
-    }
-  }, []);
-
-  const handleGoogleAuth2 = async () => {
-    try {
-      setLoading(true);
-      setError('');
       
-      // Use Supabase native Google OAuth with specific configuration
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
+      // Show user-friendly error message
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+        alert('Erreur de configuration OAuth. L\'URL de redirection ne correspond pas. Contactez le support.');
+      } else if (error.message && error.message.includes('unauthorized_client')) {
+        alert('Client OAuth non autorisé. Vérifiez la configuration Google Cloud Console.');
+      } else {
+        alert('Erreur lors de la connexion avec Google. Veuillez réessayer ou contactez le support.');
       }
-      
-    } catch (error: any) {
-      console.error('Erreur d\'authentification Google:', error);
-      setError('Erreur lors de la connexion avec Google');
-      setLoading(false);
     }
   };
 
-  const handleGoogleAuth = async () => {
-    try {
+  // Handle OAuth callback if we're using direct Google OAuth
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
+    
+    if (error) {
+      console.error('OAuth error:', error);
+      alert(`Erreur d'authentification: ${error}`);
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+    
+    if (code) {
+      console.log('OAuth code received, processing...');
       setLoading(true);
-      setError('');
       
-      // Use Supabase native Google OAuth with specific configuration
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Exchange code for tokens via our Edge Function
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'exchange-code',
+          code: code,
+          redirectUri: window.location.origin
+        }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Create user data and call onGoogleAuth
+          const userData = {
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            picture: data.user.picture,
+            authMethod: 'google'
+          };
+          
+          onGoogleAuth(userData, data.access_token);
+          
+          // Clear URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          throw new Error(data.error || 'Failed to exchange code');
+        }
+      })
+      .catch(error => {
+        console.error('Error exchanging code:', error);
+        alert('Erreur lors de l\'échange du code d\'autorisation. Veuillez réessayer.');
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+    }
+  }, []);
+
+  const handleGoogleAuthOld = () => {
+    console.log('Google Client ID:', GOOGLE_CLIENT_ID);
+    
+    try {
+      // Use Supabase native Google OAuth
+      supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}`,
+          redirectTo: window.location.origin,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -143,77 +135,38 @@ const AuthPage = () => {
           scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
       });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
-    } catch (error: any) {
-      console.error('Erreur d\'authentification Google:', error);
-      setError('Erreur lors de la connexion avec Google');
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
+    } finally {
       setLoading(false);
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-        setError('Erreur de configuration OAuth. Veuillez contacter le support.');
-      }
     }
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
     
     if (!isLogin && formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      setLoading(false);
+      alert('Les mots de passe ne correspondent pas');
       return;
     }
 
+    setLoading(true);
+    
     try {
-      if (isLogin) {
-        // Sign in with email and password
-        const { error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-        
-        if (error) throw error;
-        
-      } else {
-        // Sign up with email and password
-        const { error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              full_name: formData.fullName,
-            }
-          }
-        });
-        
-        if (error) throw error;
-        
-        // Show success message for sign up
-        setError('');
-        alert('Compte créé avec succès ! Vérifiez votre email pour confirmer votre compte.');
-      }
+      // Simulate email auth (you can integrate with Supabase Auth here)
+      const userData = {
+        id: Date.now().toString(),
+        email: formData.email,
+        name: formData.fullName || formData.email.split('@')[0],
+        picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName || formData.email)}&background=4285F4&color=fff`,
+        authMethod: 'email'
+      };
       
-    } catch (error: any) {
+      onEmailAuth(userData);
+    } catch (error) {
       console.error('Erreur d\'authentification:', error);
-      if (error?.message) {
-        if (error.message.includes('Invalid login credentials')) {
-          setError('Email ou mot de passe incorrect');
-        } else if (error.message.includes('Password should be at least 6 characters')) {
-          setError('Le mot de passe doit contenir au moins 6 caractères');
-        } else if (error.message.includes('User already registered')) {
-          setError('Un compte existe déjà avec cet email');
-        } else {
-          setError(error.message);
-        }
-      } else {
-        setError('Erreur lors de la connexion');
-      }
+      alert('Erreur lors de la connexion');
     } finally {
       setLoading(false);
     }
@@ -245,13 +198,6 @@ const AuthPage = () => {
               {isLogin ? 'Connectez-vous à votre compte' : 'Rejoignez Starlinko aujourd\'hui'}
             </p>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{error}</p>
-            </div>
-          )}
 
           {/* Google Auth Button */}
           <button
@@ -357,7 +303,7 @@ const AuthPage = () => {
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
                     placeholder="••••••••"
-                    required
+                    required={!isLogin}
                   />
                 </div>
               </div>
@@ -366,9 +312,9 @@ const AuthPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#4285F4] text-white py-3 px-4 rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-[#4285F4] text-white py-3 px-4 rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 font-medium disabled:opacity-50"
             >
-              {loading ? 'Chargement...' : (isLogin ? 'Se connecter' : 'Créer un compte')}
+              {loading ? 'Chargement...' : (isLogin ? 'Se connecter' : 'Créer le compte')}
             </button>
           </form>
 
@@ -376,7 +322,7 @@ const AuthPage = () => {
           <div className="text-center mt-6">
             <button
               onClick={() => setIsLogin(!isLogin)}
-              className="text-[#4285F4] hover:text-[#3367D6] font-medium"
+              className="text-[#4285F4] hover:underline text-sm"
             >
               {isLogin ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
             </button>
