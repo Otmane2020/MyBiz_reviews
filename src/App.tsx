@@ -20,90 +20,6 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-  const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    fullName: '',
-    confirmPassword: ''
-  });
-
-  useEffect(() => {
-    // Check for OAuth callback
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    if (code) {
-      // Exchange code for tokens
-      fetch('/api/auth/google/callback', {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code })
-      // Use Supabase native Google OAuth with specific configuration
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
-    } catch (error) {
-      console.error('Erreur d\'authentification Google:', error);
-      alert('Erreur lors de la connexion avec Google');
-      setLoading(false);
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-      }
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-        alert('Erreur de configuration OAuth. Veuillez contacter le support.');
-      }
-    }
-  };
-
-  const handleGoogleAuth2 = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Use Supabase native Google OAuth with specific configuration
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
-    } catch (error: any) {
-      console.error('Erreur d\'authentification Google:', error);
-      setError('Erreur lors de la connexion avec Google');
-      setLoading(false);
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -142,8 +58,73 @@ const AuthPage = () => {
       .catch(error => {
         console.error('OAuth callback error:', error);
       });
+      // Use Supabase native Google OAuth with specific configuration
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
+    } catch (error) {
+      console.error('Erreur d\'authentification Google:', error);
+      alert('Erreur lors de la connexion avec Google');
+      setLoading(false);
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+      }
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+        alert('Erreur de configuration OAuth. Veuillez contacter le support.');
+      }
+    }
     }
   }, []);
+
+  const handleGoogleAuth2 = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Use Supabase native Google OAuth with specific configuration
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
+    } catch (error: any) {
+      console.error('Erreur d\'authentification Google:', error);
+      setError('Erreur lors de la connexion avec Google');
+      setLoading(false);
+    }
+  };
 
   const handleGoogleAuth = async () => {
     try {
