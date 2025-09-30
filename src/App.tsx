@@ -21,6 +21,7 @@ function App() {
   const [accessToken, setAccessToken] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
 
   // Check if current path is /superadmin
   const isSuperAdminRoute = window.location.pathname === '/superadmin';
@@ -43,12 +44,14 @@ function App() {
     const savedToken = localStorage.getItem('accessToken');
     const savedAccountId = localStorage.getItem('selectedAccountId');
     const savedLocationId = localStorage.getItem('selectedLocationId');
+    const completedOnboarding = localStorage.getItem('onboardingCompleted');
 
     if (savedUser) {
       setUser(JSON.parse(savedUser));
       if (savedToken) setAccessToken(savedToken);
       if (savedAccountId) setSelectedAccountId(savedAccountId);
       if (savedLocationId) setSelectedLocationId(savedLocationId);
+      setHasCompletedOnboarding(!!completedOnboarding);
       setCurrentView('app');
     } else {
       // Show landing page for new users
@@ -158,13 +161,29 @@ function App() {
     setAccessToken(token);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('accessToken', token);
-    setCurrentView('google-setup');
+    
+    // Check if user has already completed onboarding
+    const completedOnboarding = localStorage.getItem('onboardingCompleted');
+    if (completedOnboarding) {
+      setHasCompletedOnboarding(true);
+      setCurrentView('app');
+    } else {
+      setCurrentView('google-setup');
+    }
   };
 
   const handleEmailAuth = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentView('onboarding');
+    
+    // Check if user has already completed onboarding
+    const completedOnboarding = localStorage.getItem('onboardingCompleted');
+    if (completedOnboarding) {
+      setHasCompletedOnboarding(true);
+      setCurrentView('app');
+    } else {
+      setCurrentView('onboarding');
+    }
   };
 
   const handleGetStarted = () => {
@@ -176,10 +195,20 @@ function App() {
     setSelectedLocationId(locationId);
     localStorage.setItem('selectedAccountId', accountId);
     localStorage.setItem('selectedLocationId', locationId);
-    setCurrentView('onboarding');
+    
+    // Check if user has already completed onboarding
+    const completedOnboarding = localStorage.getItem('onboardingCompleted');
+    if (completedOnboarding) {
+      setHasCompletedOnboarding(true);
+      setCurrentView('app');
+    } else {
+      setCurrentView('onboarding');
+    }
   };
 
   const handleOnboardingComplete = () => {
+    localStorage.setItem('onboardingCompleted', 'true');
+    setHasCompletedOnboarding(true);
     setCurrentView('app');
   };
 
@@ -187,6 +216,8 @@ function App() {
     // Save selected stores and plan
     localStorage.setItem('selectedStores', JSON.stringify(selectedStores));
     localStorage.setItem('selectedPlan', selectedPlan);
+    localStorage.setItem('onboardingCompleted', 'true');
+    setHasCompletedOnboarding(true);
     
     // Set the first selected store as the current location
     if (selectedStores.length > 0) {
@@ -203,10 +234,12 @@ function App() {
     setSelectedAccountId('');
     setSelectedLocationId('');
     setCurrentPage('dashboard');
+    setHasCompletedOnboarding(false);
     localStorage.removeItem('user');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('selectedAccountId');
     localStorage.removeItem('selectedLocationId');
+    localStorage.removeItem('onboardingCompleted');
     setCurrentView('landing');
   };
 
