@@ -40,8 +40,6 @@ function App() {
   // Check if current path is /success
   const isSuccessRoute = window.location.pathname === '/success';
 
-  // Check if current path is /dashboard
-  const isDashboardRoute = window.location.pathname === '/dashboard';
   // Consolidated session handling function
   const handleSession = (session: any) => {
     console.log('🔍 handleSession called with session:', !!session);
@@ -91,11 +89,12 @@ function App() {
       const isTrialSignup = localStorage.getItem('isTrialSignup') === 'true';
       const isDirectOnboarding = localStorage.getItem('directOnboarding') === 'true';
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
+      const hasSelectedLocation = !!savedLocationId;
       
       console.log('🔍 Session handling - isTrialSignup:', isTrialSignup);
       console.log('🔍 Session handling - isDirectOnboarding:', isDirectOnboarding);
       console.log('🔍 Session handling - completedOnboarding:', completedOnboarding);
-      console.log('🔍 Session handling - isDashboardRoute:', isDashboardRoute);
+      console.log('🔍 Session handling - hasSelectedLocation:', hasSelectedLocation);
       console.log('📝 All localStorage keys:', Object.keys(localStorage));
       console.log('📝 localStorage isTrialSignup value:', localStorage.getItem('isTrialSignup'));
       console.log('📝 localStorage onboardingCompleted value:', localStorage.getItem('onboardingCompleted'));
@@ -112,23 +111,17 @@ function App() {
        console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
      } 
-     // Priority 2: If user has completed onboarding, go to dashboard
-     else if (completedOnboarding === 'true') {
+     // Priority 2: If user has completed onboarding AND has selected location, go to dashboard
+     else if (completedOnboarding === 'true' && hasSelectedLocation) {
        console.log('✅ Onboarding completed - redirecting to app dashboard');
        console.log('🎯 Setting currentView to: app');
        setHasCompletedOnboarding(true);
        setCurrentView('app');
      } 
-     // Priority 3: Direct dashboard route access (existing users)
-     else if (isDashboardRoute) {
-       console.log('✅ Direct dashboard access - redirecting to app');
-       console.log('🎯 Setting currentView to: app');
-       setHasCompletedOnboarding(true);
-       setCurrentView('app');
-     } 
-     // Priority 4: Default fallback - new users go to onboarding
+     // Priority 3: Default fallback - users without complete setup go to onboarding
      else {
-       console.log('✅ New user or fallback - redirecting to onboarding');
+       console.log('✅ User needs to complete setup - redirecting to onboarding');
+       console.log('🔍 Reason: completedOnboarding =', completedOnboarding, ', hasSelectedLocation =', hasSelectedLocation);
        console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
      }
@@ -150,10 +143,9 @@ function App() {
       localStorage.removeItem('selectedLocationId');
       localStorage.removeItem('onboardingCompleted');
       localStorage.removeItem('isTrialSignup');
-      // Si on est sur /dashboard, rediriger vers auth, sinon landing
-      const targetView = isDashboardRoute ? 'auth' : 'landing';
-      console.log('🎯 Setting currentView to:', targetView);
-      setCurrentView(isDashboardRoute ? 'auth' : 'landing');
+      // Always redirect to landing page when not authenticated
+      console.log('🎯 Setting currentView to: landing');
+      setCurrentView('landing');
     }
   };
   // Initialize Supabase auth state listener
@@ -278,35 +270,6 @@ function App() {
     return <SuccessPage />;
   }
 
-  // Handle Dashboard route - version desktop
-  if (isDashboardRoute) {
-    if (!user) {
-      return (
-        <AuthPage 
-          onGoogleAuth={handleGoogleAuth}
-          onEmailAuth={handleEmailAuth}
-        />
-      );
-    }
-    
-    return (
-      <DesktopDashboard 
-        user={user}
-        accessToken={accessToken}
-        selectedLocationId={selectedLocationId}
-        setSelectedLocationId={setSelectedLocationId}
-        selectedAccountId={selectedAccountId}
-        onNavigate={handleNavigate}
-        onLogout={handleLogout}
-        notifications={notifications}
-        unreadCount={unreadCount}
-        onMarkAsRead={markAsRead}
-        onMarkAllAsRead={markAllAsRead}
-        onClearAll={clearNotifications}
-        onTokenExpired={handleGoogleTokenExpired}
-      />
-    );
-  }
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
@@ -344,6 +307,32 @@ function App() {
         onComplete={handleOnboardingCompleteWithData} 
       />
     );
+  }
+
+  // Handle app view - can be either mobile or desktop based on screen size
+  if (currentView === 'app') {
+    // Check if we're on a desktop screen (you can adjust this breakpoint)
+    const isDesktop = window.innerWidth >= 1024;
+    
+    if (isDesktop) {
+      return (
+        <DesktopDashboard 
+          user={user}
+          accessToken={accessToken}
+          selectedLocationId={selectedLocationId}
+          setSelectedLocationId={setSelectedLocationId}
+          selectedAccountId={selectedAccountId}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+          onClearAll={clearNotifications}
+          onTokenExpired={handleGoogleTokenExpired}
+        />
+      );
+    }
   }
 
   return (
