@@ -325,4 +325,18 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       alert(`Erreur lors de la récupération des établissements: ${error.message}`);
     }
   }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Onboarding content will be implemented here */}
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Onboarding en cours...</h1>
+          <p className="text-gray-600">Configuration de votre compte Starlinko</p>
+        </div>
+      </div>
+    </div>
+  );
 }
+
+export default ComprehensiveOnboarding;
