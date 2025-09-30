@@ -18,21 +18,26 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const handleGoogleAuth = (isTrial: boolean = false) => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
     console.log('Is trial signup:', isTrial);
+    console.log('🔄 Starting Google OAuth process...');
     
     // Set the trial signup flag before OAuth redirect
     if (isTrial) {
       localStorage.setItem('isTrialSignup', 'true');
       console.log('✅ Set isTrialSignup = true for trial signup');
+      console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     } else {
       localStorage.setItem('isTrialSignup', 'false');
       console.log('✅ Set isTrialSignup = false for regular login');
+      console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     }
     
     // Set loading state
     setLoading(true);
+    console.log('⏳ Loading state set to true');
     
     try {
       // Use Supabase native Google OAuth
+      console.log('🚀 Initiating Supabase OAuth...');
       supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -44,11 +49,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
       });
+      console.log('✅ OAuth request sent');
     } catch (error) {
       console.error('Error signing in with Google:', error);
       alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
     } finally {
       setLoading(false);
+      console.log('⏳ Loading state set to false');
     }
   };
 
@@ -125,7 +132,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
                   <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Essayer gratuitement
+                🎯 Essayer gratuitement (TRIAL)
               </button>
               <div className="text-center text-xs text-gray-500 mt-2">
                 ✨ 14 jours d'essai gratuit • Aucune carte requise
@@ -145,7 +152,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            {loading ? 'Connexion...' : (isLogin ? 'Se connecter avec Google' : 'Essayer gratuitement avec Google')}
+            {loading ? 'Connexion...' : (isLogin ? '🔑 Se connecter avec Google (LOGIN)' : '🎯 Essayer gratuitement avec Google (TRIAL)')}
           </button>
 
           {/* Toggle Auth Mode */}

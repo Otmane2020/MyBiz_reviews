@@ -44,7 +44,14 @@ function App() {
   const isDashboardRoute = window.location.pathname === '/dashboard';
   // Consolidated session handling function
   const handleSession = (session: any) => {
+    console.log('🔍 handleSession called with session:', !!session);
+    console.log('📍 Current location:', window.location.pathname);
+    
     if (session) {
+      console.log('✅ Valid session found');
+      console.log('👤 User ID:', session.user.id);
+      console.log('📧 User email:', session.user.email);
+      
       // Create user data from session
       const userData = {
         id: session.user.id,
@@ -54,6 +61,8 @@ function App() {
         authMethod: 'google'
       };
       
+      console.log('👤 Created user data:', userData);
+      
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       
@@ -62,15 +71,19 @@ function App() {
       if (session.provider_token) {
         token = session.provider_token;
         localStorage.setItem('accessToken', token);
+        console.log('🔑 Access token saved:', token ? 'Present' : 'Missing');
       } else {
         // Try to get from localStorage for restored sessions
         token = localStorage.getItem('accessToken') || '';
+        console.log('🔑 Access token from localStorage:', token ? 'Present' : 'Missing');
       }
       setAccessToken(token);
       
       // Load saved account and location IDs
       const savedAccountId = localStorage.getItem('selectedAccountId');
       const savedLocationId = localStorage.getItem('selectedLocationId');
+      console.log('🏢 Saved account ID:', savedAccountId);
+      console.log('📍 Saved location ID:', savedLocationId);
       if (savedAccountId) setSelectedAccountId(savedAccountId);
       if (savedLocationId) setSelectedLocationId(savedLocationId);
       
@@ -81,33 +94,42 @@ function App() {
       console.log('🔍 Session handling - isTrialSignup:', isTrialSignup);
       console.log('🔍 Session handling - completedOnboarding:', completedOnboarding);
       console.log('🔍 Session handling - isDashboardRoute:', isDashboardRoute);
+      console.log('📝 All localStorage keys:', Object.keys(localStorage));
+      console.log('📝 localStorage isTrialSignup value:', localStorage.getItem('isTrialSignup'));
+      console.log('📝 localStorage onboardingCompleted value:', localStorage.getItem('onboardingCompleted'));
      
      // Clear the trial signup flag after reading it
      localStorage.removeItem('isTrialSignup');
+     console.log('🧹 Cleared isTrialSignup from localStorage');
      
      // Priority 1: If user clicked "Essayer gratuitement", always go to onboarding
      if (isTrialSignup) {
        console.log('✅ Trial signup detected - redirecting to onboarding');
+       console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
      } 
      // Priority 2: If user has completed onboarding, go to dashboard
      else if (completedOnboarding === 'true') {
        console.log('✅ Onboarding completed - redirecting to app dashboard');
+       console.log('🎯 Setting currentView to: app');
        setHasCompletedOnboarding(true);
        setCurrentView('app');
      } 
      // Priority 3: Direct dashboard route access (existing users)
      else if (isDashboardRoute) {
        console.log('✅ Direct dashboard access - redirecting to app');
+       console.log('🎯 Setting currentView to: app');
        setHasCompletedOnboarding(true);
        setCurrentView('app');
      } 
      // Priority 4: Default fallback - new users go to onboarding
      else {
        console.log('✅ New user or fallback - redirecting to onboarding');
+       console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
      }
     } else {
+      console.log('❌ No session found - user not authenticated');
       // No session - clear everything
       setUser(null);
       setAccessToken('');
@@ -115,6 +137,7 @@ function App() {
       setSelectedLocationId('');
       setCurrentPage('dashboard');
       setHasCompletedOnboarding(false);
+      console.log('🧹 Clearing all user data from localStorage');
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('selectedAccountId');
@@ -122,21 +145,31 @@ function App() {
       localStorage.removeItem('onboardingCompleted');
       localStorage.removeItem('isTrialSignup');
       // Si on est sur /dashboard, rediriger vers auth, sinon landing
+      const targetView = isDashboardRoute ? 'auth' : 'landing';
+      console.log('🎯 Setting currentView to:', targetView);
       setCurrentView(isDashboardRoute ? 'auth' : 'landing');
     }
   };
   // Initialize Supabase auth state listener
   useEffect(() => {
+    console.log('🚀 Initializing Supabase auth state listener');
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔍 Initial session check:', !!session);
       handleSession(session);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state change event:', event);
+      console.log('🔍 Session in auth change:', !!session);
+      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log('✅ User signed in or token refreshed');
         handleSession(session);
       } else if (event === 'SIGNED_OUT') {
+        console.log('❌ User signed out');
         handleSession(null);
       }
     });
