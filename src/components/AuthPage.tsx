@@ -26,8 +26,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
     
     try {
-    
-    try {
       // Use Supabase native Google OAuth
       supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -37,15 +35,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
             access_type: 'offline',
             prompt: 'consent',
           },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/business.manage'
         }
       });
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
-      alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
-    } finally {
-      setLoading(false);
-    }
     } catch (error) {
       console.error('Error signing in with Google:', error);
       alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
