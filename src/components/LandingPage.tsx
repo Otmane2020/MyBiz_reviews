@@ -4,9 +4,10 @@ import StarlinkoLogo from './StarlinkoLogo';
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  initiateGoogleOAuth: (isTrial: boolean) => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, initiateGoogleOAuth }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05]">
@@ -25,7 +26,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 Se connecter
               </button>
               <button
-                onClick={onGetStarted}
+                onClick={() => initiateGoogleOAuth(true)}
                 className="bg-white text-[#4285F4] px-4 py-2 rounded-full font-medium hover:bg-gray-100 transition-colors"
               >
                 Commencer
@@ -48,7 +49,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
-              onClick={onGetStarted}
+              onClick={() => initiateGoogleOAuth(true)}
               className="bg-white text-[#4285F4] px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
             >
               Essayer gratuitement
@@ -154,7 +155,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
-              onClick={onGetStarted}
+              onClick={() => initiateGoogleOAuth(true)}
               className="bg-[#EA4335] text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#d33b2c] transition-all transform hover:scale-105 shadow-lg"
             >
               Commencer maintenant
