@@ -77,7 +77,8 @@ function App() {
         setHasCompletedOnboarding(true);
         setCurrentView('app');
       } else {
-        setCurrentView('google-setup');
+        // Si l'utilisateur n'a pas terminé l'onboarding, le diriger vers l'onboarding complet
+        setCurrentView('onboarding');
       }
     } else {
       // No session - clear everything
@@ -115,15 +116,30 @@ function App() {
   }, []);
 
 
-  const handleGoogleAuth = (userData: any, token: string) => {
-    // This function is no longer needed as Supabase handles auth state
-    // The auth state listener will handle user data and navigation
+  const handleGoogleAuth = () => {
+    // Pour les utilisateurs existants qui se connectent
+    try {
+      supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
+    }
   };
 
   const handleEmailAuth = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentView('google-setup');
+    setCurrentView('onboarding');
   };
 
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
@@ -165,7 +181,8 @@ function App() {
   };
 
   const handleGetStarted = () => {
-    setCurrentView('auth');
+    // Pour les nouveaux utilisateurs, aller directement à l'onboarding
+    setCurrentView('onboarding');
   };
 
   const handleGoogleTokenExpired = async () => {
@@ -224,26 +241,19 @@ function App() {
       <AuthPage 
         onGoogleAuth={handleGoogleAuth}
         onEmailAuth={handleEmailAuth}
+        onGetStarted={handleGetStarted}
       />
     );
   }
 
-  if (currentView === 'google-setup') {
-    return (
-      <GoogleBusinessSetup
-        accessToken={accessToken}
-        onSetupComplete={handleGoogleSetupComplete}
-        onTokenExpired={handleGoogleTokenExpired}
-      />
-    );
-  }
 
   if (currentView === 'onboarding') {
     return (
       <ComprehensiveOnboarding 
         user={user}
         accessToken={accessToken}
-        onComplete={handleOnboardingCompleteWithData} 
+        onComplete={handleOnboardingCompleteWithData}
+        onTokenExpired={handleGoogleTokenExpired}
       />
     );
   }
