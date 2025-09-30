@@ -73,23 +73,13 @@ function App() {
       
       // Check onboarding status
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
-      const isTrialSignup = localStorage.getItem('isTrialSignup');
       
       if (completedOnboarding) {
         setHasCompletedOnboarding(true);
         setCurrentView('app');
-      } else if (isTrialSignup) {
-        // Clear the trial signup flag and go to onboarding
-        localStorage.removeItem('isTrialSignup');
-        // Si on a déjà un token et des établissements, aller directement à l'onboarding
-        if (token && savedLocationId) {
-          setCurrentView('onboarding');
-        } else {
-          // Sinon, passer par la configuration Google d'abord
-          setCurrentView('google-setup');
-        }
       } else {
-        setCurrentView('google-setup');
+        // Pour les nouveaux utilisateurs, aller directement à l'onboarding
+        setCurrentView('onboarding');
       }
     } else {
       // No session - clear everything
