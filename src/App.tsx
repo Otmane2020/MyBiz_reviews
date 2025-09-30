@@ -131,8 +131,8 @@ function App() {
 
 
   const handleGoogleAuth = (userData: any, token: string) => {
-    // This function is called from AuthPage before OAuth redirect
-    // The isTrial flag is already set in localStorage by AuthPage
+    // This function is now called from AuthPage with isTrial flag
+    // The actual OAuth is handled by Supabase in AuthPage
   };
 
   const handleEmailAuth = (userData: any) => {

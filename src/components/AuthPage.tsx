@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 interface AuthPageProps {
-  onGoogleAuth: (isTrial: boolean) => void;
+  onGoogleAuth: (userData: any, token: string) => void;
   onEmailAuth: (userData: any) => void;
 }
 
@@ -22,8 +22,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     // Set the trial signup flag before OAuth redirect
     localStorage.setItem('isTrialSignup', isTrial.toString());
     
-    // Call the parent handler
-    onGoogleAuth(isTrial);
+    // Set loading state
+    setLoading(true);
     
     try {
       // Use Supabase native Google OAuth
