@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Star, TrendingUp, MessageSquare } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
@@ -88,18 +88,59 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
         {/* Logo */}
         <div className="text-center mb-8">
           <StarlinkoLogo size="lg" showText={true} className="text-white justify-center" />
-          <p className="text-white/90 mt-2">Gérez vos avis Google My Business</p>
+          <h1 className="text-2xl font-bold text-white mt-4 mb-2">
+            Transformez vos avis Google en opportunités
+          </h1>
+          <p className="text-white/90">
+            Gérez automatiquement vos avis Google My Business avec l'IA
+          </p>
+        </div>
+
+        {/* Features highlight */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+              <MessageSquare className="w-6 h-6 text-white" />
+            </div>
+            <p className="text-white/90 text-sm">Réponses IA</p>
+          </div>
+          <div className="text-center">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+              <Star className="w-6 h-6 text-white" />
+            </div>
+            <p className="text-white/90 text-sm">Gestion avis</p>
+          </div>
+          <div className="text-center">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <p className="text-white/90 text-sm">Analytics</p>
+          </div>
         </div>
 
         {/* Auth Card */}
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {isLogin ? 'Connexion' : 'Créer un compte'}
-            </h2>
-            <p className="text-gray-600">
-              {isLogin ? 'Connectez-vous à votre compte' : 'Rejoignez Starlinko aujourd\'hui'}
-            </p>
+            {!isLogin && (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Essayer gratuitement
+                </h2>
+                <p className="text-gray-600">
+                  14 jours d'essai gratuit • Aucune carte requise
+                </p>
+              </>
+            )}
+            {isLogin && (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Bon retour !
+                </h2>
+                <p className="text-gray-600">
+                  Connectez-vous à votre compte Starlinko
+                </p>
+              </>
+            )}
           </div>
 
           {/* Google Auth Button */}
@@ -114,7 +155,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            {loading ? 'Connexion...' : 'Continuer avec Google'}
+            {loading ? 'Connexion...' : (isLogin ? 'Se connecter avec Google' : 'Commencer avec Google')}
           </button>
 
           {/* Divider */}
@@ -123,7 +164,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">ou</span>
+              <span className="px-2 bg-white text-gray-500">ou par email</span>
             </div>
           </div>
 
@@ -217,7 +258,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
               disabled={loading}
               className="w-full bg-[#4285F4] text-white py-3 px-4 rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 font-medium disabled:opacity-50"
             >
-              {loading ? 'Chargement...' : (isLogin ? 'Se connecter' : 'Créer le compte')}
+              {loading ? 'Chargement...' : (isLogin ? 'Se connecter' : 'Commencer l\'essai gratuit')}
             </button>
           </form>
 
@@ -227,7 +268,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
               onClick={() => setIsLogin(!isLogin)}
               className="text-[#4285F4] hover:underline text-sm"
             >
-              {isLogin ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
+              {isLogin ? (
+                'Nouveau sur Starlinko ? Essayer gratuitement'
+              ) : (
+                'Vous avez déjà un compte ? Connectez-vous'
+              )}
             </button>
           </div>
         </div>

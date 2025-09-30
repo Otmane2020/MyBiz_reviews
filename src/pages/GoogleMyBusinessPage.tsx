@@ -185,10 +185,10 @@ const GoogleMyBusinessPage: React.FC<GoogleMyBusinessPageProps> = ({
             <div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center">
                 <Building2 className="w-8 h-8 text-[#4285F4] mr-3" />
-                Google My Business
+                Analytics Google My Business
               </h1>
               <p className="text-gray-600">
-                Gérez votre présence en ligne et suivez vos performances
+                Suivez vos performances et gérez votre présence en ligne
               </p>
             </div>
             <div className="flex items-center">
