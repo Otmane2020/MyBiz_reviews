@@ -3,9 +3,6 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-// Utiliser la variable d'environnement
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-
 interface AuthPageProps {
   onGoogleAuth: (userData: any, token: string) => void;
   onEmailAuth: (userData: any) => void;
@@ -23,50 +20,33 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   });
 
   const handleGoogleAuth = () => {
-    console.log('Google Client ID:', GOOGLE_CLIENT_ID);
-    
     setLoading(true);
     
     try {
-      // Clear any existing session first
-      supabase.auth.signOut().then(() => {
-        // Use Supabase native Google OAuth with specific configuration
-        return supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}`,
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent',
-            },
-            scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-          }
-        });
-      }).catch((error) => {
-        console.error('Error during Google OAuth:', error);
-        setLoading(false);
-        
-        // Fallback: try direct Google OAuth
-        if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'your_google_client_id_here') {
-          const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-            `client_id=${GOOGLE_CLIENT_ID}&` +
-            `redirect_uri=${encodeURIComponent(window.location.origin)}&` +
-            `response_type=code&` +
-            `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&` +
-            `access_type=offline&` +
-            `prompt=consent`;
-          
-          window.location.href = authUrl;
-        } else {
-          alert('Configuration Google manquante. Contactez le support.');
+      // Use Supabase native Google OAuth with specific configuration
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
       });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
     } catch (error) {
       console.error('Error signing in with Google:', error);
       setLoading(false);
       
       // Show user-friendly error message
-      if (error.message && error.message.includes('redirect_uri_mismatch')) {
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
         alert('Erreur de configuration OAuth. L\'URL de redirection ne correspond pas. Contactez le support.');
       } else if (error.message && error.message.includes('unauthorized_client')) {
         alert('Client OAuth non autorisé. Vérifiez la configuration Google Cloud Console.');
@@ -123,46 +103,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           
           // Clear URL parameters
           window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-          throw new Error(data.error || 'Failed to exchange code');
-        }
-      })
-      .catch(error => {
-        console.error('Error exchanging code:', error);
-        alert('Erreur lors de l\'échange du code d\'autorisation. Veuillez réessayer.');
-        // Clear URL parameters
-        window.history.replaceState({}, document.title, window.location.pathname);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-    }
-  }, []);
-
-  const handleGoogleAuthOld = () => {
-    console.log('Google Client ID:', GOOGLE_CLIENT_ID);
-    
-    try {
-      // Use Supabase native Google OAuth
-      supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
-      alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
