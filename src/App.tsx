@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -15,15 +16,34 @@ const AuthPage = () => {
   });
 
   useEffect(() => {
-    // Just clean up URL parameters without triggering any auth flows
+    // Check for OAuth callback
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('code') || urlParams.has('error')) {
-      window.history.replaceState({}, document.title, window.location.pathname);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      // Exchange code for tokens
+      fetch('/api/auth/google/callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.user && data.access_token) {
+          onGoogleAuth(data.user, data.access_token);
+        }
+      })
+      .catch(error => {
+        console.error('Error exchanging code for tokens:', error);
+      });
     }
   }, []);
 
   const handleGoogleAuth = async () => {
     setLoading(true);
+    setError('');
     
     try {
       // Use Supabase native Google OAuth with specific configuration
@@ -77,7 +97,11 @@ const AuthPage = () => {
       onEmailAuth(userData);
     } catch (error) {
       console.error('Erreur d\'authentification:', error);
-      alert('Erreur lors de la connexion');
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+        setError('Le mot de passe doit contenir au moins 6 caractères');
+      } else {
+        setError(error.message || 'Erreur lors de la connexion');
+      }
     } finally {
       setLoading(false);
     }
@@ -109,6 +133,13 @@ const AuthPage = () => {
               {isLogin ? 'Connectez-vous à votre compte' : 'Rejoignez Starlinko aujourd\'hui'}
             </p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
 
           {/* Google Auth Button */}
           <button
