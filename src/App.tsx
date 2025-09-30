@@ -8,6 +8,7 @@ import ComprehensiveOnboarding from './components/ComprehensiveOnboarding';
 import MobileMenu from './components/MobileMenu';
 import Dashboard from './components/Dashboard';
 import GoogleReviews from './pages/GoogleReviews';
+import GoogleMyBusinessPage from './pages/GoogleMyBusinessPage';
 import SettingsPage from './components/SettingsPage';
 import SuccessPage from './pages/SuccessPage';
 import AISettingsPage from './components/AISettingsPage';
@@ -274,6 +275,16 @@ function App() {
       {currentPage === 'dashboard' && <Dashboard user={user} />}
       {currentPage === 'reviews' && (
         <GoogleReviews 
+          user={user} 
+          accessToken={accessToken}
+          selectedLocationId={selectedLocationId}
+          setSelectedLocationId={setSelectedLocationId}
+          onNavigate={handleNavigate}
+          selectedAccountId={selectedAccountId}
+        />
+      )}
+      {currentPage === 'google-my-business' && (
+        <GoogleMyBusinessPage 
           user={user} 
           accessToken={accessToken}
           selectedLocationId={selectedLocationId}
