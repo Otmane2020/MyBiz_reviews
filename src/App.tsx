@@ -253,8 +253,10 @@ function App() {
 
   if (currentView === 'landing') {
     return (
-      <LandingPage onGetStarted={handleGetStarted} />
-      <LandingPage onGetStarted={handleGetStarted} onNavigateToAuth={() => setCurrentView('auth')} />
+      <LandingPage 
+        onGetStarted={handleGetStarted} 
+        onNavigateToAuth={() => setCurrentView('auth')} 
+      />
     );
   }
 

@@ -5,6 +5,7 @@ import StarlinkoLogo from './StarlinkoLogo';
 interface LandingPageProps {
   onGetStarted: () => void; 
   onNavigateToAuth: () => void;
+  onNavigateToAuth: () => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onNavigateToAuth }) => {
