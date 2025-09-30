@@ -13,6 +13,7 @@ import GoogleMyBusinessPage from './pages/GoogleMyBusinessPage';
 import SettingsPage from './components/SettingsPage';
 import SuccessPage from './pages/SuccessPage';
 import AISettingsPage from './components/AISettingsPage';
+import DesktopDashboard from './components/DesktopDashboard';
 import { useReviewsNotifications } from './hooks/useReviewsNotifications';
 
 function App() {
@@ -39,6 +40,8 @@ function App() {
   // Check if current path is /success
   const isSuccessRoute = window.location.pathname === '/success';
 
+  // Check if current path is /dashboard
+  const isDashboardRoute = window.location.pathname === '/dashboard';
   // Consolidated session handling function
   const handleSession = (session: any) => {
     if (session) {
@@ -74,7 +77,7 @@ function App() {
       // Check onboarding status
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
       
-      if (completedOnboarding) {
+      if (completedOnboarding || isDashboardRoute) {
         setHasCompletedOnboarding(true);
         setCurrentView('app');
       } else {
@@ -94,7 +97,8 @@ function App() {
       localStorage.removeItem('selectedAccountId');
       localStorage.removeItem('selectedLocationId');
       localStorage.removeItem('onboardingCompleted');
-      setCurrentView('landing');
+      // Si on est sur /dashboard, rediriger vers auth, sinon landing
+      setCurrentView(isDashboardRoute ? 'auth' : 'landing');
     }
   };
   // Initialize Supabase auth state listener
@@ -211,6 +215,35 @@ function App() {
     return <SuccessPage />;
   }
 
+  // Handle Dashboard route - version desktop
+  if (isDashboardRoute) {
+    if (!user) {
+      return (
+        <AuthPage 
+          onGoogleAuth={handleGoogleAuth}
+          onEmailAuth={handleEmailAuth}
+        />
+      );
+    }
+    
+    return (
+      <DesktopDashboard 
+        user={user}
+        accessToken={accessToken}
+        selectedLocationId={selectedLocationId}
+        setSelectedLocationId={setSelectedLocationId}
+        selectedAccountId={selectedAccountId}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        onClearAll={clearNotifications}
+        onTokenExpired={handleGoogleTokenExpired}
+      />
+    );
+  }
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
