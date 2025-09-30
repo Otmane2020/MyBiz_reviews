@@ -18,6 +18,10 @@ function App() {
   const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
+    // Check if we're returning from OAuth (has code or error in URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasOAuthParams = urlParams.has('code') || urlParams.has('error') || urlParams.has('state');
+    
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -29,6 +33,9 @@ function App() {
           authMethod: 'google'
         };
         setUser(userData);
+      } else if (hasOAuthParams) {
+        // If we have OAuth params but no session, show auth page
+        setShowAuth(true);
       }
       setLoading(false);
     });
@@ -46,6 +53,9 @@ function App() {
           };
           setUser(userData);
           setShowAuth(false);
+          
+          // Clean up URL after successful auth
+          window.history.replaceState({}, document.title, window.location.pathname);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setShowAuth(false);
@@ -56,7 +66,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleGoogleAuth = (userData: User, token: string) => {
+  const handleGoogleAuth = (userData: User, accessToken?: string) => {
     setUser(userData);
     setShowAuth(false);
   };
@@ -66,10 +76,14 @@ function App() {
     setShowAuth(false);
   };
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setShowAuth(false);
+  };
+
+  const handleGetStarted = () => {
+    setShowAuth(true);
   };
 
   if (loading) {
@@ -78,6 +92,10 @@ function App() {
         <div className="text-white text-xl">Chargement...</div>
       </div>
     );
+  }
+
+  if (user) {
+    return <Dashboard user={user} onLogout={handleLogout} />;
   }
 
   if (showAuth) {
@@ -89,20 +107,7 @@ function App() {
     );
   }
 
-  if (user) {
-    return (
-      <Dashboard 
-        user={user}
-        onSignOut={handleSignOut}
-      />
-    );
-  }
-
-  return (
-    <LandingPage 
-      onGetStarted={() => setShowAuth(true)}
-    />
-  );
+  return <LandingPage onGetStarted={handleGetStarted} />;
 }
 
 export default App;
