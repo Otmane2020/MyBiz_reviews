@@ -111,13 +111,25 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: undefined,
+            data: {
+              email_confirm: false
+            }
+          }
         });
 
         if (error) {
           throw error;
         }
 
-        setMessage('Un email de confirmation a été envoyé à votre adresse');
+        setMessage('Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
+        
+        // Basculer automatiquement vers le mode connexion après inscription réussie
+        setTimeout(() => {
+          setIsLogin(true);
+          setMessage(null);
+        }, 2000);
       }
     } catch (err: any) {
       console.error('Auth error:', err);
