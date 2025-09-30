@@ -167,7 +167,7 @@ const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
                 className="w-full flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <LogOut className="w-4 h-4 mr-2" />
-                Déconnexion
+                {user?.authMethod === 'demo' ? 'Quitter le mode démo' : 'Déconnexion'}
               </button>
             </div>
           ) : (
