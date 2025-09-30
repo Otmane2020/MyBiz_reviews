@@ -23,6 +23,8 @@ function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Notifications hook - must be at top level
   const {
@@ -39,8 +41,8 @@ function App() {
   // Check if current path is /success
   const isSuccessRoute = window.location.pathname === '/success';
   
-  // Consolidated session handling function
-  const handleSession = (session: any) => {
+  // Function to update user states based on session
+  const updateSessionStates = (session: any) => {
     if (session) {
       // Create user data from session
       const userData = {
@@ -73,13 +75,7 @@ function App() {
       
       // Check onboarding status
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
-      if (completedOnboarding) {
-        setHasCompletedOnboarding(true);
-        setCurrentView('app');
-      } else {
-        // Si l'utilisateur n'a pas terminé l'onboarding, le diriger vers l'onboarding complet
-        setCurrentView('onboarding');
-      }
+      setHasCompletedOnboarding(!!completedOnboarding);
     } else {
       // No session - clear everything
       setUser(null);
@@ -93,47 +89,77 @@ function App() {
       localStorage.removeItem('selectedAccountId');
       localStorage.removeItem('selectedLocationId');
       localStorage.removeItem('onboardingCompleted');
-      setCurrentView('landing');
     }
   };
   // Initialize Supabase auth state listener
+  // Determine initial view based on session and onboarding status
+  const determineInitialView = (session: any) => {
+    if (session) {
+      const completedOnboarding = localStorage.getItem('onboardingCompleted');
+      if (completedOnboarding) {
+        setCurrentView('app');
+      } else {
+        setCurrentView('onboarding');
+      }
+    } else {
+      setCurrentView('landing');
+    }
+  };
   useEffect(() => {
+    if (initialLoadComplete) return;
+
     // Check if returning from onboarding OAuth
     const urlParams = new URLSearchParams(window.location.search);
     const isOnboardingReturn = urlParams.get('onboarding') === 'true';
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      updateSessionStates(session);
+      
       if (isOnboardingReturn && session) {
         // Clear the URL parameter
         window.history.replaceState({}, document.title, window.location.pathname);
         // Continue with onboarding
         setCurrentView('onboarding');
+      } else {
+        determineInitialView(session);
       }
-      handleSession(session);
+      
+      setLoadingAuth(false);
+      setInitialLoadComplete(true);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!initialLoadComplete) return;
+      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        updateSessionStates(session);
         // If signing in during onboarding, stay in onboarding
         if (currentView === 'onboarding') {
-          handleSession(session);
           return;
         }
-        handleSession(session);
+        // Navigate to app if user has completed onboarding
+        const completedOnboarding = localStorage.getItem('onboardingCompleted');
+        if (completedOnboarding) {
+          setCurrentView('app');
+        } else {
+          setCurrentView('onboarding');
+        }
       } else if (event === 'SIGNED_OUT') {
-        handleSession(null);
+        updateSessionStates(null);
+        setCurrentView('landing');
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [currentView]);
+  }, [initialLoadComplete]);
 
 
   const handleGoogleAuth = () => {
     // Pour les utilisateurs existants - connexion Google directe
     try {
+      setLoadingAuth(true);
       supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -148,6 +174,7 @@ function App() {
     } catch (error) {
       console.error('Error signing in with Google:', error);
       alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
+      setLoadingAuth(false);
     }
   };
 
@@ -156,6 +183,9 @@ function App() {
     console.log('Email auth deprecated');
   };
 
+  const handleNavigateToAuth = () => {
+    setCurrentView('auth');
+  };
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
     setSelectedAccountId(accountId);
     setSelectedLocationId(locationId);
@@ -247,6 +277,18 @@ function App() {
     return <SuccessPage />;
   }
   
+  // Show loading screen during initial auth check
+  if (loadingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
@@ -255,7 +297,7 @@ function App() {
     return (
       <LandingPage 
         onGetStarted={handleGetStarted} 
-        onNavigateToAuth={() => setCurrentView('auth')}
+        onNavigateToAuth={handleNavigateToAuth}
       />
     );
   }
