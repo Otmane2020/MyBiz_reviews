@@ -55,7 +55,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, initiateGoogleO
               Essayer gratuitement
             </button>
             <div className="text-white/80 text-sm">
-              ✨ 14 jours d'essai gratuit • Aucune carte requise
+              onClick={onGetStarted}
             </div>
           </div>
         </div>

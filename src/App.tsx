@@ -111,7 +111,13 @@ function App() {
         setCurrentView('onboarding');
       } else if (completedOnboarding || isDashboardRoute) {
         setHasCompletedOnboarding(true);
-        setCurrentView('app');
+        // If on dashboard route, stay on dashboard view
+        if (isDashboardRoute) {
+          setCurrentView('app');
+        } else {
+          // Otherwise redirect to dashboard
+          window.location.href = '/dashboard';
+        }
       } else {
         // For existing users without trial flag, go to auth page
         setCurrentView('auth');
@@ -200,12 +206,13 @@ function App() {
       localStorage.setItem('selectedLocationId', selectedStores[0]);
     }
     
-    setCurrentView('app');
+    // Redirect to dashboard after onboarding
+    window.location.href = '/dashboard';
   };
 
   const handleGetStarted = () => {
-    // Directly initiate Google OAuth for trial signup
-    initiateGoogleOAuth(true);
+    // Go to auth page with two options
+    setCurrentView('auth');
   };
 
   const handleGoogleTokenExpired = async () => {
