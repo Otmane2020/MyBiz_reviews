@@ -25,12 +25,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onNavigateToAut
               >
                 Connexion
               </button>
-              <button
-                onClick={onGetStarted}
-                className="bg-white text-[#4285F4] px-4 py-2 rounded-full font-medium hover:bg-gray-100 transition-colors"
-              >
-                Commencer
-              </button>
             </div>
           </div>
         </div>
