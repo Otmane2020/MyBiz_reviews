@@ -46,6 +46,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     } finally {
       setLoading(false);
     }
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
