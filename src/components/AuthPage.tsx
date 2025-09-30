@@ -20,9 +20,6 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-interface AuthPageProps {
-  onGoogleAuth: (userData: any, token: string) => void;
-  onEmailAuth: (userData: any) => void;
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
@@ -40,6 +37,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     setLoading(true);
     
     try {
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
       // Use Supabase native Google OAuth with specific configuration
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -58,26 +58,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
         throw error;
       }
       
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
-      setLoading(false);
-      
-      // Show user-friendly error message
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-        alert('Erreur de configuration OAuth. L\'URL de redirection ne correspond pas. Contactez le support.');
-      } else if (error.message && error.message.includes('unauthorized_client')) {
-        alert('Client OAuth non autorisé. Vérifiez la configuration Google Cloud Console.');
-      } else {
-        alert('Erreur lors de la connexion avec Google. Veuillez réessayer ou contactez le support.');
-      }
-    }
-  };
-
-  // Handle OAuth callback if we're using direct Google OAuth
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const error = urlParams.get('error');
     
     if (error) {
       console.error('OAuth error:', error);
@@ -161,7 +141,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       alert('Erreur lors de la connexion');
     } finally {
       setLoading(false);
-    }
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,43 +267,5 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
-                  {/* Use Supabase native Google OAuth with specific configuration */}
+      // Use Supabase native Google OAuth with specific configuration
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#4285F4] text-white py-3 px-4 rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Chargement...' : (isLogin ? 'Se connecter' : 'Créer un compte')}
-            </button>
-          </form>
-
-          {/* Toggle Auth Mode */}
-          <div className="text-center mt-6">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-[#4285F4] hover:text-[#3367D6] font-medium"
-            >
-              {isLogin ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default AuthPage;
