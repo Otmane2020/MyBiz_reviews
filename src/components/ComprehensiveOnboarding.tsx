@@ -205,8 +205,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session && session.provider_token) {
+      console.log('🔑 Found provider token, setting up GMB connection');
       setAccessToken(session.provider_token);
       setGmbConnected(true);
+      console.log('📞 Calling fetchAccounts...');
       await fetchAccounts();
     } else {
       // User needs to authenticate with Google
@@ -215,10 +217,12 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   };
 
   const fetchAccounts = async () => {
+    console.log('🚀 fetchAccounts called with accessToken:', accessToken ? 'Present' : 'Missing');
     if (!accessToken) return;
 
     setLoading(true);
     try {
+      console.log('📡 Making request to google-oauth function...');
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
@@ -230,12 +234,15 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
           accessToken: accessToken,
         }),
       });
+      console.log('📡 Response status:', response.status);
       const data = await response.json();
       console.log('DEBUG: Data from Google Accounts API:', data);
       
       if (data.accounts && data.accounts.length > 0) {
+        console.log('✅ Found', data.accounts.length, 'accounts');
         setAccounts(data.accounts);
         // Fetch locations for the first account
+        console.log('📞 Calling fetchLocations for first account...');
         await fetchLocations(data.accounts[0].name);
       } else {
         console.error('❌ Aucun compte trouvé dans onboarding:', data);
@@ -255,7 +262,9 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   };
 
   const fetchLocations = async (accountId: string) => {
+    console.log('🏢 fetchLocations called with accountId:', accountId);
     try {
+      console.log('📡 Making request to get locations...');
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
@@ -268,10 +277,12 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
           accountId: accountId,
         }),
       });
+      console.log('📡 Locations response status:', response.status);
       const data = await response.json();
       console.log('DEBUG: Data from Google Locations API:', data);
       
       if (data.locations && data.locations.length > 0) {
+        console.log('✅ Found', data.locations.length, 'locations');
         setLocations(data.locations);
       } else {
         console.error('❌ Aucun établissement trouvé dans onboarding:', data);
