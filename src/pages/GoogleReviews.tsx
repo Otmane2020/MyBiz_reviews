@@ -72,7 +72,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,16 +160,15 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     setLoading(true);
     try {
       // Use the new fetch-reviews function that stores in Supabase
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth-login`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          action: 'get-reviews',
-          accessToken: accessToken,
-          locationName: selectedLocationId,
+          accessToken,
+          locationId: selectedLocationId,
         }),
       });
       
@@ -438,7 +437,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
                   className="inline-flex items-center px-4 py-2 bg-[#4285F4] text-white text-sm font-medium rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
-                  {replyingTo === review.reviewId ? 'Envoi...' : 'Répondre'}
+                  {replyingTo === review.reviewId ? 'Envoi...' : 'Répondre avec IA'}
                 </button>
               )}
             </div>

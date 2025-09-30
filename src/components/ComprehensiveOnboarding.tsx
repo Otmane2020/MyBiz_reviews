@@ -239,7 +239,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       return;
     }
     
-    const redirectUri = window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro';
+    const redirectUri = window.location.origin;
     console.log('GMB Redirect URI:', redirectUri);
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -303,7 +303,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         return;
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -312,7 +312,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         body: JSON.stringify({
           action: 'exchange-code',
           code,
-          redirectUri: window.location.hostname === 'localhost' ? window.location.origin : 'https://starlinko.pro',
+          redirectUri: window.location.origin,
         }),
       });
 
@@ -364,7 +364,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -407,7 +407,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         throw new Error('Configuration Supabase manquante');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/auth-login`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
