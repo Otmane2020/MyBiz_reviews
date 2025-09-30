@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Star, ArrowRight, CheckCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 // Utiliser la variable d'environnement
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -40,32 +41,41 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   const [step, setStep] = useState<'accounts' | 'locations' | 'complete'>('accounts');
 
   useEffect(() => {
-    fetchAccounts();
+    // Check if user has Google access token from Supabase session
+    const initializeWithSupabaseSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && session.provider_token) {
+        // Use the access token from Supabase session
+        fetchAccounts(session.provider_token);
+      } else if (accessToken) {
+        // Fallback to provided access token
+        fetchAccounts(accessToken);
+      } else {
+        setLoading(false);
+        alert('Aucun token d\'accès Google trouvé. Veuillez vous reconnecter.');
+      }
+    };
+    
+    initializeWithSupabaseSession();
   }, []);
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = async (token: string = accessToken) => {
     try {
       console.log('🔍 Fetching Google My Business accounts via Supabase Edge Function...');
-      console.log('🔑 Access token:', accessToken ? 'Present' : 'Missing');
+      console.log('🔑 Access token:', token ? 'Present' : 'Missing');
       
       // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Configuration Supabase manquante');
-      }
-      
       console.log('📡 Calling Supabase Edge Function for accounts...');
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           action: 'get-accounts',
-          accessToken: accessToken,
+          accessToken: token,
         }),
       });
       
@@ -126,26 +136,23 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   const fetchLocations = async (accountId: string) => {
     setLoading(true);
     try {
+      // Get current access token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.provider_token || accessToken;
+      
       console.log('🏪 Fetching locations for account via Supabase Edge Function:', accountId);
       
       // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Configuration Supabase manquante');
-      }
-      
       console.log('📡 Calling Supabase Edge Function for locations...');
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           action: 'get-locations',
-          accessToken: accessToken,
+          accessToken: token,
           accountId: accountId,
         }),
       });
