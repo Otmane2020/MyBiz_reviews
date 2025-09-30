@@ -81,7 +81,13 @@ function App() {
       } else if (isTrialSignup) {
         // Clear the trial signup flag and go to onboarding
         localStorage.removeItem('isTrialSignup');
-        setCurrentView('onboarding');
+        // Si on a déjà un token et des établissements, aller directement à l'onboarding
+        if (token && savedLocationId) {
+          setCurrentView('onboarding');
+        } else {
+          // Sinon, passer par la configuration Google d'abord
+          setCurrentView('google-setup');
+        }
       } else {
         setCurrentView('google-setup');
       }
