@@ -10,6 +10,7 @@ const corsHeaders = {
 // Récupérer les identifiants depuis les variables d'environnement
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
+const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,9 +22,9 @@ serve(async (req) => {
 
   try {
     // Vérifier que les variables d'environnement sont configurées
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      console.error('Google OAuth credentials not configured');
-      throw new Error('Google OAuth credentials not configured in environment variables');
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_API_KEY) {
+      console.error('Google credentials not configured');
+      throw new Error('Google credentials not configured in environment variables');
     }
 
     // Initialize Supabase client
@@ -137,7 +138,7 @@ serve(async (req) => {
           console.log('Access token (first 20 chars):', accessToken.substring(0, 20) + '...');
           
           // NOUVEL ENDPOINT V1 (Account Management API)
-          const accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+          const accountsResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts?key=${GOOGLE_API_KEY}`, {
             headers: {
               Authorization: `Bearer ${accessToken}`
             }
@@ -194,7 +195,7 @@ serve(async (req) => {
           console.log(`Fetching locations for account: ${accountId} using v1 API...`);
 
           // NOUVEL ENDPOINT V1 (Business Information API)
-          const locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
+          const locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations?key=${GOOGLE_API_KEY}`, {
             headers: {
               Authorization: `Bearer ${accessToken}`
             }
@@ -244,7 +245,7 @@ serve(async (req) => {
           console.log(`Replying to review: ${reviewId} using v4 API...`);
 
           // ENDPOINT V4 (Reviews API)
-          const replyResponse = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/replies`, {
+          const replyResponse = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/replies?key=${GOOGLE_API_KEY}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
