@@ -175,6 +175,9 @@ function App() {
       // Clear expired token data
       setAccessToken('');
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('selectedAccountId');
+      localStorage.removeItem('selectedLocationId');
       
       // Initiate Google OAuth sign-in with Supabase
       await supabase.auth.signInWithOAuth({
@@ -185,7 +188,8 @@ function App() {
             access_type: 'offline',
             prompt: 'consent',
           },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+          queryParams: { access_type: 'offline', prompt: 'consent' }
         }
       });
     } catch (error) {
@@ -194,6 +198,7 @@ function App() {
       setCurrentView('auth');
     }
   };
+  
   const handleLogout = () => {
     // Use Supabase signOut which will trigger the auth state listener
     supabase.auth.signOut();

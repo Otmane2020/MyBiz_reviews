@@ -46,7 +46,10 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   // Fetch Google My Business accounts
   const fetchAccounts = async () => {
     try {
-      debugLog('Starting fetchAccounts', { accessToken: accessToken ? `${accessToken.substring(0, 10)}...` : 'null' });
+      debugLog('Starting fetchAccounts', { 
+        accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : 'null',
+        tokenLength: accessToken?.length || 0
+      });
       setLoading(true);
       setError(null);
 
@@ -55,6 +58,12 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
 
       if (!supabaseUrl || !supabaseKey) {
         throw new Error('Configuration Supabase manquante. Vérifiez vos variables d\'environnement.');
+      }
+
+      // Vérifier que le token est valide
+      if (!accessToken || accessToken.length < 50) {
+        debugLog('Invalid or missing access token', { tokenLength: accessToken?.length || 0 });
+        throw new Error('Token d\'accès manquant ou invalide. Veuillez vous reconnecter.');
       }
 
       debugLog('Calling Supabase Edge Function', { 
@@ -67,6 +76,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
+          'X-Debug-Token-Length': accessToken.length.toString(),
         },
         body: JSON.stringify({
           action: 'get-accounts',
@@ -97,6 +107,11 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       debugLog(`Found ${data.accounts?.length || 0} accounts`);
 
       if (data.accounts && data.accounts.length > 0) {
+        debugLog('Accounts found successfully', {
+          accountCount: data.accounts.length,
+          firstAccountName: data.accounts[0]?.name || 'N/A',
+          firstAccountType: data.accounts[0]?.type || 'N/A'
+        });
         setSelectedAccount(data.accounts[0]);
       }
 
@@ -104,6 +119,15 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
       debugLog('fetchAccounts error', errorMessage);
       setError(`Erreur lors du chargement des comptes: ${errorMessage}`);
+      
+      // Si c'est une erreur de token, proposer une reconnexion
+      if (errorMessage.includes('401') || errorMessage.includes('invalide') || errorMessage.includes('expiré')) {
+        debugLog('Token error detected, suggesting reconnection');
+        if (onTokenExpired) {
+          setTimeout(() => onTokenExpired(), 2000);
+          return;
+        }
+      }
     } finally {
       setLoading(false);
     }
