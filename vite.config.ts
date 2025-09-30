@@ -20,6 +20,11 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
+const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -31,15 +36,6 @@ import { supabase } from '../lib/supabase';
     setLoading(true);
     
     try {
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
       // Use Supabase native Google OAuth with specific configuration
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -58,6 +54,36 @@ import { supabase } from '../lib/supabase';
         throw error;
       }
       
+    } catch (error) {
+      console.error('Error during Google OAuth:', error);
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+        alert('Erreur de configuration OAuth. Veuillez contacter le support.');
+      } else {
+        alert('Erreur lors de la connexion avec Google');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      setLoading(true);
+      
+      fetch('/api/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          onGoogleAuth(data.user);
           // Clear URL parameters
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
@@ -101,7 +127,7 @@ import { supabase } from '../lib/supabase';
       alert('Erreur lors de la connexion');
     } finally {
       setLoading(false);
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -227,7 +253,6 @@ import { supabase } from '../lib/supabase';
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
-                  {/* Use Supabase native Google OAuth with specific configuration */}
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
