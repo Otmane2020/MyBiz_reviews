@@ -103,11 +103,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           {isLogin && (
             <div className="mb-6">
               <button
-                onClick={() => {
-                  // Marquer comme essai gratuit et déclencher l'auth Google
-                  localStorage.setItem('isTrialSignup', 'true');
-                  handleGoogleAuth();
-                }}
+                onClick={handleGoogleAuth}
                 className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-[#34A853] to-[#4285F4] text-white rounded-lg hover:from-[#2D8A47] hover:to-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-all duration-200 shadow-lg transform hover:scale-105"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
