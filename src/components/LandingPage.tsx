@@ -19,7 +19,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => window.location.href = '/auth'}
+                onClick={() => window.location.pathname = '/auth'}
                 className="hidden md:block bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
               >
                 Connexion
