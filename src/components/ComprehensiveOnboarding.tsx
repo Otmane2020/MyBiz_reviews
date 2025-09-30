@@ -314,4 +314,4 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       if (data.locations && data.locations.length > 0) {
         setLocations(data.locations);
       } else {
-        console.error('❌
+        console.error('❌ Aucun établissement trouvé dans onboarding:', data);
