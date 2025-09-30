@@ -296,28 +296,6 @@ function App() {
     }
   };
 
-  const handleEmailAuth = async (userData: any) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    try {
-      // Forcer une nouvelle authentification Google via Supabase
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-    } catch (error) {
-      console.error('Erreur lors de la reconnexion:', error);
-      alert('Erreur lors de la reconnexion. Veuillez rafraîchir la page et réessayer.');
-    }
-  };
-
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
     setSelectedAccountId(accountId);
     setSelectedLocationId(locationId);
