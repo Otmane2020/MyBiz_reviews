@@ -315,3 +315,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         setLocations(data.locations);
       } else {
         console.error('❌ Aucun établissement trouvé dans onboarding:', data);
+      }
+    }
+  }
+}
