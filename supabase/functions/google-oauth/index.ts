@@ -134,6 +134,7 @@ serve(async (req) => {
             throw new Error('Access token is required for get-accounts action');
           }
           console.log('Fetching Google Business Profile accounts using v1 API...');
+          console.log('Access token (first 20 chars):', accessToken.substring(0, 20) + '...');
           
           // NOUVEL ENDPOINT V1 (Account Management API)
           const accountsResponse = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
@@ -142,10 +143,34 @@ serve(async (req) => {
             }
           });
 
+          console.log('Accounts API response status:', accountsResponse.status);
+          
           const accountsData = await accountsResponse.json();
+          console.log('Accounts API response data:', JSON.stringify(accountsData, null, 2));
+          
           if (!accountsResponse.ok) {
             console.error('Get accounts failed:', accountsData);
-            throw new Error(`Google API Error (get-accounts): ${accountsData.error?.message || accountsData.error || 'Unknown error'}`);
+            
+            // Messages d'erreur plus détaillés
+            if (accountsResponse.status === 403) {
+              if (accountsData.error?.message?.includes('My Business Account Management API')) {
+                throw new Error(`L'API "My Business Account Management API" n'est pas activée dans votre projet Google Cloud Console. Veuillez l'activer dans https://console.cloud.google.com/apis/library/mybusinessaccountmanagement.googleapis.com`);
+              }
+              if (accountsData.error?.message?.includes('insufficient permissions')) {
+                throw new Error(`Permissions insuffisantes. Assurez-vous que votre token a le scope 'https://www.googleapis.com/auth/business.manage'`);
+              }
+              throw new Error(`Accès refusé (403): ${accountsData.error?.message || 'Vérifiez vos permissions et scopes OAuth'}`);
+            }
+            
+            if (accountsResponse.status === 401) {
+              throw new Error(`Token d'accès invalide ou expiré (401). Reconnectez-vous.`);
+            }
+            
+            if (accountsResponse.status === 404) {
+              throw new Error(`Endpoint non trouvé (404). L'API Google My Business a peut-être changé.`);
+            }
+            
+            throw new Error(`Google API Error (${accountsResponse.status}): ${accountsData.error?.message || accountsData.error || 'Erreur inconnue'}`);
           }
 
           // La réponse doit contenir le nom de ressource complet (ex: accounts/123...)
@@ -175,10 +200,27 @@ serve(async (req) => {
             }
           });
           
+          console.log('Locations API response status:', locationsResponse.status);
+          
           const locationsData = await locationsResponse.json();
+          console.log('Locations API response data:', JSON.stringify(locationsData, null, 2));
+          
           if (!locationsResponse.ok) {
             console.error('Get locations failed:', locationsData);
-            throw new Error(`Google API Error (get-locations): ${locationsData.error?.message || locationsData.error || 'Unknown error'}`);
+            
+            // Messages d'erreur plus détaillés pour les locations
+            if (locationsResponse.status === 403) {
+              if (locationsData.error?.message?.includes('My Business Business Information API')) {
+                throw new Error(`L'API "My Business Business Information API" n'est pas activée. Activez-la sur https://console.cloud.google.com/apis/library/mybusinessbusinessinformation.googleapis.com`);
+              }
+              throw new Error(`Accès refusé aux locations (403): ${locationsData.error?.message || 'Vérifiez vos permissions'}`);
+            }
+            
+            if (locationsResponse.status === 401) {
+              throw new Error(`Token d'accès invalide pour les locations (401). Reconnectez-vous.`);
+            }
+            
+            throw new Error(`Google API Error (locations - ${locationsResponse.status}): ${locationsData.error?.message || locationsData.error || 'Erreur inconnue'}`);
           }
           
           return new Response(JSON.stringify({
