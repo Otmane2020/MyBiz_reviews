@@ -20,12 +20,6 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-interface AuthPageProps {
-  onGoogleAuth: (userData: any, accessToken?: string) => void;
-  onEmailAuth: (userData: any) => void;
-}
-
-const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,6 +34,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     setLoading(true);
     
     try {
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
       // Use Supabase native Google OAuth with specific configuration
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -58,89 +58,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
         throw error;
       }
       
-    } catch (error) {
-      console.error('OAuth error:', error);
-      alert(`Erreur d'authentification: ${error}`);
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    
-    if (code) {
-      console.log('OAuth code received, processing...');
-      setLoading(true);
-      
-      // Exchange code for tokens via our Edge Function
-      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          action: 'exchange-code',
-          code: code,
-          redirectUri: window.location.origin
-        }),
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Create user data and call onGoogleAuth
-          const userData = {
-            id: data.user.id,
-            name: data.user.name,
-            email: data.user.email,
-            picture: data.user.picture,
-            authMethod: 'google'
-          };
-          
-          onGoogleAuth(userData, data.access_token);
-          
-          // Clear URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-          console.error('OAuth exchange failed:', data.error);
-          alert('Erreur lors de l\'échange du code OAuth');
-        }
-      })
-      .catch(error => {
-        console.error('Error exchanging OAuth code:', error);
-        alert('Erreur lors de l\'authentification');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-    }
-  };
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const error = urlParams.get('error');
-    
-    if (error) {
-      console.error('OAuth error:', error);
-      alert(`Erreur d'authentification: ${error}`);
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-    
-    if (code) {
-      console.log('OAuth code received, processing...');
-      setLoading(true);
-      
-      // Exchange code for tokens via our Edge Function
-      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
         body: JSON.stringify({
           action: 'exchange-code',
           code: code,
@@ -204,7 +121,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       alert('Erreur lors de la connexion');
     } finally {
       setLoading(false);
-    }
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -330,6 +247,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
+                  {/* Use Supabase native Google OAuth with specific configuration */}
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
