@@ -1,4 +1,4 @@
-const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}`,
@@ -287,4 +287,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
+            )
+            }
+      // Use Supabase native Google OAuth with specific configuration
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+  )
+}
