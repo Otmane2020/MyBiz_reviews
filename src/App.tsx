@@ -254,7 +254,7 @@ function App() {
     if (!user) {
       return (
         <AuthPage 
-          onGoogleAuth={handleGoogleAuth}
+          initiateGoogleOAuth={initiateGoogleOAuth}
           onEmailAuth={handleEmailAuth}
         />
       );
