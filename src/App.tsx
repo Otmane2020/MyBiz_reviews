@@ -1,30 +1,13 @@
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
-import StarlinkoLogo from './StarlinkoLogo';
+import StarlinkoLogo from './components/StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-const AuthPage = ({ onEmailAuth }) => {
+const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -42,18 +25,32 @@ const AuthPage = ({ onEmailAuth }) => {
       fetch('/api/auth/google/callback', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ code })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Redirect to dashboard or handle success
+          window.location.href = '/dashboard';
+        } else {
+          console.error('OAuth callback error:', data.error);
+          alert('Erreur lors de la connexion avec Google');
+        }
+      })
+      .catch(error => {
+        console.error('OAuth callback error:', error);
+        alert('Erreur lors de la connexion avec Google');
       });
     }
   }, []);
 
   const handleGoogleAuth = async () => {
-    setLoading(true);
-    setError('');
-    
     try {
+      setLoading(true);
+      setError('');
+      
       // Use Supabase native Google OAuth with specific configuration
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -72,9 +69,9 @@ const AuthPage = ({ onEmailAuth }) => {
         throw error;
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur d\'authentification Google:', error);
-      alert('Erreur lors de la connexion avec Google');
+      setError('Erreur lors de la connexion avec Google');
       setLoading(false);
       if (error?.message && error.message.includes('redirect_uri_mismatch')) {
         alert('Erreur de configuration OAuth. Veuillez contacter le support.');
@@ -82,40 +79,67 @@ const AuthPage = ({ onEmailAuth }) => {
     }
   };
 
-  const handleEmailSubmit = async (e) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
     
     if (!isLogin && formData.password !== formData.confirmPassword) {
-      alert('Les mots de passe ne correspondent pas');
+      setError('Les mots de passe ne correspondent pas');
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    
     try {
-      // Simulate email auth (you can integrate with Supabase Auth here)
-      const userData = {
-        id: Date.now().toString(),
-        email: formData.email,
-        name: formData.fullName || formData.email.split('@')[0],
-        picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName || formData.email)}&background=4285F4&color=fff`,
-        authMethod: 'email'
-      };
-      
-      onEmailAuth(userData);
-    } catch (error) {
-      console.error('Erreur d\'authentification:', error);
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-        setError('Le mot de passe doit contenir au moins 6 caractères');
+      if (isLogin) {
+        // Sign in with email and password
+        const { error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+        
+        if (error) throw error;
+        
       } else {
-        setError(error.message || 'Erreur lors de la connexion');
+        // Sign up with email and password
+        const { error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.fullName,
+            }
+          }
+        });
+        
+        if (error) throw error;
+        
+        // Show success message for sign up
+        setError('');
+        alert('Compte créé avec succès ! Vérifiez votre email pour confirmer votre compte.');
+      }
+      
+    } catch (error: any) {
+      console.error('Erreur d\'authentification:', error);
+      if (error?.message) {
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Email ou mot de passe incorrect');
+        } else if (error.message.includes('Password should be at least 6 characters')) {
+          setError('Le mot de passe doit contenir au moins 6 caractères');
+        } else if (error.message.includes('User already registered')) {
+          setError('Un compte existe déjà avec cet email');
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setError('Erreur lors de la connexion');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
