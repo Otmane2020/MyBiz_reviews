@@ -97,6 +97,11 @@ function App() {
   };
   // Initialize Supabase auth state listener
   useEffect(() => {
+    // Check for OAuth errors first
+    if (checkForOAuthErrors()) {
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSession(session);
@@ -108,6 +113,10 @@ function App() {
         handleSession(session);
       } else if (event === 'SIGNED_OUT') {
         handleSession(null);
+      } else if (event === 'SIGN_IN_ERROR') {
+        console.error('Sign in error:', session);
+        alert('Erreur lors de la connexion. Veuillez réessayer.');
+        setCurrentView('auth');
       }
     });
 
@@ -142,6 +151,26 @@ function App() {
     }
   };
 
+  // Check for OAuth errors in URL
+  const checkForOAuthErrors = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    const errorDescription = urlParams.get('error_description');
+    
+    if (error) {
+      console.error('OAuth Error:', error, errorDescription);
+      
+      // Clear the error from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      // Show error message and redirect to auth
+      alert(`Erreur d'authentification Google: ${errorDescription || error}. Veuillez réessayer.`);
+      setCurrentView('auth');
+      return true;
+    }
+    return false;
+  };
   const handleOnboardingComplete = () => {
     localStorage.setItem('onboardingCompleted', 'true');
     setHasCompletedOnboarding(true);

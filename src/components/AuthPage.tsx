@@ -25,6 +25,123 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const handleGoogleAuth = () => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
     
+    setLoading(true);
+    
+    try {
+      // Clear any existing session first
+      supabase.auth.signOut().then(() => {
+        // Use Supabase native Google OAuth with specific configuration
+        return supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}`,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
+            scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+          }
+        });
+      }).catch((error) => {
+        console.error('Error during Google OAuth:', error);
+        setLoading(false);
+        
+        // Fallback: try direct Google OAuth
+        if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'your_google_client_id_here') {
+          const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+            `client_id=${GOOGLE_CLIENT_ID}&` +
+            `redirect_uri=${encodeURIComponent(window.location.origin)}&` +
+            `response_type=code&` +
+            `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&` +
+            `access_type=offline&` +
+            `prompt=consent`;
+          
+          window.location.href = authUrl;
+        } else {
+          alert('Configuration Google manquante. Contactez le support.');
+        }
+      });
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      setLoading(false);
+      
+      // Show user-friendly error message
+      if (error.message && error.message.includes('redirect_uri_mismatch')) {
+        alert('Erreur de configuration OAuth. L\'URL de redirection ne correspond pas. Contactez le support.');
+      } else if (error.message && error.message.includes('unauthorized_client')) {
+        alert('Client OAuth non autorisé. Vérifiez la configuration Google Cloud Console.');
+      } else {
+        alert('Erreur lors de la connexion avec Google. Veuillez réessayer ou contactez le support.');
+      }
+    }
+  };
+
+  // Handle OAuth callback if we're using direct Google OAuth
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
+    
+    if (error) {
+      console.error('OAuth error:', error);
+      alert(`Erreur d'authentification: ${error}`);
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+    
+    if (code) {
+      console.log('OAuth code received, processing...');
+      setLoading(true);
+      
+      // Exchange code for tokens via our Edge Function
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'exchange-code',
+          code: code,
+          redirectUri: window.location.origin
+        }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Create user data and call onGoogleAuth
+          const userData = {
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            picture: data.user.picture,
+            authMethod: 'google'
+          };
+          
+          onGoogleAuth(userData, data.access_token);
+          
+          // Clear URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          throw new Error(data.error || 'Failed to exchange code');
+        }
+      })
+      .catch(error => {
+        console.error('Error exchanging code:', error);
+        alert('Erreur lors de l\'échange du code d\'autorisation. Veuillez réessayer.');
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+    }
+  }, []);
+
+  const handleGoogleAuthOld = () => {
+    console.log('Google Client ID:', GOOGLE_CLIENT_ID);
+    
     try {
       // Use Supabase native Google OAuth
       supabase.auth.signInWithOAuth({
