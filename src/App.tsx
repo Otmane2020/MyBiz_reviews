@@ -287,6 +287,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
+                  {/* Use Supabase native Google OAuth with specific configuration */}
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -295,7 +296,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
                     placeholder="••••••••"
-                    required={!isLogin}
+                    required
                   />
                 </div>
               </div>
