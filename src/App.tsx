@@ -39,81 +39,235 @@ function App() {
   // Check if current path is /success
   const isSuccessRoute = window.location.pathname === '/success';
 
-  // Consolidated session handling function
-  const handleSession = (session: any) => {
-    if (session) {
-      // Create user data from session
-      const userData = {
-        id: session.user.id,
-        name: session.user.user_metadata.full_name || session.user.user_metadata.name || session.user.email,
-        email: session.user.email,
-        picture: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.email)}&background=4285F4&color=fff`,
-        authMethod: 'google'
-      };
-      
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Set access token from session or localStorage
-      let token = '';
-      if (session.provider_token) {
-        token = session.provider_token;
-        localStorage.setItem('accessToken', token);
-      } else {
-        // Try to get from localStorage for restored sessions
-        token = localStorage.getItem('accessToken') || '';
-      }
-      setAccessToken(token);
-      
-      // Load saved account and location IDs
-      const savedAccountId = localStorage.getItem('selectedAccountId');
-      const savedLocationId = localStorage.getItem('selectedLocationId');
-      if (savedAccountId) setSelectedAccountId(savedAccountId);
-      if (savedLocationId) setSelectedLocationId(savedLocationId);
-      
-      // Check onboarding status
-      const completedOnboarding = localStorage.getItem('onboardingCompleted');
-      if (completedOnboarding) {
-        setHasCompletedOnboarding(true);
-        setCurrentView('app');
-      } else {
-        setCurrentView('google-setup');
-      }
-    } else {
-      // No session - clear everything
-      setUser(null);
-      setAccessToken('');
-      setSelectedAccountId('');
-      setSelectedLocationId('');
-      setCurrentPage('dashboard');
-      setHasCompletedOnboarding(false);
-      localStorage.removeItem('user');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('selectedAccountId');
-      localStorage.removeItem('selectedLocationId');
-      localStorage.removeItem('onboardingCompleted');
-      setCurrentView('landing');
-    }
-  };
   // Initialize Supabase auth state listener
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSession(session);
+      if (session) {
+        const userData = {
+          id: session.user.id,
+          name: session.user.user_metadata.full_name || session.user.user_metadata.name || session.user.email,
+          email: session.user.email,
+          picture: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.email)}&background=4285F4&color=fff`,
+          authMethod: 'google'
+        };
+        
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Extract Google access token if available
+        if (session.provider_token) {
+          setAccessToken(session.provider_token);
+          localStorage.setItem('accessToken', session.provider_token);
+        }
+        
+        // Check if user has completed onboarding
+        const completedOnboarding = localStorage.getItem('onboardingCompleted');
+        if (completedOnboarding) {
+          setHasCompletedOnboarding(true);
+          setCurrentView('app');
+        } else {
+          setCurrentView('google-setup');
+        }
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        handleSession(session);
+      if (event === 'SIGNED_IN' && session) {
+        const userData = {
+          id: session.user.id,
+          name: session.user.user_metadata.full_name || session.user.user_metadata.name || session.user.email,
+          email: session.user.email,
+          picture: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.email)}&background=4285F4&color=fff`,
+          authMethod: 'google'
+        };
+        
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Extract Google access token if available
+        if (session.provider_token) {
+          setAccessToken(session.provider_token);
+          localStorage.setItem('accessToken', session.provider_token);
+        }
+        
+        // Check if user has completed onboarding
+        const completedOnboarding = localStorage.getItem('onboardingCompleted');
+        if (completedOnboarding) {
+          setHasCompletedOnboarding(true);
+          setCurrentView('app');
+        } else {
+          setCurrentView('google-setup');
+        }
       } else if (event === 'SIGNED_OUT') {
-        handleSession(null);
+        setUser(null);
+        setAccessToken('');
+        setSelectedAccountId('');
+        setSelectedLocationId('');
+        setCurrentPage('dashboard');
+        setHasCompletedOnboarding(false);
+        localStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('selectedAccountId');
+        localStorage.removeItem('selectedLocationId');
+        localStorage.removeItem('onboardingCompleted');
+        setCurrentView('landing');
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // Check for existing session
+  useEffect(() => {
+    // Only check localStorage if no Supabase session is found
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        const savedUser = localStorage.getItem('user');
+        const savedToken = localStorage.getItem('accessToken');
+        const savedAccountId = localStorage.getItem('selectedAccountId');
+        const savedLocationId = localStorage.getItem('selectedLocationId');
+        const completedOnboarding = localStorage.getItem('onboardingCompleted');
+
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+          if (savedToken) setAccessToken(savedToken);
+          if (savedAccountId) setSelectedAccountId(savedAccountId);
+          if (savedLocationId) setSelectedLocationId(savedLocationId);
+          setHasCompletedOnboarding(!!completedOnboarding);
+          setCurrentView('app');
+        } else {
+          // Show landing page for new users
+          setCurrentView('landing');
+        }
+      }
+    });
+  }, []);
+
+  // Remove the old OAuth callback handling
+  /*
+  // Listen for OAuth popup messages
+  useEffect(() => {
+    // Handle OAuth callback directly in main window (not popup)
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    // Forcer une reconnexion complète via Supabase
+      if (event.origin !== window.location.origin) return;
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+  */
+
+  const handleDirectOAuthCallback = async (code: string) => {
+    try {
+      console.log('Processing OAuth callback...');
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      console.log('Environment variables check:', {
+        supabaseUrl: supabaseUrl || 'MISSING',
+        supabaseKey: supabaseKey ? 'Present' : 'MISSING',
+        allEnvVars: import.meta.env
+      });
+      
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Supabase configuration missing');
+        const errorMsg = `❌ Configuration Supabase manquante:\n• URL: ${supabaseUrl || 'MANQUANTE'}\n• Clé: ${supabaseKey ? 'Présente' : 'MANQUANTE'}\n\nVeuillez configurer les variables d'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY`;
+        alert(errorMsg);
+        // Redirect to home page after error
+        window.location.href = '/';
+        return;
+      }
+      
+      if (supabaseUrl.includes('your-project-id')) {
+        alert('❌ ERREUR: Variables d\'environnement non configurées\n\nLes variables contiennent encore des valeurs par défaut.\nVeuillez créer un fichier .env avec vos vraies valeurs Supabase.');
+        // Redirect to home page after error
+        window.location.href = '/';
+        return;
+      }
+      
+      console.log('🔄 Calling Supabase Edge Function for OAuth...');
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          action: 'exchange-code',
+          code,
+          redirectUri: window.location.origin,
+        }),
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const textResponse = await response.text();
+        console.error('❌ Non-JSON response received:', textResponse);
+        
+        if (textResponse.includes('<!DOCTYPE') || textResponse.includes('<html>')) {
+          alert('❌ ERREUR: Fonction Supabase non disponible\n\nLa fonction Edge "google-oauth" n\'est pas déployée ou accessible.\n\nVérifiez:\n• Que la fonction est déployée dans Supabase\n• Que l\'URL Supabase est correcte\n• Les logs de la fonction dans le dashboard Supabase');
+          // Redirect to home page after error
+          window.location.href = '/';
+          return;
+        } else {
+          alert(`❌ ERREUR: Réponse inattendue du serveur\n\nType de contenu: ${contentType || 'inconnu'}\nRéponse: ${textResponse.substring(0, 200)}...`);
+          // Redirect to home page after error
+          window.location.href = '/';
+          return;
+        }
+      }
+      
+      if (response.ok && data.user && data.access_token) {
+      console.log('❌ Impossible de rafraîchir le token automatiquement');
+      }
+    } catch (error) {
+      console.error('💥 Error processing OAuth callback:', error);
+      
+      let errorMessage = '❌ ERREUR CRITIQUE lors de la connexion\n\n';
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage += 'Problème de réseau ou URL Supabase incorrecte\n\n';
+        errorMessage += `URL utilisée: ${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth\n\n`;
+        errorMessage += '🔍 Vérifiez:\n';
+        errorMessage += '• Connexion internet\n';
+        errorMessage += '• URL Supabase correcte\n';
+        errorMessage += '• Fonction Edge déployée';
+      } else {
+        errorMessage += `Détails: ${error.message}\n\n`;
+        errorMessage += '🔍 Consultez la console pour plus de détails';
+      }
+      
+      alert(errorMessage);
+      // Redirect to home page after error
+      window.location.href = '/';
+    }
+  };
+
+  // Check if we're in OAuth popup
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code && window.opener) {
+      // We're in a popup, send code to parent
+      window.opener.postMessage({
+        type: 'GOOGLE_AUTH_SUCCESS',
+        code: code
+      }, window.location.origin);
+      window.close();
+    }
+  }, []);
 
   const handleGoogleAuth = (userData: any, token: string) => {
     // This function is no longer needed as Supabase handles auth state
@@ -123,7 +277,23 @@ function App() {
   const handleEmailAuth = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentView('google-setup');
+    try {
+      // Forcer une nouvelle authentification Google via Supabase
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+    } catch (error) {
+      console.error('Erreur lors de la reconnexion:', error);
+      alert('Erreur lors de la reconnexion. Veuillez rafraîchir la page et réessayer.');
+    }
   };
 
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
@@ -164,36 +334,6 @@ function App() {
     setCurrentView('app');
   };
 
-  const handleGetStarted = () => {
-    setCurrentView('auth');
-  };
-
-  const handleGoogleTokenExpired = async () => {
-    try {
-      console.log('Token expired, initiating Google re-authentication...');
-      
-      // Clear expired token data
-      setAccessToken('');
-      localStorage.removeItem('accessToken');
-      
-      // Initiate Google OAuth sign-in with Supabase
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-    } catch (error) {
-      console.error('Error during Google re-authentication:', error);
-      // Fallback: redirect to auth page
-      setCurrentView('auth');
-    }
-  };
   const handleLogout = () => {
     // Use Supabase signOut which will trigger the auth state listener
     supabase.auth.signOut();
@@ -233,7 +373,6 @@ function App() {
       <GoogleBusinessSetup
         accessToken={accessToken}
         onSetupComplete={handleGoogleSetupComplete}
-        onTokenExpired={handleGoogleTokenExpired}
       />
     );
   }
