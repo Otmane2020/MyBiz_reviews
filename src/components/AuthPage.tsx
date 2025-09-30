@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
+import { supabase } from '../lib/supabase';
 
 // Utiliser la variable d'environnement
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -24,148 +25,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const handleGoogleAuth = () => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
     
-    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your_google_client_id_here') {
-      console.warn('Configuration Google OAuth manquante, utilisation du mode demo');
-      // Créer un utilisateur demo pour les tests
-      const demoUser = {
-        id: 'demo-user-' + Date.now(),
-        name: 'Utilisateur Demo',
-        email: 'demo@starlinko.com',
-        picture: 'https://ui-avatars.com/api/?name=Demo+User&background=4285F4&color=fff'
-      };
-      onGoogleAuth(demoUser, 'demo-token-' + Date.now());
-      return;
-    }
-
     setLoading(true);
     
-    // Use direct redirect instead of popup for better compatibility
-    const redirectUri = window.location.origin;
-    console.log('Redirect URI:', redirectUri);
-    
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `response_type=code&` +
-      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email')}&` +
-      `access_type=offline&` +
-      `prompt=consent`;
-    
-    console.log('Auth URL:', authUrl);
-    
-    // Direct redirect instead of popup
-    window.location.href = authUrl;
-  };
-
-  const handleOAuthCallback = async (code: string) => {
-    try {
-      console.log('Exchanging code for token...');
-      
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      console.log('AuthPage - Environment variables check:', {
-        supabaseUrl: supabaseUrl || 'MISSING',
-        supabaseKey: supabaseKey ? 'Present' : 'MISSING'
-      });
-      
-      if (!supabaseUrl || !supabaseKey) {
-        console.error('❌ Supabase configuration missing in AuthPage');
-        // Fallback to demo mode for development
-        const demoUser = {
-          id: 'demo-user-' + Date.now(),
-          name: 'Utilisateur Demo',
-          email: 'demo@starlinko.com',
-          picture: 'https://ui-avatars.com/api/?name=Demo+User&background=4285F4&color=fff'
-        };
-        console.log('🎭 Switching to demo mode');
-        onGoogleAuth(demoUser, 'demo-token-' + Date.now());
-        return;
-      }
-      
-      if (supabaseUrl.includes('your-project-id')) {
-        console.error('❌ Default environment variables detected');
-        // Fallback to demo mode
-        const demoUser = {
-          id: 'demo-user-' + Date.now(),
-          name: 'Utilisateur Demo',
-          email: 'demo@starlinko.com',
-          picture: 'https://ui-avatars.com/api/?name=Demo+User&background=4285F4&color=fff'
-        };
-        console.log('🎭 Switching to demo mode (default env vars)');
-        onGoogleAuth(demoUser, 'demo-token-' + Date.now());
-        return;
-      }
-      
-      console.log('🔄 AuthPage calling Supabase Edge Function...');
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
+    // Use Supabase native Google OAuth
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
         },
-        body: JSON.stringify({
-          action: 'exchange-code',
-          code,
-          redirectUri: window.location.origin,
-        }),
-      });
-
-      const contentType = response.headers.get('content-type');
-      let data;
-      
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        // Si ce n'est pas du JSON, c'est probablement une erreur HTML
-        const text = await response.text();
-        console.error('❌ Non-JSON response received in AuthPage:', text);
-        
-        if (text.includes('<!DOCTYPE')) {
-          console.log('🎭 Function not available, switching to demo mode');
-          const demoUser = {
-            id: 'demo-user-' + Date.now(),
-            name: 'Utilisateur Demo',
-            email: 'demo@starlinko.com',
-            picture: 'https://ui-avatars.com/api/?name=Demo+User&background=4285F4&color=fff'
-          };
-          onGoogleAuth(demoUser, 'demo-token-' + Date.now());
-          return;
-        } else {
-          throw new Error(`Réponse inattendue du serveur: ${text.substring(0, 100)}...`);
-        }
-      }
-      
-      console.log('OAuth response:', data);
-      
-      if (response.ok) {
-        console.log('✅ OAuth success in AuthPage');
-        onGoogleAuth(data.user, data.access_token);
-      } else {
-        console.error('❌ OAuth error in AuthPage:', data.error);
-        
-        // Fallback to demo mode instead of showing error
-        console.log('🎭 OAuth failed, switching to demo mode');
-        const demoUser = {
-          id: 'demo-user-' + Date.now(),
-          name: 'Utilisateur Demo',
-          email: 'demo@starlinko.com',
-          picture: 'https://ui-avatars.com/api/?name=Demo+User&background=4285F4&color=fff'
-        };
-        onGoogleAuth(demoUser, 'demo-token-' + Date.now());
+        scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
       }
     } catch (error) {
-      console.error('💥 Error in AuthPage OAuth callback:', error);
-      
-      // Fallback to demo mode instead of showing error
-      console.log('🎭 Exception occurred, switching to demo mode');
-      const demoUser = {
-        id: 'demo-user-' + Date.now(),
-        name: 'Utilisateur Demo',
-        email: 'demo@starlinko.com',
-        picture: 'https://ui-avatars.com/api/?name=Demo+User&background=4285F4&color=fff'
-      };
-      onGoogleAuth(demoUser, 'demo-token-' + Date.now());
+      console.error('Error signing in with Google:', error);
+      alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -231,7 +106,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           <button
             onClick={handleGoogleAuth}
             disabled={loading}
-            className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 shadow-sm mb-6 disabled:opacity-50"
+            className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 shadow-sm mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

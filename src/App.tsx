@@ -1,5 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
 import SuperAdmin from './pages/SuperAdmin';
 import AuthPage from './components/AuthPage';
 import LandingPage from './components/LandingPage';
@@ -29,6 +30,82 @@ function App() {
   // Check if current path is /success
   const isSuccessRoute = window.location.pathname === '/success';
 
+  // Initialize Supabase auth state listener
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const userData = {
+          id: session.user.id,
+          name: session.user.user_metadata.full_name || session.user.user_metadata.name || session.user.email,
+          email: session.user.email,
+          picture: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.email)}&background=4285F4&color=fff`,
+          authMethod: 'google'
+        };
+        
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Extract Google access token if available
+        if (session.provider_token) {
+          setAccessToken(session.provider_token);
+          localStorage.setItem('accessToken', session.provider_token);
+        }
+        
+        // Check if user has completed onboarding
+        const completedOnboarding = localStorage.getItem('onboardingCompleted');
+        if (completedOnboarding) {
+          setHasCompletedOnboarding(true);
+          setCurrentView('app');
+        } else {
+          setCurrentView('google-setup');
+        }
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const userData = {
+          id: session.user.id,
+          name: session.user.user_metadata.full_name || session.user.user_metadata.name || session.user.email,
+          email: session.user.email,
+          picture: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.email)}&background=4285F4&color=fff`,
+          authMethod: 'google'
+        };
+        
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Extract Google access token if available
+        if (session.provider_token) {
+          setAccessToken(session.provider_token);
+          localStorage.setItem('accessToken', session.provider_token);
+        }
+        
+        // Check if user has completed onboarding
+        const completedOnboarding = localStorage.getItem('onboardingCompleted');
+        if (completedOnboarding) {
+          setHasCompletedOnboarding(true);
+          setCurrentView('app');
+        } else {
+          setCurrentView('google-setup');
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setAccessToken('');
+        setSelectedAccountId('');
+        setSelectedLocationId('');
+        setCurrentPage('dashboard');
+        setHasCompletedOnboarding(false);
+        localStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('selectedAccountId');
+        localStorage.removeItem('selectedLocationId');
+        localStorage.removeItem('onboardingCompleted');
+        setCurrentView('landing');
+      }
+    });
   // Notifications hook
   const {
     notifications,
@@ -38,27 +115,37 @@ function App() {
     clearNotifications,
   } = useReviewsNotifications(selectedLocationId);
 
-  // Check for existing session
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const savedToken = localStorage.getItem('accessToken');
-    const savedAccountId = localStorage.getItem('selectedAccountId');
-    const savedLocationId = localStorage.getItem('selectedLocationId');
-    const completedOnboarding = localStorage.getItem('onboardingCompleted');
-
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      if (savedToken) setAccessToken(savedToken);
-      if (savedAccountId) setSelectedAccountId(savedAccountId);
-      if (savedLocationId) setSelectedLocationId(savedLocationId);
-      setHasCompletedOnboarding(!!completedOnboarding);
-      setCurrentView('app');
-    } else {
-      // Show landing page for new users
-      setCurrentView('landing');
-    }
+    return () => subscription.unsubscribe();
   }, []);
 
+  // Check for existing session
+  useEffect(() => {
+    // Only check localStorage if no Supabase session is found
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        const savedUser = localStorage.getItem('user');
+        const savedToken = localStorage.getItem('accessToken');
+        const savedAccountId = localStorage.getItem('selectedAccountId');
+        const savedLocationId = localStorage.getItem('selectedLocationId');
+        const completedOnboarding = localStorage.getItem('onboardingCompleted');
+
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+          if (savedToken) setAccessToken(savedToken);
+          if (savedAccountId) setSelectedAccountId(savedAccountId);
+          if (savedLocationId) setSelectedLocationId(savedLocationId);
+          setHasCompletedOnboarding(!!completedOnboarding);
+          setCurrentView('app');
+        } else {
+          // Show landing page for new users
+          setCurrentView('landing');
+        }
+      }
+    });
+  }, []);
+
+  // Remove the old OAuth callback handling
+  /*
   // Listen for OAuth popup messages
   useEffect(() => {
     // Handle OAuth callback directly in main window (not popup)
@@ -84,6 +171,7 @@ function App() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+  */
 
   const handleDirectOAuthCallback = async (code: string) => {
     try {
@@ -232,19 +320,8 @@ function App() {
   }, []);
 
   const handleGoogleAuth = (userData: any, token: string) => {
-    setUser(userData);
-    setAccessToken(token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('accessToken', token);
-    
-    // Check if user has already completed onboarding
-    const completedOnboarding = localStorage.getItem('onboardingCompleted');
-    if (completedOnboarding) {
-      setHasCompletedOnboarding(true);
-      setCurrentView('app');
-    } else {
-      setCurrentView('google-setup');
-    }
+    // This function is no longer needed as Supabase handles auth state
+    // The auth state listener will handle user data and navigation
   };
 
   const handleEmailAuth = (userData: any) => {
@@ -304,18 +381,8 @@ function App() {
   };
 
   const handleLogout = () => {
-    setUser(null);
-    setAccessToken('');
-    setSelectedAccountId('');
-    setSelectedLocationId('');
-    setCurrentPage('dashboard');
-    setHasCompletedOnboarding(false);
-    localStorage.removeItem('user');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('selectedAccountId');
-    localStorage.removeItem('selectedLocationId');
-    localStorage.removeItem('onboardingCompleted');
-    setCurrentView('landing');
+    // Use Supabase signOut which will trigger the auth state listener
+    supabase.auth.signOut();
   };
 
   // Handle Super Admin route
