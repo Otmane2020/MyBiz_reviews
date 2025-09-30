@@ -20,7 +20,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     console.log('Is trial signup:', isTrial);
     
     // Set the trial signup flag before OAuth redirect
-    localStorage.setItem('isTrialSignup', isTrial.toString());
+    if (isTrial) {
+      localStorage.setItem('isTrialSignup', 'true');
+      console.log('✅ Set isTrialSignup = true for trial signup');
+    } else {
+      localStorage.setItem('isTrialSignup', 'false');
+      console.log('✅ Set isTrialSignup = false for regular login');
+    }
     
     // Set loading state
     setLoading(true);

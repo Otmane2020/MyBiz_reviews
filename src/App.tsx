@@ -78,18 +78,24 @@ function App() {
       const isTrialSignup = localStorage.getItem('isTrialSignup') === 'true';
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
       
+      console.log('🔍 Session handling - isTrialSignup:', isTrialSignup);
+      console.log('🔍 Session handling - completedOnboarding:', completedOnboarding);
+      console.log('🔍 Session handling - isDashboardRoute:', isDashboardRoute);
       // Clear the trial signup flag after reading it
       localStorage.removeItem('isTrialSignup');
       
       if (isTrialSignup || (!completedOnboarding && !isDashboardRoute)) {
         // New trial user or user who hasn't completed onboarding
+        console.log('✅ Redirecting to onboarding');
         setCurrentView('onboarding');
       } else if (completedOnboarding || isDashboardRoute) {
         // Existing user with completed onboarding or direct dashboard access
+        console.log('✅ Redirecting to app dashboard');
         setHasCompletedOnboarding(true);
         setCurrentView('app');
       } else {
         // Fallback to onboarding for safety
+        console.log('✅ Fallback - redirecting to onboarding');
         setCurrentView('onboarding');
       }
     } else {
@@ -131,8 +137,8 @@ function App() {
 
 
   const handleGoogleAuth = (userData: any, token: string) => {
-    // This function is now called from AuthPage with isTrial flag
-    // The actual OAuth is handled by Supabase in AuthPage
+    // Cette fonction n'est plus utilisée - l'OAuth est géré directement dans AuthPage
+    // et la logique de redirection est dans handleSession
   };
 
   const handleEmailAuth = (userData: any) => {
