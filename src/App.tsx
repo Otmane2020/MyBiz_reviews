@@ -61,6 +61,11 @@ function App() {
           localStorage.setItem('accessToken', session.provider_token);
         }
         
+        // Extract Google refresh token if available
+        if (session.provider_refresh_token) {
+          localStorage.setItem('refreshToken', session.provider_refresh_token);
+        }
+        
         // Check if user has completed onboarding
         const completedOnboarding = localStorage.getItem('onboardingCompleted');
         if (completedOnboarding) {
@@ -90,6 +95,11 @@ function App() {
         if (session.provider_token) {
           setAccessToken(session.provider_token);
           localStorage.setItem('accessToken', session.provider_token);
+        }
+        
+        // Extract Google refresh token if available
+        if (session.provider_refresh_token) {
+          localStorage.setItem('refreshToken', session.provider_refresh_token);
         }
         
         // Check if user has completed onboarding
