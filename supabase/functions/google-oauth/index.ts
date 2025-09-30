@@ -44,34 +44,73 @@ serve(async (req) => {
             throw new Error('Code and redirectUri are required for exchange-code action');
           }
           console.log('Exchanging code for tokens...');
+          console.log('=== OAUTH CODE EXCHANGE DEBUG ===');
+          console.log('Code received:', code.substring(0, 20) + '...');
+          console.log('Redirect URI:', redirectUri);
+          console.log('Google Client ID:', GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 20) + '...' : 'NOT SET');
+          console.log('Google Client Secret:', GOOGLE_CLIENT_SECRET ? 'SET (length: ' + GOOGLE_CLIENT_SECRET.length + ')' : 'NOT SET');
           
           // --- Échange de Code OAuth ---
+          const tokenRequestBody = new URLSearchParams({
+            code,
+            client_id: GOOGLE_CLIENT_ID,
+            client_secret: GOOGLE_CLIENT_SECRET,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code'
+          });
+          
+          console.log('Token request body params:', {
+            code: code.substring(0, 20) + '...',
+            client_id: GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 20) + '...' : 'NOT SET',
+            client_secret: GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET',
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code'
+          });
+          
           const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: new URLSearchParams({
-              code,
-              client_id: GOOGLE_CLIENT_ID,
-              client_secret: GOOGLE_CLIENT_SECRET,
-              redirect_uri: redirectUri,
-              grant_type: 'authorization_code'
-            })
+            body: tokenRequestBody
           });
+          
+          console.log('Google token response status:', tokenResponse.status);
+          console.log('Google token response headers:', Object.fromEntries(tokenResponse.headers.entries()));
+          
           const tokenData = await tokenResponse.json();
+          console.log('Google token response data:', JSON.stringify(tokenData, null, 2));
+          
           if (!tokenResponse.ok) {
             console.error('Token exchange failed:', tokenData);
+            console.error('=== DETAILED ERROR INFO ===');
+            console.error('Status:', tokenResponse.status);
+            console.error('Status Text:', tokenResponse.statusText);
+            console.error('Error:', tokenData.error);
+            console.error('Error Description:', tokenData.error_description);
+            console.error('Error URI:', tokenData.error_uri);
             throw new Error(`Google Token Exchange Error: ${tokenData.error_description || tokenData.error}`);
           }
           
           // Fetch user info
+          console.log('Fetching user info with access token:', tokenData.access_token ? tokenData.access_token.substring(0, 20) + '...' : 'NOT SET');
           const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
             headers: {
               Authorization: `Bearer ${tokenData.access_token}`
             }
           });
+          
+          console.log('User info response status:', userInfoResponse.status);
           const userInfo = await userInfoResponse.json();
+          console.log('User info response data:', JSON.stringify(userInfo, null, 2));
+          
+          if (!userInfoResponse.ok) {
+            console.error('User info fetch failed:', userInfo);
+            throw new Error(`Failed to fetch user info: ${userInfo.error_description || userInfo.error}`);
+          }
+          
+          console.log('=== OAUTH SUCCESS ===');
+          console.log('User authenticated:', userInfo.email);
 
           return new Response(JSON.stringify({
             success: true,
