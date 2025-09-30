@@ -102,11 +102,15 @@ function App() {
         console.error('Supabase configuration missing');
         const errorMsg = `❌ Configuration Supabase manquante:\n• URL: ${supabaseUrl || 'MANQUANTE'}\n• Clé: ${supabaseKey ? 'Présente' : 'MANQUANTE'}\n\nVeuillez configurer les variables d'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY`;
         alert(errorMsg);
+        // Redirect to home page after error
+        window.location.href = '/';
         return;
       }
       
       if (supabaseUrl.includes('your-project-id')) {
         alert('❌ ERREUR: Variables d\'environnement non configurées\n\nLes variables contiennent encore des valeurs par défaut.\nVeuillez créer un fichier .env avec vos vraies valeurs Supabase.');
+        // Redirect to home page after error
+        window.location.href = '/';
         return;
       }
       
@@ -138,9 +142,13 @@ function App() {
         
         if (textResponse.includes('<!DOCTYPE') || textResponse.includes('<html>')) {
           alert('❌ ERREUR: Fonction Supabase non disponible\n\nLa fonction Edge "google-oauth" n\'est pas déployée ou accessible.\n\nVérifiez:\n• Que la fonction est déployée dans Supabase\n• Que l\'URL Supabase est correcte\n• Les logs de la fonction dans le dashboard Supabase');
+          // Redirect to home page after error
+          window.location.href = '/';
           return;
         } else {
           alert(`❌ ERREUR: Réponse inattendue du serveur\n\nType de contenu: ${contentType || 'inconnu'}\nRéponse: ${textResponse.substring(0, 200)}...`);
+          // Redirect to home page after error
+          window.location.href = '/';
           return;
         }
       }
@@ -151,6 +159,9 @@ function App() {
         setAccessToken(data.access_token);
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('accessToken', data.access_token);
+        
+        // Clean URL and redirect to setup
+        window.history.replaceState({}, document.title, window.location.pathname);
         setCurrentView('google-setup');
       } else {
         console.error('❌ OAuth error:', data);
@@ -179,6 +190,8 @@ function App() {
         errorMessage += '\n• API Google My Business activée';
         
         alert(errorMessage);
+        // Redirect to home page after error
+        window.location.href = '/';
       }
     } catch (error) {
       console.error('💥 Error processing OAuth callback:', error);
@@ -198,6 +211,8 @@ function App() {
       }
       
       alert(errorMessage);
+      // Redirect to home page after error
+      window.location.href = '/';
     }
   };
 
