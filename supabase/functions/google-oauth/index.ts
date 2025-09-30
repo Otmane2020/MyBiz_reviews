@@ -1,170 +1,176 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'npm:@supabase/supabase-js@2';
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization"
 };
-
 // Récupérer les identifiants depuis les variables d'environnement
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
-
-serve(async (req) => {
+serve(async (req)=>{
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
       headers: corsHeaders
     });
   }
-
   try {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       console.error('Google credentials not configured');
       throw new Error('Google credentials not configured in environment variables');
     }
-
     const { action, accessToken, locationId, accountId, code, redirectUri, refreshToken, reviewId, comment } = await req.json();
     console.log(`Processing action: ${action}`);
-
-    switch (action) {
-      case 'exchange-code': {
-        if (!code || !redirectUri) {
-          throw new Error('Code and redirectUri are required for exchange-code action');
-        }
-
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            code,
-            client_id: GOOGLE_CLIENT_ID,
-            client_secret: GOOGLE_CLIENT_SECRET,
-            redirect_uri: redirectUri,
-            grant_type: 'authorization_code'
-          })
-        });
-        const tokenData = await tokenResponse.json();
-        if (!tokenResponse.ok) {
-          throw new Error(`Google Token Exchange Error: ${tokenData.error_description || tokenData.error}`);
-        }
-
-        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenData.access_token}` }
-        });
-        const userInfo = await userInfoResponse.json();
-
-        return new Response(JSON.stringify({
-          success: true,
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
-          expires_in: tokenData.expires_in,
-          user: {
-            id: userInfo.sub,
-            email: userInfo.email,
-            name: userInfo.name,
-            picture: userInfo.picture
+    switch(action){
+      case 'exchange-code':
+        {
+          if (!code || !redirectUri) {
+            throw new Error('Code and redirectUri are required for exchange-code action');
           }
-        }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
-
-      case 'refresh-token': {
-        if (!refreshToken) throw new Error('Refresh token is required');
-
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: GOOGLE_CLIENT_ID,
-            client_secret: GOOGLE_CLIENT_SECRET,
-            refresh_token: refreshToken,
-            grant_type: 'refresh_token'
-          })
-        });
-        const tokenData = await tokenResponse.json();
-        if (!tokenResponse.ok) {
-          throw new Error(`Google Token Refresh Error: ${tokenData.error_description || tokenData.error}`);
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+              code,
+              client_id: GOOGLE_CLIENT_ID,
+              client_secret: GOOGLE_CLIENT_SECRET,
+              redirect_uri: redirectUri,
+              grant_type: 'authorization_code'
+            })
+          });
+          const tokenData = await tokenResponse.json();
+          if (!tokenResponse.ok) {
+            throw new Error(`Google Token Exchange Error: ${tokenData.error_description || tokenData.error}`);
+          }
+          const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: {
+              Authorization: `Bearer ${tokenData.access_token}`
+            }
+          });
+          const userInfo = await userInfoResponse.json();
+          return new Response(JSON.stringify({
+            success: true,
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+            expires_in: tokenData.expires_in,
+            user: {
+              id: userInfo.sub,
+              email: userInfo.email,
+              name: userInfo.name,
+              picture: userInfo.picture
+            }
+          }), {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
         }
-
-        return new Response(JSON.stringify({
-          success: true,
-          access_token: tokenData.access_token,
-          expires_in: tokenData.expires_in
-        }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
-
-      case 'get-accounts': {
-        if (!accessToken) throw new Error('Access token is required for get-accounts action');
-
-        const accountsResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-
-        const accountsData = await accountsResponse.json();
-        if (!accountsResponse.ok) {
-          throw new Error(`Google API Error (${accountsResponse.status}): ${accountsData.error?.message || 'Unknown error'}`);
+      case 'refresh-token':
+        {
+          if (!refreshToken) throw new Error('Refresh token is required');
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+              client_id: GOOGLE_CLIENT_ID,
+              client_secret: GOOGLE_CLIENT_SECRET,
+              refresh_token: refreshToken,
+              grant_type: 'refresh_token'
+            })
+          });
+          const tokenData = await tokenResponse.json();
+          if (!tokenResponse.ok) {
+            throw new Error(`Google Token Refresh Error: ${tokenData.error_description || tokenData.error}`);
+          }
+          return new Response(JSON.stringify({
+            success: true,
+            access_token: tokenData.access_token,
+            expires_in: tokenData.expires_in
+          }), {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
         }
-
-        return new Response(JSON.stringify({
-          success: true,
-          accounts: accountsData.accounts || []
-        }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
-
-      case 'get-locations': {
-        if (!accessToken || !accountId) throw new Error('Access token and accountId are required for get-locations action');
-
-        const locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-
-        const locationsData = await locationsResponse.json();
-        if (!locationsResponse.ok) {
-          throw new Error(`Google API Error (${locationsResponse.status}): ${locationsData.error?.message || 'Unknown error'}`);
+      case 'get-accounts':
+        {
+          if (!accessToken) throw new Error('Access token is required for get-accounts action');
+          const accountsResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`
+            }
+          });
+          const accountsData = await accountsResponse.json();
+          if (!accountsResponse.ok) {
+            throw new Error(`Google API Error (${accountsResponse.status}): ${accountsData.error?.message || 'Unknown error'}`);
+          }
+          return new Response(JSON.stringify({
+            success: true,
+            accounts: accountsData.accounts || []
+          }), {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
         }
-
-        return new Response(JSON.stringify({
-          success: true,
-          locations: locationsData.locations || []
-        }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
-
-      case 'reply-review': {
-        if (!accessToken || !locationId || !reviewId || !comment) {
-          throw new Error('Access token, locationId, reviewId, and comment are required');
+      case 'get-locations':
+        {
+          if (!accessToken || !accountId) throw new Error('Access token and accountId are required for get-locations action');
+          const locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`
+            }
+          });
+          const locationsData = await locationsResponse.json();
+          if (!locationsResponse.ok) {
+            throw new Error(`Google API Error (${locationsResponse.status}): ${locationsData.error?.message || 'Unknown error'}`);
+          }
+          return new Response(JSON.stringify({
+            success: true,
+            locations: locationsData.locations || []
+          }), {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
         }
-
-        const replyResponse = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/replies`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({ comment })
-        });
-
-        const replyData = await replyResponse.json();
-        if (!replyResponse.ok) {
-          throw new Error(`Google API Error (${replyResponse.status}): ${replyData.error?.message || 'Unknown error'}`);
+      case 'reply-review':
+        {
+          if (!accessToken || !locationId || !reviewId || !comment) {
+            throw new Error('Access token, locationId, reviewId, and comment are required');
+          }
+          const replyResponse = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/replies`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+              comment
+            })
+          });
+          const replyData = await replyResponse.json();
+          if (!replyResponse.ok) {
+            throw new Error(`Google API Error (${replyResponse.status}): ${replyData.error?.message || 'Unknown error'}`);
+          }
+          return new Response(JSON.stringify({
+            success: true,
+            reply: replyData
+          }), {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
         }
-
-        return new Response(JSON.stringify({
-          success: true,
-          reply: replyData
-        }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
-
       default:
         throw new Error(`Unsupported action: ${action}`);
     }
@@ -175,7 +181,10 @@ serve(async (req) => {
       error: error.message
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
     });
   }
 });
