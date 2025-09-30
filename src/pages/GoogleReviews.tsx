@@ -187,9 +187,27 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         if (data.newReviews > 0) {
           console.log(`${data.newReviews} nouveaux avis ajoutés`);
         }
+      } else if (data.error) {
+        console.error('Erreur API fetch-reviews:', data.error);
+        // Check if it's a token expiration error
+        if (data.error.includes('401') || data.error.includes('invalide') || data.error.includes('expiré') || data.error.includes('Token')) {
+          if (onTokenExpired) {
+            onTokenExpired();
+            return;
+          }
+        }
+        alert(`Erreur lors de la récupération des avis: ${data.error}`);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des avis:', error);
+      // Check if it's a network error that might indicate token issues
+      if (error.message && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
+        if (onTokenExpired) {
+          onTokenExpired();
+          return;
+        }
+      }
+      alert(`Erreur de réseau lors de la récupération des avis: ${error.message}`);
     } finally {
       setLoading(false);
     }
