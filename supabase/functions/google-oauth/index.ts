@@ -1,335 +1,290 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'npm:@supabase/supabase-js@2';
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization"
-};
-
-// Récupérer les identifiants depuis les variables d'environnement
-const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
-const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
-const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders
-    });
-  }
-
-  try {
-    // Vérifier que les variables d'environnement sont configurées
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_API_KEY) {
-      console.error('Google credentials not configured');
-      throw new Error('Google credentials not configured in environment variables');
-    }
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    // Note: Le client Supabase n'est pas utilisé dans les actions actuelles, mais il est conservé
-    // pour de futures interactions avec la base de données (ex: stockage des tokens).
-    // const supabase = createClient(supabaseUrl, supabaseServiceKey); 
-
-    const { action, accessToken, locationId, accountId, code, redirectUri, refreshToken, reviewId, comment } = await req.json();
-    console.log(`Processing action: ${action}`);
-
-    switch (action) {
-      case 'exchange-code':
-        {
-          if (!code || !redirectUri) {
-            throw new Error('Code and redirectUri are required for exchange-code action');
-          }
-          console.log('Exchanging code for tokens...');
-          console.log('=== OAUTH CODE EXCHANGE DEBUG ===');
-          console.log('Code received:', code.substring(0, 20) + '...');
-          console.log('Redirect URI:', redirectUri);
-          console.log('Google Client ID:', GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 20) + '...' : 'NOT SET');
-          console.log('Google Client Secret:', GOOGLE_CLIENT_SECRET ? 'SET (length: ' + GOOGLE_CLIENT_SECRET.length + ')' : 'NOT SET');
-          
-          // --- Échange de Code OAuth ---
-          const tokenRequestBody = new URLSearchParams({
-            code,
-            client_id: GOOGLE_CLIENT_ID,
-            client_secret: GOOGLE_CLIENT_SECRET,
-            redirect_uri: redirectUri,
-            grant_type: 'authorization_code'
-          });
-          
-          console.log('Token request body params:', {
-            code: code.substring(0, 20) + '...',
-            client_id: GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 20) + '...' : 'NOT SET',
-            client_secret: GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET',
-            redirect_uri: redirectUri,
-            grant_type: 'authorization_code'
-          });
-          
-          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: tokenRequestBody
-          });
-          
-          console.log('Google token response status:', tokenResponse.status);
-          console.log('Google token response headers:', Object.fromEntries(tokenResponse.headers.entries()));
-          
-          const tokenData = await tokenResponse.json();
-          console.log('Google token response data:', JSON.stringify(tokenData, null, 2));
-          
-          if (!tokenResponse.ok) {
-            console.error('Token exchange failed:', tokenData);
-            console.error('=== DETAILED ERROR INFO ===');
-            console.error('Status:', tokenResponse.status);
-            console.error('Status Text:', tokenResponse.statusText);
-            console.error('Error:', tokenData.error);
-            console.error('Error Description:', tokenData.error_description);
-            console.error('Error URI:', tokenData.error_uri);
-            throw new Error(`Google Token Exchange Error: ${tokenData.error_description || tokenData.error}`);
-          }
-          
-          // Fetch user info
-          console.log('Fetching user info with access token:', tokenData.access_token ? tokenData.access_token.substring(0, 20) + '...' : 'NOT SET');
-          const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: {
-              Authorization: `Bearer ${tokenData.access_token}`
-            }
-          });
-          
-          console.log('User info response status:', userInfoResponse.status);
-          const userInfo = await userInfoResponse.json();
-          console.log('User info response data:', JSON.stringify(userInfo, null, 2));
-          
-          if (!userInfoResponse.ok) {
-            console.error('User info fetch failed:', userInfo);
-            throw new Error(`Failed to fetch user info: ${userInfo.error_description || userInfo.error}`);
-          }
-          
-          console.log('=== OAUTH SUCCESS ===');
-          console.log('User authenticated:', userInfo.email);
-
-          return new Response(JSON.stringify({
-            success: true,
-            access_token: tokenData.access_token,
-            refresh_token: tokenData.refresh_token,
-            expires_in: tokenData.expires_in,
-            user: {
-              id: userInfo.sub,
-              email: userInfo.email,
-              name: userInfo.name,
-              picture: userInfo.picture
-            }
-          }), {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders
-            }
-          });
+const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
-
-      case 'refresh-token':
-        {
-          if (!refreshToken) {
-            throw new Error('Refresh token is required for refresh-token action');
-          }
-          console.log('Refreshing access token...');
-
-          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-              client_id: GOOGLE_CLIENT_ID,
-              client_secret: GOOGLE_CLIENT_SECRET,
-              refresh_token: refreshToken,
-              grant_type: 'refresh_token'
-            })
-          });
-          const tokenData = await tokenResponse.json();
-          if (!tokenResponse.ok) {
-            console.error('Token refresh failed:', tokenData);
-            throw new Error(`Google Token Refresh Error: ${tokenData.error_description || tokenData.error}`);
-          }
-          
-          return new Response(JSON.stringify({
-            success: true,
-            access_token: tokenData.access_token,
-            expires_in: tokenData.expires_in
-          }), {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders
-            }
-          });
-        }
-
-      case 'get-accounts':
-        {
-          if (!accessToken) {
-            throw new Error('Access token is required for get-accounts action');
-          }
-          console.log('Fetching Google Business Profile accounts using v1 API...');
-          console.log('Access token (first 20 chars):', accessToken.substring(0, 20) + '...');
-          
-          // NOUVEL ENDPOINT V1 (Account Management API)
-          const accountsResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts?key=${GOOGLE_API_KEY}`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`
-            }
-          });
-
-          console.log('Accounts API response status:', accountsResponse.status);
-          
-          const accountsData = await accountsResponse.json();
-          console.log('Accounts API response data:', JSON.stringify(accountsData, null, 2));
-          
-          if (!accountsResponse.ok) {
-            console.error('Get accounts failed:', accountsData);
-            
-            // Messages d'erreur plus détaillés
-            if (accountsResponse.status === 403) {
-              if (accountsData.error?.message?.includes('My Business Account Management API')) {
-                throw new Error(`L'API "My Business Account Management API" n'est pas activée dans votre projet Google Cloud Console. Veuillez l'activer dans https://console.cloud.google.com/apis/library/mybusinessaccountmanagement.googleapis.com`);
-              }
-              if (accountsData.error?.message?.includes('insufficient permissions')) {
-                throw new Error(`Permissions insuffisantes. Assurez-vous que votre token a le scope 'https://www.googleapis.com/auth/business.manage'`);
-              }
-              throw new Error(`Accès refusé (403): ${accountsData.error?.message || 'Vérifiez vos permissions et scopes OAuth'}`);
-            }
-            
-            if (accountsResponse.status === 401) {
-              throw new Error(`Token d'accès invalide ou expiré (401). Reconnectez-vous.`);
-            }
-            
-            if (accountsResponse.status === 404) {
-              throw new Error(`Endpoint non trouvé (404). L'API Google My Business a peut-être changé.`);
-            }
-            
-            throw new Error(`Google API Error (${accountsResponse.status}): ${accountsData.error?.message || accountsData.error || 'Erreur inconnue'}`);
-          }
-
-          // La réponse doit contenir le nom de ressource complet (ex: accounts/123...)
-          return new Response(JSON.stringify({
-            success: true,
-            accounts: accountsData.accounts || []
-          }), {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders
-            }
-          });
-        }
-
-      case 'get-locations':
-        {
-          if (!accessToken || !accountId) {
-            throw new Error('Access token and accountId are required for get-locations action');
-          }
-          // accountId doit être le nom de ressource complet (ex: accounts/123456789)
-          console.log(`Fetching locations for account: ${accountId} using v1 API...`);
-
-          // NOUVEL ENDPOINT V1 (Business Information API)
-          const locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations?key=${GOOGLE_API_KEY}`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`
-            }
-          });
-          
-          console.log('Locations API response status:', locationsResponse.status);
-          
-          const locationsData = await locationsResponse.json();
-          console.log('Locations API response data:', JSON.stringify(locationsData, null, 2));
-          
-          if (!locationsResponse.ok) {
-            console.error('Get locations failed:', locationsData);
-            
-            // Messages d'erreur plus détaillés pour les locations
-            if (locationsResponse.status === 403) {
-              if (locationsData.error?.message?.includes('My Business Business Information API')) {
-                throw new Error(`L'API "My Business Business Information API" n'est pas activée. Activez-la sur https://console.cloud.google.com/apis/library/mybusinessbusinessinformation.googleapis.com`);
-              }
-              throw new Error(`Accès refusé aux locations (403): ${locationsData.error?.message || 'Vérifiez vos permissions'}`);
-            }
-            
-            if (locationsResponse.status === 401) {
-              throw new Error(`Token d'accès invalide pour les locations (401). Reconnectez-vous.`);
-            }
-            
-            if (locationsResponse.status === 429) {
-              throw new Error(`Limite de taux dépassée pour les locations (429). Veuillez patienter quelques minutes.`);
-            }
-            
-            throw new Error(`Google API Error (locations - ${locationsResponse.status}): ${locationsData.error?.message || locationsData.error || 'Erreur inconnue'}`);
-          }
-          
-          return new Response(JSON.stringify({
-            success: true,
-            // Les données sont maintenant dans locationsData.locations (pas .location)
-            locations: locationsData.locations || [] 
-          }), {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders
-            }
-          });
-        }
-
-      case 'reply-review':
-        {
-          if (!accessToken || !locationId || !reviewId || !comment) {
-            throw new Error('Access token, locationId, reviewId, and comment are required for reply-review action');
-          }
-          // locationId doit être le nom de ressource complet (ex: accounts/123/locations/456)
-          console.log(`Replying to review: ${reviewId} using v4 API...`);
-
-          // ENDPOINT V4 (Reviews API)
-          const replyResponse = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/replies?key=${GOOGLE_API_KEY}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`
-            },
-            body: JSON.stringify({
-              comment: comment
-            })
-          });
-          
-          const replyData = await replyResponse.json();
-          if (!replyResponse.ok) {
-            console.error('Reply to review failed:', replyData);
-            throw new Error(`Google API Error (reply-review): ${replyData.error?.message || replyData.error || 'Unknown error'}`);
-          }
-          
-          return new Response(JSON.stringify({
-            success: true,
-            reply: replyData
-          }), {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders
-            }
-          });
-        }
-
-      default:
-        throw new Error(`Unsupported action: ${action}`);
-    }
-  } catch (error) {
-    console.error('Error in google-oauth function:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
       }
-    });
-  }
-});
+      
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import StarlinkoLogo from './StarlinkoLogo';
+import { supabase } from '../lib/supabase';
+
+interface AuthPageProps {
+  onGoogleAuth: (userData: any, token: string) => void;
+  onEmailAuth: (userData: any) => void;
+}
+
+const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    confirmPassword: ''
+  });
+
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+    
+    try {
+      // Use Supabase native Google OAuth with specific configuration
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      setLoading(false);
+      
+      // Show user-friendly error message
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+        alert('Erreur de configuration OAuth. L\'URL de redirection ne correspond pas. Contactez le support.');
+      } else if (error.message && error.message.includes('unauthorized_client')) {
+        alert('Client OAuth non autorisé. Vérifiez la configuration Google Cloud Console.');
+      } else {
+        alert('Erreur lors de la connexion avec Google. Veuillez réessayer ou contactez le support.');
+      }
+    }
+  };
+
+  // Handle OAuth callback if we're using direct Google OAuth
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
+    
+    if (error) {
+      console.error('OAuth error:', error);
+      alert(`Erreur d'authentification: ${error}`);
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+    
+    if (code) {
+      console.log('OAuth code received, processing...');
+      setLoading(true);
+      
+      // Exchange code for tokens via our Edge Function
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'exchange-code',
+          code: code,
+          redirectUri: window.location.origin
+        }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Create user data and call onGoogleAuth
+          const userData = {
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            picture: data.user.picture,
+            authMethod: 'google'
+          };
+          
+          onGoogleAuth(userData, data.access_token);
+          
+          // Clear URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          console.error('OAuth exchange failed:', data.error);
+          alert('Erreur lors de l\'échange du code OAuth');
+        }
+      })
+      .catch(error => {
+        console.error('Error exchanging OAuth code:', error);
+        alert('Erreur lors de l\'authentification');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+    }
+  }, [onGoogleAuth]);
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isLogin && formData.password !== formData.confirmPassword) {
+      alert('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      // Simulate email auth (you can integrate with Supabase Auth here)
+      const userData = {
+        id: Date.now().toString(),
+        email: formData.email,
+        name: formData.fullName || formData.email.split('@')[0],
+        picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName || formData.email)}&background=4285F4&color=fff`,
+        authMethod: 'email'
+      };
+      
+      onEmailAuth(userData);
+    } catch (error) {
+      console.error('Erreur d\'authentification:', error);
+      alert('Erreur lors de la connexion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05] flex items-center justify-center p-4">
+      <div className="max-w-md w-full">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <StarlinkoLogo size="lg" showText={true} className="text-white justify-center" />
+          <p className="text-white/90 mt-2">Gérez vos avis Google My Business</p>
+        </div>
+
+        {/* Auth Card */}
+        <div className="bg-white rounded-2xl p-8 shadow-2xl">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {isLogin ? 'Connexion' : 'Créer un compte'}
+            </h2>
+            <p className="text-gray-600">
+              {isLogin ? 'Connectez-vous à votre compte' : 'Rejoignez Starlinko aujourd\'hui'}
+            </p>
+          </div>
+
+          {/* Google Auth Button */}
+          <button
+            onClick={handleGoogleAuth}
+            disabled={loading}
+            className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 shadow-sm mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            {loading ? 'Connexion...' : 'Continuer avec Google'}
+          </button>
+
+          {/* Divider */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">ou</span>
+            </div>
+          </div>
+
+          {/* Email Form */}
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom complet
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
+                    placeholder="Votre nom complet"
+                    required={!isLogin}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
+                  placeholder="votre@email.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mot de passe
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirmer le mot de passe
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
