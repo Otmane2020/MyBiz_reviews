@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap, Gift, Shield } from 'lucide-react';
 import { useStripe } from '../hooks/useStripe';
+import { supabase } from '../lib/supabase';
 
 interface GoogleAccount {
   name: string;
@@ -128,7 +129,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const steps = [
     {
       icon: <Gift className="w-16 h-16 text-[#FBBC05]" />,
-      title: `Bienvenue ${user?.name?.split(' ')[0]} !`,
+      title: "Bienvenue !",
       description: "Félicitations ! Vous venez de rejoindre Starlinko, la plateforme qui va révolutionner la gestion de vos avis Google My Business. Commencez avec 14 jours d'essai gratuit !",
       color: "from-[#4285F4] to-[#34A853]",
       type: 'welcome'
@@ -148,27 +149,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       description: "Sélectionnez le plan qui correspond le mieux à vos besoins. Tous les plans incluent 14 jours d'essai gratuit avec réponses IA incluses !",
       color: "from-[#FBBC05] to-[#EA4335]",
       type: 'plan-selection'
-    },
-    {
-      icon: <MessageSquare className="w-16 h-16 text-[#EA4335]" />,
-      title: "IA de réponse intelligente",
-      description: "Notre intelligence artificielle analyse chaque avis et génère des réponses personnalisées et professionnelles en quelques secondes. Testez gratuitement pendant 14 jours !",
-      color: "from-[#EA4335] to-[#4285F4]",
-      type: 'feature'
-    },
-    {
-      icon: <TrendingUp className="w-16 h-16 text-[#4285F4]" />,
-      title: "Tableau de bord analytique",
-      description: "Suivez l'évolution de votre réputation avec des statistiques détaillées : note moyenne, taux de réponse, tendances et rapports PDF mensuels.",
-      color: "from-[#4285F4] to-[#34A853]",
-      type: 'feature'
-    },
-    {
-      icon: <Smartphone className="w-16 h-16 text-[#34A853]" />,
-      title: "Notifications en temps réel",
-      description: "Recevez des alertes instantanées pour chaque nouvel avis et ne manquez jamais une opportunité d'interaction avec vos clients.",
-      color: "from-[#34A853] to-[#FBBC05]",
-      type: 'feature'
     },
     {
       icon: <Check className="w-16 h-16 text-[#FBBC05]" />,
@@ -221,134 +201,16 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   };
 
   const connectGoogleMyBusiness = async () => {
-    if (accessToken) {
-      // Already connected, fetch accounts and locations
+    // Check if user is already authenticated with Google via Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session && session.provider_token) {
+      setAccessToken(session.provider_token);
+      setGmbConnected(true);
       await fetchAccounts();
-      return;
-    }
-
-    setLoading(true);
-    
-    // Utiliser la variable d'environnement
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-    console.log('GMB Client ID:', clientId);
-    
-    if (!clientId || clientId === 'your_google_client_id_here') {
-      alert('Configuration Google OAuth manquante. Client ID: ' + clientId);
-      setLoading(false);
-      return;
-    }
-    
-    const redirectUri = window.location.origin;
-    console.log('GMB Redirect URI:', redirectUri);
-    
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${clientId}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `response_type=code&` +
-      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage')}&` +
-      `access_type=offline&` +
-      `prompt=consent`;
-    
-    console.log('GMB Auth URL:', authUrl);
-    
-    const popup = window.open(
-      authUrl,
-      'google-oauth',
-      'width=500,height=600,scrollbars=yes,resizable=yes'
-    );
-    
-    if (!popup) {
-      alert('Les popups sont bloquées. Veuillez autoriser les popups pour ce site.');
-      setLoading(false);
-      return;
-    }
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
-        console.log('GMB Received auth code:', event.data.code);
-        handleOAuthCallback(event.data.code);
-        window.removeEventListener('message', handleMessage);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    
-    const checkClosed = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(checkClosed);
-        setLoading(false);
-        window.removeEventListener('message', handleMessage);
-      }
-    }, 1000);
-  };
-
-  const handleOAuthCallback = async (code: string) => {
-    try {
-      console.log('GMB Exchanging code for token...');
-      
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        console.error('Supabase configuration missing in onboarding:', {
-          hasUrl: !!supabaseUrl,
-          hasKey: !!supabaseKey,
-          url: supabaseUrl ? 'Present' : 'Missing',
-          key: supabaseKey ? 'Present' : 'Missing'
-        });
-        alert('Configuration Supabase manquante. Veuillez vérifier les variables d\'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.');
-        return;
-      }
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
-          action: 'exchange-code',
-          code,
-          redirectUri: window.location.origin,
-        }),
-      });
-
-      const contentType = response.headers.get('content-type');
-      let data;
-      
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        // Si ce n'est pas du JSON, c'est probablement une erreur HTML
-        const text = await response.text();
-        console.error('GMB Non-JSON response received:', text);
-        
-        if (text.includes('<!DOCTYPE')) {
-          throw new Error('Fonction google-oauth non disponible. Vérifiez la configuration Supabase.');
-        } else {
-          throw new Error(`Réponse inattendue du serveur GMB: ${text.substring(0, 100)}...`);
-        }
-      }
-      
-      console.log('GMB OAuth response:', data);
-      
-      if (response.ok) {
-        setAccessToken(data.access_token);
-        localStorage.setItem('accessToken', data.access_token);
-        setGmbConnected(true);
-        await fetchAccounts();
-      } else {
-        console.error('OAuth error:', data.error);
-        alert(`Erreur lors de la connexion Google My Business: ${data.error || 'Erreur inconnue'}`);
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'échange du code:', error);
-      alert(`Erreur lors de la connexion GMB: ${error.message}`);
-    } finally {
-      setLoading(false);
+    } else {
+      // User needs to authenticate with Google
+      alert('Veuillez d\'abord vous connecter avec Google depuis la page de connexion.');
     }
   };
 
@@ -357,18 +219,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
     setLoading(true);
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Configuration Supabase manquante');
-      }
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           action: 'get-accounts',
@@ -400,18 +255,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
   const fetchLocations = async (accountId: string) => {
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Configuration Supabase manquante');
-      }
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           action: 'get-locations',

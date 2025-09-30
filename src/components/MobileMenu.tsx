@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Home, Star, MessageSquare, Settings, User, LogOut, Bot } from 'lucide-react';
+import { Menu, X, Home, Star, MessageSquare, Settings, User, LogOut, Bot, Building2 } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import NotificationCenter from './NotificationCenter';
 
@@ -31,6 +31,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: Home },
     { id: 'reviews', label: 'Avis', icon: Star },
+    { id: 'google-my-business', label: 'Analytics GMB', icon: Building2 },
     { id: 'avis-ia', label: 'Avis IA', icon: Bot },
     { id: 'responses', label: 'Réponses', icon: MessageSquare },
     { id: 'settings', label: 'Paramètres', icon: Settings },
@@ -108,8 +109,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 className="w-12 h-12 rounded-full mr-3 border-2 border-white/30"
               />
               <div>
-                <div className="font-medium">{user.name}</div>
-                <div className="text-sm text-white/80">{user.email}</div>
+                <div className="font-medium">Utilisateur</div>
+                <div className="text-sm text-white/80">Mode démo</div>
               </div>
             </div>
           )}
@@ -148,7 +149,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             className="w-full flex items-center px-2 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
           >
             <LogOut className="w-5 h-5 mr-3 text-gray-500" />
-            Déconnexion
+            {user?.authMethod === 'demo' ? 'Quitter le mode démo' : 'Déconnexion'}
           </button>
         </div>
       </div>

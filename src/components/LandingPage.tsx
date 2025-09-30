@@ -51,7 +51,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               onClick={onGetStarted}
               className="bg-white text-[#4285F4] px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
             >
-              Commencer gratuitement
+              Essayer gratuitement
             </button>
             <div className="text-white/80 text-sm">
               ✨ 14 jours d'essai gratuit • Aucune carte requise
