@@ -20,6 +20,7 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
+const AuthPage = ({ onGoogleAuth, onEmailAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,12 +35,6 @@ import { supabase } from '../lib/supabase';
     setLoading(true);
     
     try {
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
       // Use Supabase native Google OAuth with specific configuration
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -58,6 +53,27 @@ import { supabase } from '../lib/supabase';
         throw error;
       }
       
+    } catch (error) {
+      console.error('Error during Google OAuth:', error);
+      alert('Erreur lors de l\'authentification Google');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Check for OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      setLoading(true);
+      
+      fetch('/api/oauth/exchange', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'exchange-code',
           code: code,
@@ -95,7 +111,7 @@ import { supabase } from '../lib/supabase';
     }
   }, [onGoogleAuth]);
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e) => {
     e.preventDefault();
     
     if (!isLogin && formData.password !== formData.confirmPassword) {
@@ -121,10 +137,10 @@ import { supabase } from '../lib/supabase';
       alert('Erreur lors de la connexion');
     } finally {
       setLoading(false);
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+    }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -247,7 +263,6 @@ import { supabase } from '../lib/supabase';
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
-                  {/* Use Supabase native Google OAuth with specific configuration */}
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
