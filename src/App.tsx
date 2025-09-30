@@ -81,18 +81,23 @@ function App() {
       console.log('🔍 Session handling - isTrialSignup:', isTrialSignup);
       console.log('🔍 Session handling - completedOnboarding:', completedOnboarding);
       console.log('🔍 Session handling - isDashboardRoute:', isDashboardRoute);
-      // Clear the trial signup flag after reading it
-      localStorage.removeItem('isTrialSignup');
-      
-      if (isTrialSignup || (!completedOnboarding && !isDashboardRoute)) {
+     
+     // Clear the trial signup flag after reading it
+     localStorage.removeItem('isTrialSignup');
+     if (isTrialSignup) {
         // New trial user or user who hasn't completed onboarding
         console.log('✅ Redirecting to onboarding');
         setCurrentView('onboarding');
-      } else if (completedOnboarding || isDashboardRoute) {
+     } else if (completedOnboarding) {
         // Existing user with completed onboarding or direct dashboard access
         console.log('✅ Redirecting to app dashboard');
         setHasCompletedOnboarding(true);
         setCurrentView('app');
+     } else if (isDashboardRoute) {
+       // Direct dashboard access
+       console.log('✅ Direct dashboard access');
+       setHasCompletedOnboarding(true);
+       setCurrentView('app');
       } else {
         // Fallback to onboarding for safety
         console.log('✅ Fallback - redirecting to onboarding');
