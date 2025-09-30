@@ -318,6 +318,10 @@ function App() {
     setCurrentView('app');
   };
 
+  const handleGetStarted = () => {
+    setCurrentView('auth');
+  };
+
   const handleLogout = () => {
     // Use Supabase signOut which will trigger the auth state listener
     supabase.auth.signOut();
