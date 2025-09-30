@@ -42,6 +42,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(false);
   const [gmbConnected, setGmbConnected] = useState(!!initialAccessToken);
+  const [autoLoadingGMB, setAutoLoadingGMB] = useState(false);
   
   const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
 
@@ -199,6 +200,30 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       onComplete(selectedStores, selectedPlan);
     }
   };
+
+  // Auto-load GMB accounts and locations when user is already connected
+  useEffect(() => {
+    const autoLoadGMBData = async () => {
+      // Only auto-load if:
+      // 1. User is connected to GMB (has access token)
+      // 2. We haven't loaded accounts yet
+      // 3. We're not already loading
+      // 4. We're on the GMB connection step
+      if (gmbConnected && accessToken && accounts.length === 0 && !loading && !autoLoadingGMB && steps[currentStep]?.type === 'gmb-connection') {
+        console.log('🔄 Auto-loading GMB accounts and locations...');
+        setAutoLoadingGMB(true);
+        try {
+          await fetchAccounts();
+        } catch (error) {
+          console.error('Error auto-loading GMB data:', error);
+        } finally {
+          setAutoLoadingGMB(false);
+        }
+      }
+    };
+
+    autoLoadGMBData();
+  }, [gmbConnected, accessToken, accounts.length, loading, currentStep]);
 
   const connectGoogleMyBusiness = async () => {
     // Check if user is already authenticated with Google via Supabase
@@ -371,6 +396,13 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                 <p className="text-[#34A853] font-medium">Google My Business connecté !</p>
               </div>
               
+              {(loading || autoLoadingGMB) && accounts.length === 0 && (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4285F4] mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-500">Chargement de vos établissements...</p>
+                </div>
+              )}
+              
               {locations.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3">
@@ -404,6 +436,27 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                       </label>
                     ))}
                   </div>
+                </div>
+              )}
+              
+              {!loading && !autoLoadingGMB && accounts.length === 0 && gmbConnected && (
+                <div className="text-center py-4">
+                  <p className="text-gray-600 mb-4">Aucun compte Google My Business trouvé.</p>
+                  <button
+                    onClick={fetchAccounts}
+                    className="text-[#4285F4] hover:underline text-sm"
+                  >
+                    Réessayer le chargement
+                  </button>
+                </div>
+              )}
+              
+              {!loading && !autoLoadingGMB && accounts.length > 0 && locations.length === 0 && (
+                <div className="text-center py-4">
+                  <p className="text-gray-600 mb-4">Aucun établissement trouvé dans vos comptes Google My Business.</p>
+                  <p className="text-sm text-gray-500">
+                    Assurez-vous d'avoir créé au moins un établissement dans votre profil Google My Business.
+                  </p>
                 </div>
               )}
             </div>
