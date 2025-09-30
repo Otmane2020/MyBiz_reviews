@@ -20,9 +20,6 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-const AuthPage = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -40,32 +37,9 @@ const AuthPage = () => {
     if (code) {
       // Exchange code for tokens
       fetch('/api/auth/google/callback', {
-        method: 'POST',
-        headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ code })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Handle successful authentication
-          window.location.href = '/dashboard';
-        } else {
-          console.error('OAuth callback error:', data.error);
-        }
-      })
-      .catch(error => {
-        console.error('OAuth callback error:', error);
-      });
-    }
-  }, []);
-
-  const handleGoogleAuth = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
       // Use Supabase native Google OAuth with specific configuration
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -84,12 +58,18 @@ const AuthPage = () => {
         throw error;
       }
       
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
     } catch (error) {
       console.error('Erreur d\'authentification Google:', error);
       alert('Erreur lors de la connexion avec Google');
       setLoading(false);
       if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-        alert('Erreur de configuration OAuth. Veuillez contacter le support.');
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
       }
       if (error?.message && error.message.includes('redirect_uri_mismatch')) {
         alert('Erreur de configuration OAuth. Veuillez contacter le support.');
