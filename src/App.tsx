@@ -152,8 +152,22 @@ function App() {
     // Handle OAuth callback directly in main window (not popup)
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    // Forcer une reconnexion complète via Supabase
+    
+    if (code && !user) {
+      console.log('OAuth callback detected with code:', code);
+      handleDirectOAuthCallback(code);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        // This will be handled by AuthPage component
+      }
+    };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
@@ -229,7 +243,44 @@ function App() {
       }
       
       if (response.ok && data.user && data.access_token) {
-      console.log('❌ Impossible de rafraîchir le token automatiquement');
+        console.log('✅ OAuth success, setting user data');
+        setUser(data.user);
+        setAccessToken(data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('accessToken', data.access_token);
+        
+        // Clean URL and redirect to setup
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setCurrentView('google-setup');
+      } else {
+        console.error('❌ OAuth error:', data);
+        
+        let errorMessage = '❌ ERREUR de connexion Google My Business\n\n';
+        
+        if (data.error) {
+          if (typeof data.error === 'string') {
+            errorMessage += `Détails: ${data.error}`;
+          } else if (data.error.message) {
+            errorMessage += `Message: ${data.error.message}`;
+            if (data.error.code) {
+              errorMessage += `\nCode: ${data.error.code}`;
+            }
+          } else {
+            errorMessage += `Erreur: ${JSON.stringify(data.error)}`;
+          }
+        } else {
+          errorMessage += 'Erreur inconnue - Vérifiez les logs de la console';
+        }
+        
+        errorMessage += '\n\n🔍 Vérifications suggérées:';
+        errorMessage += '\n• Variables d\'environnement Google configurées';
+        errorMessage += '\n• Fonction Edge "google-oauth" déployée';
+        errorMessage += '\n• Client ID Google valide';
+        errorMessage += '\n• API Google My Business activée';
+        
+        alert(errorMessage);
+        // Redirect to home page after error
+        window.location.href = '/';
       }
     } catch (error) {
       console.error('💥 Error processing OAuth callback:', error);
@@ -277,23 +328,19 @@ function App() {
   const handleEmailAuth = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    try {
-      // Forcer une nouvelle authentification Google via Supabase
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-    } catch (error) {
-      console.error('Erreur lors de la reconnexion:', error);
-      alert('Erreur lors de la reconnexion. Veuillez rafraîchir la page et réessayer.');
+    
+    // Check if user has already completed onboarding
+    const completedOnboarding = localStorage.getItem('onboardingCompleted');
+    if (completedOnboarding) {
+      setHasCompletedOnboarding(true);
+      setCurrentView('app');
+    } else {
+      setCurrentView('onboarding');
     }
+  };
+
+  const handleGetStarted = () => {
+    setCurrentView('auth');
   };
 
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
@@ -410,7 +457,6 @@ function App() {
           setSelectedLocationId={setSelectedLocationId}
           onNavigate={handleNavigate}
           selectedAccountId={selectedAccountId}
-          onTokenExpired={handleGoogleTokenExpired}
         />
       )}
       {currentPage === 'google-my-business' && (
