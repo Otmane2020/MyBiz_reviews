@@ -104,6 +104,77 @@ import { supabase } from '../lib/supabase';
       console.error('Erreur d\'authentification Google:', error);
       setError('Erreur lors de la connexion avec Google');
       setLoading(false);
+const AuthPage = () => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    confirmPassword: ''
+  });
+
+  useEffect(() => {
+    // Check for OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      // Exchange code for tokens
+      fetch('/api/auth/google/callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Handle successful authentication
+          window.location.href = '/dashboard';
+        } else {
+          console.error('OAuth callback error:', data.error);
+        }
+      })
+      .catch(error => {
+        console.error('OAuth callback error:', error);
+      });
+    }
+  }, []);
+
+  const handleGoogleAuth = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Use Supabase native Google OAuth with specific configuration
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
+    } catch (error: any) {
+      console.error('Erreur d\'authentification Google:', error);
+      setError('Erreur lors de la connexion avec Google');
+      setLoading(false);
+      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
+        setError('Erreur de configuration OAuth. Veuillez contacter le support.');
+      }
     }
   };
 
