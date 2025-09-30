@@ -19,7 +19,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     confirmPassword: ''
   });
 
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = async () => {
     setLoading(true);
     
     try {
@@ -103,6 +103,21 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           
           // Clear URL parameters
           window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          console.error('OAuth exchange failed:', data.error);
+          alert('Erreur lors de l\'échange du code OAuth');
+        }
+      })
+      .catch(error => {
+        console.error('Error exchanging OAuth code:', error);
+        alert('Erreur lors de l\'authentification');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+    }
+  }, [onGoogleAuth]);
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
