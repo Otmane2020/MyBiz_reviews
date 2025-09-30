@@ -322,6 +322,32 @@ function App() {
     setCurrentView('auth');
   };
 
+  const handleGoogleTokenExpired = async () => {
+    try {
+      console.log('Token expired, initiating Google re-authentication...');
+      
+      // Clear expired token data
+      setAccessToken('');
+      localStorage.removeItem('accessToken');
+      
+      // Initiate Google OAuth sign-in with Supabase
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+    } catch (error) {
+      console.error('Error during Google re-authentication:', error);
+      // Fallback: redirect to auth page
+      setCurrentView('auth');
+    }
+  };
   const handleLogout = () => {
     // Use Supabase signOut which will trigger the auth state listener
     supabase.auth.signOut();
@@ -361,6 +387,7 @@ function App() {
       <GoogleBusinessSetup
         accessToken={accessToken}
         onSetupComplete={handleGoogleSetupComplete}
+        onTokenExpired={handleGoogleTokenExpired}
       />
     );
   }
@@ -398,6 +425,7 @@ function App() {
           setSelectedLocationId={setSelectedLocationId}
           onNavigate={handleNavigate}
           selectedAccountId={selectedAccountId}
+          onTokenExpired={handleGoogleTokenExpired}
           onTokenExpired={handleGoogleTokenExpired}
         />
       )}
