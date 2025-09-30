@@ -36,8 +36,88 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     confirmPassword: ''
   });
 
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+    
+    try {
+      // Use Supabase native Google OAuth with specific configuration
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
+    } catch (error) {
+      console.error('OAuth error:', error);
+      alert(`Erreur d'authentification: ${error}`);
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      console.log('OAuth code received, processing...');
+      setLoading(true);
+      
+      // Exchange code for tokens via our Edge Function
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'exchange-code',
+          code: code,
+          redirectUri: window.location.origin
+        }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Create user data and call onGoogleAuth
+          const userData = {
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            picture: data.user.picture,
+            authMethod: 'google'
+          };
+          
+          onGoogleAuth(userData, data.access_token);
+          
+          // Clear URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          console.error('OAuth exchange failed:', data.error);
+          alert('Erreur lors de l\'échange du code OAuth');
+        }
+      })
+      .catch(error => {
+        console.error('Error exchanging OAuth code:', error);
+        alert('Erreur lors de l\'authentification');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+    }
+  };
+
   useEffect(() => {
-    // Check for OAuth callback parameters
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const error = urlParams.get('error');
@@ -97,39 +177,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       });
     }
   }, [onGoogleAuth]);
-
-  const handleGoogleAuth = async () => {
-    setLoading(true);
-    
-    try {
-      // Use Supabase native Google OAuth with specific configuration
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-      
-      if (error) {
-        console.error('Error during Google OAuth:', error);
-        throw error;
-      }
-      
-    } catch (error: any) {
-      console.error('OAuth error:', error);
-      alert(`Erreur d'authentification: ${error.message}`);
-      if (error?.message && error.message.includes('redirect_uri_mismatch')) {
-        alert('Erreur de configuration OAuth. Veuillez contacter le support.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,7 +338,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
                     placeholder="••••••••"
-                    required={!isLogin}
+                    required
                   />
                 </div>
               </div>
