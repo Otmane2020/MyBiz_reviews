@@ -1,9 +1,26 @@
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      
+      if (error) {
+        console.error('Error during Google OAuth:', error);
+        throw error;
+      }
+      
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-const AuthPage = () => {
+const AuthPage = ({ onEmailAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -25,18 +42,9 @@ const AuthPage = () => {
       fetch('/api/auth/google/callback', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ code })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.user && data.access_token) {
-          onGoogleAuth(data.user, data.access_token);
-        }
-      })
-      .catch(error => {
-        console.error('Error exchanging code for tokens:', error);
       });
     }
   }, []);
