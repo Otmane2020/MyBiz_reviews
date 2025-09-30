@@ -21,15 +21,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, initiateGoogleO
             <div className="flex items-center space-x-4">
               <button
                 onClick={onGetStarted}
-                className="bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
+                className="hidden md:block bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
               >
-                Commencer
+                Se connecter
               </button>
               <button
                 onClick={() => initiateGoogleOAuth(true)}
                 className="bg-white text-[#4285F4] px-4 py-2 rounded-full font-medium hover:bg-gray-100 transition-colors"
               >
-                Essai gratuit
+                Commencer
               </button>
             </div>
           </div>
@@ -49,13 +49,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, initiateGoogleO
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
-              onClick={onGetStarted}
+              onClick={() => initiateGoogleOAuth(true)}
               className="bg-white text-[#4285F4] px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
             >
-              Commencer
+              Essayer gratuitement
             </button>
             <div className="text-white/80 text-sm">
-              🚀 Configuration en 2 minutes
+              ✨ 14 jours d'essai gratuit • Aucune carte requise
             </div>
           </div>
         </div>
@@ -155,7 +155,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, initiateGoogleO
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
-              onClick={onGetStarted}
+              onClick={() => initiateGoogleOAuth(true)}
               className="bg-[#EA4335] text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#d33b2c] transition-all transform hover:scale-105 shadow-lg"
             >
               Commencer maintenant

@@ -129,7 +129,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ initiateGoogleOAuth, onEmailAuth })
           {/* Toggle Auth Mode */}
           <div className="text-center mt-6">
             <button
-              onClick={() => initiateGoogleOAuth(true)}
+              onClick={() => setIsLogin(!isLogin)}
               className="text-[#4285F4] hover:underline text-sm"
             >
               {isLogin ? (
