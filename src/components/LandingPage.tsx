@@ -3,12 +3,11 @@ import { Star, MessageSquare, Smartphone, TrendingUp, Users, Shield } from 'luci
 import StarlinkoLogo from './StarlinkoLogo';
 
 interface LandingPageProps {
-  onGetStarted: () => void; 
-  onNavigateToAuth: () => void;
+  onGetStarted: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onNavigateToAuth }) => {
- 
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05]">
       {/* Header */}
@@ -18,12 +17,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onNavigateToAut
             <div className="flex items-center">
               <StarlinkoLogo size="md" showGoogleIcon={true} className="text-white" />
             </div>
-            <div className="flex items-center space-x-4"> 
+            <div className="flex items-center space-x-4">
               <button
-                onClick={onNavigateToAuth}
-                className="bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
+                onClick={onGetStarted}
+                className="hidden md:block bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
               >
-                Connexion
+                Se connecter
+              </button>
+              <button
+                onClick={onGetStarted}
+                className="bg-white text-[#4285F4] px-4 py-2 rounded-full font-medium hover:bg-gray-100 transition-colors"
+              >
+                Commencer
               </button>
             </div>
           </div>
