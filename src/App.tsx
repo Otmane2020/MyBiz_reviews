@@ -84,25 +84,29 @@ function App() {
      
      // Clear the trial signup flag after reading it
      localStorage.removeItem('isTrialSignup');
+     
+     // Priority 1: If user clicked "Essayer gratuitement", always go to onboarding
      if (isTrialSignup) {
-        // New trial user or user who hasn't completed onboarding
-        console.log('✅ Redirecting to onboarding');
-        setCurrentView('onboarding');
-     } else if (completedOnboarding) {
-        // Existing user with completed onboarding or direct dashboard access
-        console.log('✅ Redirecting to app dashboard');
-        setHasCompletedOnboarding(true);
-        setCurrentView('app');
-     } else if (isDashboardRoute) {
-       // Direct dashboard access
-       console.log('✅ Direct dashboard access');
+       console.log('✅ Trial signup detected - redirecting to onboarding');
+       setCurrentView('onboarding');
+     } 
+     // Priority 2: If user has completed onboarding, go to dashboard
+     else if (completedOnboarding === 'true') {
+       console.log('✅ Onboarding completed - redirecting to app dashboard');
        setHasCompletedOnboarding(true);
        setCurrentView('app');
-      } else {
-        // Fallback to onboarding for safety
-        console.log('✅ Fallback - redirecting to onboarding');
-        setCurrentView('onboarding');
-      }
+     } 
+     // Priority 3: Direct dashboard route access (existing users)
+     else if (isDashboardRoute) {
+       console.log('✅ Direct dashboard access - redirecting to app');
+       setHasCompletedOnboarding(true);
+       setCurrentView('app');
+     } 
+     // Priority 4: Default fallback - new users go to onboarding
+     else {
+       console.log('✅ New user or fallback - redirecting to onboarding');
+       setCurrentView('onboarding');
+     }
     } else {
       // No session - clear everything
       setUser(null);
