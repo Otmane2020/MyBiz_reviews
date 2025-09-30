@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 interface GoogleBusinessSetupProps {
   accessToken: string;
   onSetupComplete: (accountId: string, locationId: string) => void;
+  onTokenExpired?: () => void;
 }
 
 interface Account {
@@ -26,7 +27,8 @@ interface Location {
 
 const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({ 
   accessToken, 
-  onSetupComplete 
+  onSetupComplete,
+  onTokenExpired
 }) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -88,12 +90,6 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       debugLog('fetchAccounts response data', data);
 
       if (!data.success) {
-        // Check if it's a token expiration error
-        if (data.error && (data.error.includes('401') || data.error.includes('invalide') || data.error.includes('expiré'))) {
-          debugLog('Token expired, calling onTokenExpired');
-          onTokenExpired();
-          return;
-        }
         throw new Error(data.error || 'Échec de récupération des comptes');
       }
 
@@ -209,7 +205,10 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
   }, [accessToken]);
 
   // Error display component with improved design
-  const ErrorDisplay = ({ message }: { message: string }) => (
+  const ErrorDisplay = ({ message }: { message: string }) => {
+    const isTokenError = message.includes('401') || message.includes('invalide') || message.includes('expiré');
+    
+    return (
     <div className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 rounded-lg p-6 mb-6">
       <div className="flex items-start">
         <div className="flex-shrink-0">
@@ -217,10 +216,21 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         </div>
         <div className="ml-3 flex-1">
           <h3 className="text-lg font-semibold text-red-800 mb-2">
-            Erreur de connexion à Google My Business
+            {isTokenError ? 'Session Google expirée' : 'Erreur de connexion à Google My Business'}
           </h3>
           <p className="text-red-700 mb-4">{message}</p>
           
+          {isTokenError && (
+            <div className="bg-white/50 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-red-800 mb-2">Session expirée :</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                <li>Votre session Google a expiré</li>
+                <li>Cliquez sur "Reconnecter Google" pour vous reconnecter</li>
+                <li>Vous serez redirigé vers Google pour une nouvelle authentification</li>
+              </ul>
+            </div>
+          )}
+
           {message.includes('My Business Account Management API') && (
             <div className="bg-white/50 rounded-lg p-4 mb-4">
               <h4 className="font-semibold text-red-800 mb-2">Actions requises :</h4>
@@ -245,6 +255,15 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
           )}
 
           <div className="flex flex-col sm:flex-row gap-3">
+            {isTokenError ? (
+              <button
+                onClick={onTokenExpired}
+                className="flex items-center justify-center px-4 py-2 bg-[#4285F4] text-white rounded-lg hover:bg-[#3367D6] transition-colors font-medium"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Reconnecter Google
+              </button>
+            ) : (
             <button
               onClick={handleRetry}
               className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
@@ -252,6 +271,7 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
               <RefreshCw className="w-4 h-4 mr-2" />
               Réessayer
             </button>
+            )}
             <a
               href="https://console.cloud.google.com/apis/dashboard"
               target="_blank"
@@ -265,7 +285,8 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05] flex items-center justify-center p-4">

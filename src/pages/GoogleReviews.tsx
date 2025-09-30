@@ -144,6 +144,13 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         }
       } else if (data.error) {
         console.error('Erreur API locations:', data.error);
+        // Check if it's a token expiration error
+        if (data.error.includes('401') || data.error.includes('invalide') || data.error.includes('expiré')) {
+          if (onTokenExpired) {
+            onTokenExpired();
+            return;
+          }
+        }
         alert(`Erreur lors de la récupération des établissements: ${data.error.message}`);
       }
     } catch (error) {
