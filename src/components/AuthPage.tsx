@@ -16,19 +16,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const [loading, setLoading] = useState(false);
 
   const handleDirectOnboarding = () => {
-    console.log('🎯 Direct onboarding access - bypassing auth');
-    localStorage.setItem('isTrialSignup', 'true');
-    localStorage.setItem('directOnboarding', 'true');
-    // Simulate a basic user for onboarding
-    const mockUser = {
-      id: 'demo-user-' + Date.now(),
-      name: 'Utilisateur',
-      email: 'utilisateur@demo.com',
-      picture: 'https://ui-avatars.com/api/?name=U&background=4285F4&color=fff',
-      authMethod: 'demo'
-    };
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    window.location.reload();
+    handleGoogleAuth(true);
   };
   const handleGoogleAuth = (isTrial: boolean = false) => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);

@@ -136,17 +136,6 @@ function App() {
       console.log('❌ No session found - user not authenticated');
       
       // Check for direct onboarding access with demo user
-      const isDirectOnboarding = localStorage.getItem('directOnboarding') === 'true';
-      const demoUser = localStorage.getItem('user');
-      
-      if (isDirectOnboarding && demoUser) {
-        console.log('🎯 Direct onboarding access with demo user');
-        const userData = JSON.parse(demoUser);
-        setUser(userData);
-        setCurrentView('onboarding');
-        return;
-      }
-      
       // No session - clear everything
       setUser(null);
       setAccessToken('');
@@ -161,7 +150,6 @@ function App() {
       localStorage.removeItem('selectedLocationId');
       localStorage.removeItem('onboardingCompleted');
       localStorage.removeItem('isTrialSignup');
-      localStorage.removeItem('directOnboarding');
       // Si on est sur /dashboard, rediriger vers auth, sinon landing
       const targetView = isDashboardRoute ? 'auth' : 'landing';
       console.log('🎯 Setting currentView to:', targetView);
@@ -276,25 +264,7 @@ function App() {
     }
   };
   const handleLogout = () => {
-    // Check if it's a demo user
-    const currentUser = localStorage.getItem('user');
-    if (currentUser) {
-      const userData = JSON.parse(currentUser);
-      if (userData.authMethod === 'demo') {
-        // For demo users, clear everything manually
-        localStorage.clear();
-        setUser(null);
-        setAccessToken('');
-        setSelectedAccountId('');
-        setSelectedLocationId('');
-        setCurrentPage('dashboard');
-        setHasCompletedOnboarding(false);
-        setCurrentView('landing');
-        return;
-      }
-    }
-    
-    // For real users, use Supabase signOut
+    // Use Supabase signOut for all users
     supabase.auth.signOut();
   };
 
