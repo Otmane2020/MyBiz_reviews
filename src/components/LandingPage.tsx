@@ -21,7 +21,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onNavigateToAut
             <div className="flex items-center space-x-4"> 
               <button
                 onClick={onNavigateToAuth}
-                className="hidden md:block bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
+                className="bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
               >
                 Connexion
               </button>
