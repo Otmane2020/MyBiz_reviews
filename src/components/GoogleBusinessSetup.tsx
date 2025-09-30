@@ -1,450 +1,465 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, MapPin, Star, ArrowRight, CheckCircle } from 'lucide-react';
+import { Loader2, Building2, MapPin, AlertCircle, CheckCircle, Wifi, WifiOff, RefreshCw, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-// Utiliser la variable d'environnement
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-
-interface GoogleAccount {
-  name: string;
-  type: string;
-  role: string;
+interface GoogleBusinessSetupProps {
+  accessToken: string;
+  onSetupComplete: (accountId: string, locationId: string) => void;
+  onTokenExpired?: () => void;
 }
 
-interface GoogleLocation {
+interface Account {
+  name: string;
+  accountName: string;
+}
+
+interface Location {
   name: string;
   locationName: string;
-  primaryCategory: {
+  primaryCategory?: {
     displayName: string;
   };
   address?: {
-    addressLines: string[];
     locality: string;
     administrativeArea: string;
   };
 }
 
-interface GoogleBusinessSetupProps {
-  accessToken: string;
-  onSetupComplete: (accountId: string, locationId: string) => void;
-}
-
-const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
-  accessToken,
-  onSetupComplete
+const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({ 
+  accessToken, 
+  onSetupComplete,
+  onTokenExpired
 }) => {
-  const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
-  const [locations, setLocations] = useState<GoogleLocation[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'accounts' | 'locations' | 'complete'>('accounts');
 
-  useEffect(() => {
-    // Check if user has Google access token from Supabase session
-    const initializeWithSupabaseSession = async () => {
-      console.log('🚀 [DEBUG] Initializing GoogleBusinessSetup...');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      console.log('📋 [DEBUG] Supabase session present:', !!session);
-      console.log('📋 [DEBUG] Provider token present:', !!session?.provider_token);
-      console.log('📋 [DEBUG] Fallback accessToken present:', !!accessToken);
-      
-      if (session && session.provider_token) {
-        // Use the access token from Supabase session
-        console.log('✅ [DEBUG] Using provider token from Supabase session');
-        fetchAccounts(session.provider_token);
-      } else if (accessToken) {
-        // Fallback to provided access token
-        console.log('✅ [DEBUG] Using fallback accessToken from props');
-        fetchAccounts(accessToken);
-      } else {
-        console.error('❌ [DEBUG] No access token available from any source');
-        setLoading(false);
-        alert('Aucun token d\'accès Google trouvé.\n\nCauses possibles:\n• Session Supabase expirée\n• Token non fourni en props\n• Problème d\'authentification\n\nVeuillez vous reconnecter.');
-      }
-    };
-    
-    initializeWithSupabaseSession();
-  }, []);
+  // Debug logging function
+  const debugLog = (message: string, data?: any) => {
+    console.log(`[DEBUG GoogleBusinessSetup] ${message}`, data || '');
+  };
 
-  const fetchAccounts = async (token: string = accessToken) => {
+  // Fetch Google My Business accounts
+  const fetchAccounts = async () => {
     try {
-      console.log('🔍 [DEBUG] Starting fetchAccounts...');
-      console.log('🔑 [DEBUG] Access token present:', !!token);
-      console.log('🔑 [DEBUG] Access token (first 20 chars):', token ? token.substring(0, 20) + '...' : 'MISSING');
-      console.log('🌐 [DEBUG] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-      console.log('🔐 [DEBUG] Supabase Key present:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-      
-      console.log('🔍 Fetching Google My Business accounts via Supabase Edge Function...');
-      
-      // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
-      console.log('📡 Calling Supabase Edge Function for accounts...');
-      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`;
-      console.log('🎯 [DEBUG] Edge Function URL:', edgeFunctionUrl);
-      
-      const requestBody = {
-        action: 'get-accounts',
-        accessToken: token,
-      };
-      console.log('📤 [DEBUG] Request body:', { ...requestBody, accessToken: token ? token.substring(0, 20) + '...' : 'MISSING' });
-      
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+      debugLog('Starting fetchAccounts', { accessToken: accessToken ? `${accessToken.substring(0, 10)}...` : 'null' });
+      setLoading(true);
+      setError(null);
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante. Vérifiez vos variables d\'environnement.');
+      }
+
+      debugLog('Calling Supabase Edge Function', { 
+        url: `${supabaseUrl}/functions/v1/google-oauth`,
+        hasToken: !!accessToken 
+      });
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseKey}`,
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          action: 'get-accounts',
+          accessToken: accessToken
+        }),
       });
-      
-      console.log('📡 [DEBUG] Response status:', response.status);
-      console.log('📡 [DEBUG] Response headers:', Object.fromEntries(response.headers.entries()));
-      console.log('📡 [DEBUG] Response ok:', response.ok);
-      
+
+      debugLog('Edge Function response', { 
+        status: response.status, 
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
-        const text = await response.text();
-        console.error('❌ [DEBUG] HTTP Error from google-oauth function:', response.status, text);
-        console.error('❌ [DEBUG] Full response text:', text);
-        
-        // Try to parse as JSON first
-        try {
-          const errorData = JSON.parse(text);
-          console.error('❌ [DEBUG] Parsed error data:', errorData);
-          throw new Error(`Erreur API: ${errorData.error || 'Erreur inconnue'}`);
-        } catch (parseError) {
-          console.error('❌ [DEBUG] Failed to parse error as JSON:', parseError);
-          // If not JSON, it's likely an HTML error page
-          if (text.includes('<!DOCTYPE') || text.includes('<html>')) {
-            throw new Error('La fonction Supabase google-oauth n\'est pas déployée correctement. Vérifiez que la fonction Edge est active dans votre projet Supabase.');
-          } else {
-            throw new Error(`Erreur HTTP ${response.status}: ${text.substring(0, 100)}...`);
-          }
-        }
+        const errorText = await response.text();
+        debugLog('Edge Function error response', errorText);
+        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
       }
-      
+
       const data = await response.json();
-      console.log('📊 [DEBUG] Raw accounts response:', data);
-      console.log('📊 [DEBUG] Response success:', data.success);
-      console.log('📊 [DEBUG] Response accounts count:', data.accounts ? data.accounts.length : 0);
-      console.log('📊 [DEBUG] Response error:', data.error);
-      
-      if (data && data.success && data.accounts && data.accounts.length > 0) {
-        console.log('✅ [DEBUG] Accounts loaded successfully:', data.accounts.length);
-        setAccounts(data.accounts);
-        if (data.accounts.length === 1) {
-          // Auto-select if only one account
-          console.log('🎯 [DEBUG] Auto-selecting single account:', data.accounts[0].name);
-          setSelectedAccountId(data.accounts[0].name);
-          fetchLocations(data.accounts[0].name);
-        }
-      } else if (data && data.error) {
-        console.error('❌ [DEBUG] No GMB accounts found:', data);
-        console.error('🚨 [DEBUG] API error details:', data.error);
-        
-        // Show detailed error to user
-        let userErrorMessage = 'Erreur lors de la récupération des comptes Google My Business:\n\n';
-        
-        if (data.error.code === 401 || data.error.status === 401) {
-          userErrorMessage += '🔑 Token d\'accès expiré. Veuillez vous reconnecter.';
-        } else if (data.error.code === 403 || data.error.status === 403) {
-          userErrorMessage += '🚫 Accès refusé. Vérifiez que l\'API "My Business Account Management API" est activée dans Google Cloud Console et que vous avez les permissions nécessaires.';
-        } else if (data.error.code === 404 || data.error.status === 404) {
-          userErrorMessage += '🔍 Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google.';
-        } else {
-          userErrorMessage += `⚠️ Erreur API Google: ${data.error.message || data.error.code || 'Erreur inconnue'}`;
-        }
-        
-        userErrorMessage += '\n\n🔍 Détails techniques dans la console (F12)';
-        alert(userErrorMessage);
-      } else {
-        console.error('❌ [DEBUG] Unexpected response structure:', data);
-        alert('Réponse inattendue du serveur. Vérifiez les logs de la console (F12) pour plus de détails.');
+      debugLog('fetchAccounts response data', data);
+
+      if (!data.success) {
+        throw new Error(data.error || 'Échec de récupération des comptes');
       }
-    } catch (error) {
-      console.error('💥 [DEBUG] Fatal error in fetchAccounts:', error);
-      console.error('💥 [DEBUG] Error stack:', error.stack);
-      
-      let userErrorMessage = 'Erreur critique lors de la récupération des comptes:\n\n';
-      userErrorMessage += `📝 Message: ${error.message}\n\n`;
-      userErrorMessage += '🔍 Vérifications suggérées:\n';
-      userErrorMessage += '• Variables d\'environnement Supabase configurées\n';
-      userErrorMessage += '• Fonction Edge "google-oauth" déployée\n';
-      userErrorMessage += '• APIs Google activées dans Cloud Console\n';
-      userErrorMessage += '• Token d\'accès valide avec les bons scopes\n\n';
-      userErrorMessage += '🔍 Détails techniques dans la console (F12)';
-      
-      alert(userErrorMessage);
+
+      setAccounts(data.accounts || []);
+      debugLog(`Found ${data.accounts?.length || 0} accounts`);
+
+      if (data.accounts && data.accounts.length > 0) {
+        setSelectedAccount(data.accounts[0]);
+      }
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      debugLog('fetchAccounts error', errorMessage);
+      setError(`Erreur lors du chargement des comptes: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchLocations = async (accountId: string) => {
-    setLoading(true);
+  // Fetch locations for selected account
+  const fetchLocations = async (account: Account) => {
     try {
-      console.log('🏪 [DEBUG] Starting fetchLocations...');
-      console.log('🏪 [DEBUG] Account ID:', accountId);
-      
-      // Get current access token
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.provider_token || accessToken;
-      
-      console.log('🔑 [DEBUG] Token for locations present:', !!token);
-      console.log('🔑 [DEBUG] Token source:', session?.provider_token ? 'Supabase session' : 'Props');
-      
-      console.log('🏪 Fetching locations for account via Supabase Edge Function:', accountId);
-      
-      // IMPORTANT: Use Supabase Edge Function as proxy to avoid CORS issues
-      console.log('📡 Calling Supabase Edge Function for locations...');
-      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`;
-      console.log('🎯 [DEBUG] Edge Function URL:', edgeFunctionUrl);
-      
-      const requestBody = {
-        action: 'get-locations',
-        accessToken: token,
-        accountId: accountId,
-      };
-      console.log('📤 [DEBUG] Request body:', { ...requestBody, accessToken: token ? token.substring(0, 20) + '...' : 'MISSING' });
-      
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+      debugLog('Starting fetchLocations', { account: account.name });
+      setLoading(true);
+      setError(null);
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseKey}`,
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          action: 'get-locations',
+          accessToken: accessToken,
+          accountId: account.name
+        }),
       });
-      
-      console.log('📡 [DEBUG] Locations response status:', response.status);
-      console.log('📡 [DEBUG] Locations response ok:', response.ok);
-      
+
+      debugLog('fetchLocations response', { status: response.status });
+
       if (!response.ok) {
-        const text = await response.text();
-        console.error('❌ [DEBUG] HTTP Error from locations API:', response.status, text);
-        console.error('❌ [DEBUG] Full locations response text:', text);
-        throw new Error(`Erreur HTTP ${response.status} lors de la récupération des établissements`);
+        const errorText = await response.text();
+        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
       }
-      
+
       const data = await response.json();
-      console.log('🏢 [DEBUG] Raw locations response:', data);
-      console.log('🏢 [DEBUG] Locations success:', data.success);
-      console.log('🏢 [DEBUG] Locations count:', data.locations ? data.locations.length : 0);
-      console.log('🏢 [DEBUG] Locations error:', data.error);
-      
-      if (data && data.success && data.locations && data.locations.length > 0) {
-        console.log('✅ [DEBUG] Locations loaded successfully:', data.locations.length);
-        setLocations(data.locations);
-        setStep('locations');
-      } else if (data && data.error) {
-        console.error('🚨 [DEBUG] Locations API error:', data.error);
-        
-        let userErrorMessage = 'Erreur lors de la récupération des établissements:\n\n';
-        
-        if (data.error.code === 403 || data.error.status === 403) {
-          if (data.error.message?.includes('My Business Business Information API')) {
-            userErrorMessage += '🚫 L\'API "My Business Business Information API" n\'est pas activée.\n';
-            userErrorMessage += 'Activez-la sur: https://console.cloud.google.com/apis/library/mybusinessbusinessinformation.googleapis.com';
-          } else {
-            userErrorMessage += '🚫 Accès refusé aux établissements. Vérifiez vos permissions Google My Business.';
-          }
-        } else if (data.error.code === 401 || data.error.status === 401) {
-          userErrorMessage += '🔑 Token d\'accès invalide ou expiré. Reconnectez-vous.';
-        } else {
-          userErrorMessage += `⚠️ ${data.error.message || data.error.code || 'Erreur inconnue'}`;
-        }
-        
-        userErrorMessage += '\n\n🔍 Détails techniques dans la console (F12)';
-        alert(userErrorMessage);
-      } else {
-        console.error('❌ [DEBUG] No locations found or unexpected response:', data);
-        alert('Aucun établissement trouvé pour ce compte.\n\nAssurez-vous d\'avoir créé au moins un établissement dans votre profil Google My Business.\n\n🔍 Détails techniques dans la console (F12)');
+      debugLog('fetchLocations response data', data);
+
+      if (!data.success) {
+        throw new Error(data.error || 'Échec de récupération des établissements');
       }
-    } catch (error) {
-      console.error('💥 [DEBUG] Fatal error in fetchLocations:', error);
-      console.error('💥 [DEBUG] Error stack:', error.stack);
-      
-      let userErrorMessage = 'Erreur critique lors de la récupération des établissements:\n\n';
-      userErrorMessage += `📝 Message: ${error.message}\n\n`;
-      userErrorMessage += '🔍 Vérifications suggérées:\n';
-      userErrorMessage += '• Connexion internet stable\n';
-      userErrorMessage += '• APIs Google activées\n';
-      userErrorMessage += '• Token d\'accès valide\n';
-      userErrorMessage += '• Fonction Edge déployée\n\n';
-      userErrorMessage += '🔍 Détails techniques dans la console (F12)';
-      
-      alert(userErrorMessage);
+
+      setLocations(data.locations || []);
+      debugLog(`Found ${data.locations?.length || 0} locations`);
+
+      if (data.locations && data.locations.length > 0) {
+        setSelectedLocation(data.locations[0]);
+      }
+
+      setStep('locations');
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      debugLog('fetchLocations error', errorMessage);
+      setError(`Erreur lors du chargement des établissements: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAccountSelect = (accountId: string) => {
-    setSelectedAccountId(accountId);
-    fetchLocations(accountId);
+  // Handle account selection
+  const handleAccountSelect = (account: Account) => {
+    setSelectedAccount(account);
+    setSelectedLocation(null);
+    setLocations([]);
+    fetchLocations(account);
   };
 
-  const handleLocationSelect = (locationId: string) => {
-    setSelectedLocationId(locationId);
-    setStep('complete');
-  };
-
+  // Handle setup completion
   const handleComplete = () => {
-    onSetupComplete(selectedAccountId, selectedLocationId);
+    if (selectedAccount && selectedLocation) {
+      debugLog('Setup complete', { 
+        accountId: selectedAccount.name, 
+        locationId: selectedLocation.name 
+      });
+      onSetupComplete(selectedAccount.name, selectedLocation.name);
+    }
   };
 
-  if (loading) {
+  // Retry function
+  const handleRetry = () => {
+    setError(null);
+    setAccounts([]);
+    setLocations([]);
+    setSelectedAccount(null);
+    setSelectedLocation(null);
+    setStep('accounts');
+    fetchAccounts();
+  };
+
+  // Load accounts on component mount
+  useEffect(() => {
+    if (accessToken) {
+      fetchAccounts();
+    } else {
+      setError('Token d\'accès manquant');
+      setLoading(false);
+    }
+  }, [accessToken]);
+
+  // Error display component with improved design
+  const ErrorDisplay = ({ message }: { message: string }) => {
+    const isTokenError = message.includes('401') || message.includes('invalide') || message.includes('expiré');
+    
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05] flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Chargement de vos comptes Google My Business...</p>
-          <p className="text-sm text-white/70 mt-2">Vérifiez la console (F12) pour les détails</p>
+    <div className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 rounded-lg p-6 mb-6">
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          <AlertCircle className="w-6 h-6 text-red-500" />
+        </div>
+        <div className="ml-3 flex-1">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">
+            {isTokenError ? 'Session Google expirée' : 'Erreur de connexion à Google My Business'}
+          </h3>
+          <p className="text-red-700 mb-4">{message}</p>
+          
+          {isTokenError && (
+            <div className="bg-white/50 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-red-800 mb-2">Session expirée :</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                <li>Votre session Google a expiré</li>
+                <li>Cliquez sur "Reconnecter Google" pour vous reconnecter</li>
+                <li>Vous serez redirigé vers Google pour une nouvelle authentification</li>
+              </ul>
+            </div>
+          )}
+
+          {message.includes('My Business Account Management API') && (
+            <div className="bg-white/50 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-red-800 mb-2">Actions requises :</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                <li>Activez l'API "My Business Account Management API" dans Google Cloud Console</li>
+                <li>Activez l'API "My Business Business Information API"</li>
+                <li>Vérifiez que votre compte a accès à Google My Business</li>
+                <li>Attendez 5-10 minutes après activation des APIs</li>
+              </ul>
+            </div>
+          )}
+
+          {message.includes('Edge Function') && (
+            <div className="bg-white/50 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-red-800 mb-2">Problème de connexion :</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                <li>Vérifiez votre connexion internet</li>
+                <li>Les fonctions Supabase Edge peuvent être temporairement indisponibles</li>
+                <li>Vérifiez la configuration de vos variables d'environnement</li>
+              </ul>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            {isTokenError ? (
+              <button
+                onClick={() => {
+                  if (onTokenExpired) {
+                    onTokenExpired();
+                  } else {
+                    // Fallback si onTokenExpired n'est pas défini
+                    window.location.reload();
+                  }
+                }}
+                className="flex items-center justify-center px-4 py-2 bg-[#4285F4] text-white rounded-lg hover:bg-[#3367D6] transition-colors font-medium"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Reconnecter Google
+              </button>
+            ) : (
+            <button
+              onClick={handleRetry}
+              className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Réessayer
+            </button>
+            )}
+            <a
+              href="https://console.cloud.google.com/apis/dashboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center px-4 py-2 bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors font-medium"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Google Cloud Console
+            </a>
+          </div>
         </div>
       </div>
+    </div>
     );
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05] flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
-        {/* Progress Steps */}
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-4">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              step === 'accounts' ? 'bg-white text-[#4285F4]' : 'bg-white/30 text-white'
-            }`}>
-              1
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-r from-[#4285F4] to-[#34A853] rounded-full flex items-center justify-center mx-auto mb-4">
+              <Building2 className="w-8 h-8 text-white" />
             </div>
-            <div className="w-12 h-0.5 bg-white/30"></div>
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              step === 'locations' ? 'bg-white text-[#4285F4]' : 'bg-white/30 text-white'
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Configuration Google My Business
+            </h2>
+            <p className="text-gray-600">
+              Connectez vos établissements pour commencer à gérer vos avis
+            </p>
+          </div>
+
+          {/* Connection Status */}
+          <div className="flex items-center justify-center mb-6">
+            <div className={`flex items-center px-4 py-2 rounded-full text-sm font-medium ${
+              error ? 'bg-red-100 text-red-700' : 
+              loading ? 'bg-yellow-100 text-yellow-700' : 
+              'bg-green-100 text-green-700'
             }`}>
-              2
-            </div>
-            <div className="w-12 h-0.5 bg-white/30"></div>
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              step === 'complete' ? 'bg-white text-[#4285F4]' : 'bg-white/30 text-white'
-            }`}>
-              3
+              {error ? <WifiOff className="w-4 h-4 mr-2" /> : 
+               loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 
+               <Wifi className="w-4 h-4 mr-2" />}
+              {error ? 'Connexion échouée' : 
+               loading ? 'Connexion en cours...' : 
+               'Connecté'}
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-2xl p-8 shadow-2xl">
-          {step === 'accounts' && (
-            <>
-              <div className="text-center mb-6">
-                <Building2 className="w-12 h-12 text-[#4285F4] mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Sélectionnez votre compte
-                </h2>
-                <p className="text-gray-600">
-                  Choisissez le compte Google My Business que vous souhaitez gérer
-                </p>
-              </div>
+          {error && <ErrorDisplay message={error} />}
 
-              <div className="space-y-3">
-                {accounts.map((account) => (
-                  <button
-                    key={account.name}
-                    onClick={() => handleAccountSelect(account.name)}
-                    className="w-full p-4 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors text-left"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {account.name.split('/')[1]}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {account.type} • {account.role}
-                        </div>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-gray-400" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </>
+          {loading && !error && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-12 h-12 animate-spin text-[#4285F4] mb-4" />
+              <p className="text-gray-600 text-center">
+                {step === 'accounts' ? 'Chargement des comptes...' : 'Chargement des établissements...'}
+              </p>
+            </div>
           )}
 
-          {step === 'locations' && (
+          {!loading && !error && (
             <>
-              <div className="text-center mb-6">
-                <MapPin className="w-12 h-12 text-[#4285F4] mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Choisissez votre établissement
-                </h2>
-                <p className="text-gray-600">
-                  Sélectionnez l'établissement dont vous voulez gérer les avis
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {locations.map((location) => (
-                  <button
-                    key={location.name}
-                    onClick={() => handleLocationSelect(location.name)}
-                    className="w-full p-4 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors text-left"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {location.locationName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {location.primaryCategory?.displayName}
-                        </div>
-                        {location.address && (
-                          <div className="text-xs text-gray-400 mt-1">
-                            {location.address.locality}, {location.address.administrativeArea}
+              {/* Account Selection */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <Building2 className="w-5 h-5 mr-2 text-[#4285F4]" />
+                  Sélectionnez votre compte ({accounts.length})
+                </h3>
+                
+                {accounts.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-xl">
+                    <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-4">Aucun compte Google My Business trouvé</p>
+                    <p className="text-sm text-gray-500">
+                      Vérifiez que vous avez créé un profil d'entreprise Google
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {accounts.map((account) => (
+                      <div
+                        key={account.name}
+                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                          selectedAccount?.name === account.name
+                            ? 'border-[#4285F4] bg-[#4285F4]/5 shadow-md'
+                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                        onClick={() => handleAccountSelect(account)}
+                      >
+                        <div className="flex items-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                            selectedAccount?.name === account.name 
+                              ? 'bg-[#4285F4] text-white' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            <Building2 className="w-5 h-5" />
                           </div>
-                        )}
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{account.accountName}</div>
+                            <div className="text-sm text-gray-500">{account.name}</div>
+                          </div>
+                          {selectedAccount?.name === account.name && (
+                            <CheckCircle className="w-5 h-5 text-[#4285F4]" />
+                          )}
+                        </div>
                       </div>
-                      <ArrowRight className="w-5 h-5 text-gray-400" />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Location Selection */}
+              {step === 'locations' && selectedAccount && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <MapPin className="w-5 h-5 mr-2 text-[#34A853]" />
+                    Sélectionnez votre établissement ({locations.length})
+                  </h3>
+                  
+                  {locations.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 rounded-xl">
+                      <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-4">Aucun établissement trouvé</p>
+                      <p className="text-sm text-gray-500">
+                        Créez un établissement dans Google My Business
+                      </p>
                     </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {locations.map((location) => (
+                        <div
+                          key={location.name}
+                          className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                            selectedLocation?.name === location.name
+                              ? 'border-[#34A853] bg-[#34A853]/5 shadow-md'
+                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                          onClick={() => setSelectedLocation(location)}
+                        >
+                          <div className="flex items-center">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                              selectedLocation?.name === location.name 
+                                ? 'bg-[#34A853] text-white' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              <MapPin className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{location.locationName}</div>
+                              <div className="text-sm text-gray-500">
+                                {location.primaryCategory?.displayName}
+                              </div>
+                              {location.address && (
+                                <div className="text-xs text-gray-400">
+                                  {location.address.locality}, {location.address.administrativeArea}
+                                </div>
+                              )}
+                            </div>
+                            {selectedLocation?.name === location.name && (
+                              <CheckCircle className="w-5 h-5 text-[#34A853]" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Complete Button */}
+              {selectedAccount && selectedLocation && (
+                <div className="text-center">
+                  <button
+                    onClick={handleComplete}
+                    className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-[#4285F4] to-[#34A853] text-white rounded-xl hover:from-[#3367D6] hover:to-[#2D8A47] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-all transform hover:scale-105 font-medium shadow-lg"
+                  >
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Terminer la configuration
                   </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setStep('accounts')}
-                className="mt-4 text-[#4285F4] hover:underline text-sm"
-              >
-                ← Retour aux comptes
-              </button>
-            </>
-          )}
-
-          {step === 'complete' && (
-            <>
-              <div className="text-center mb-6">
-                <CheckCircle className="w-12 h-12 text-[#34A853] mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Configuration terminée !
-                </h2>
-                <p className="text-gray-600">
-                  Votre compte Google My Business est maintenant connecté
-                </p>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="text-sm text-gray-600 mb-2">Établissement sélectionné :</div>
-                <div className="font-medium text-gray-900">
-                  {locations.find(l => l.name === selectedLocationId)?.locationName}
                 </div>
-                <div className="text-sm text-gray-500">
-                  {locations.find(l => l.name === selectedLocationId)?.primaryCategory?.displayName}
-                </div>
-              </div>
-
-              <button
-                onClick={handleComplete}
-                className="w-full bg-[#4285F4] text-white py-3 px-4 rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 font-medium"
-              >
-                Commencer à gérer mes avis
-              </button>
+              )}
             </>
           )}
         </div>
