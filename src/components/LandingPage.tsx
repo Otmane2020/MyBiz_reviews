@@ -19,10 +19,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={onGetStarted}
+                onClick={() => window.location.href = '/auth'}
                 className="hidden md:block bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
               >
-                Se connecter
+                Connexion
               </button>
               <button
                 onClick={onGetStarted}

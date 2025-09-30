@@ -38,6 +38,9 @@ function App() {
   
   // Check if current path is /success
   const isSuccessRoute = window.location.pathname === '/success';
+  
+  // Check if current path is /auth
+  const isAuthRoute = window.location.pathname === '/auth';
 
   // Consolidated session handling function
   const handleSession = (session: any) => {
@@ -98,14 +101,29 @@ function App() {
   };
   // Initialize Supabase auth state listener
   useEffect(() => {
+    // Check if returning from onboarding OAuth
+    const urlParams = new URLSearchParams(window.location.search);
+    const isOnboardingReturn = urlParams.get('onboarding') === 'true';
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isOnboardingReturn && session) {
+        // Clear the URL parameter
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // Continue with onboarding
+        setCurrentView('onboarding');
+      }
       handleSession(session);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // If signing in during onboarding, stay in onboarding
+        if (currentView === 'onboarding') {
+          handleSession(session);
+          return;
+        }
         handleSession(session);
       } else if (event === 'SIGNED_OUT') {
         handleSession(null);
@@ -113,7 +131,7 @@ function App() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [currentView]);
 
 
   const handleGoogleAuth = () => {
@@ -176,6 +194,13 @@ function App() {
       localStorage.setItem('selectedLocationId', selectedStores[0]);
     }
     
+    // Ensure user is logged in after onboarding
+    if (!user) {
+      // If no user session, redirect to auth
+      setCurrentView('auth');
+      return;
+    }
+    
     setCurrentView('app');
   };
 
@@ -223,6 +248,17 @@ function App() {
   // Handle Success route
   if (isSuccessRoute) {
     return <SuccessPage />;
+  }
+  
+  // Handle Auth route
+  if (isAuthRoute) {
+    return (
+      <AuthPage 
+        onGoogleAuth={handleGoogleAuth}
+        onEmailAuth={handleEmailAuth}
+        onGetStarted={handleGetStarted}
+      />
+    );
   }
 
   const handleNavigate = (page: string) => {

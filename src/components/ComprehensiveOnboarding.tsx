@@ -236,10 +236,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         await fetchAccounts();
       } else {
         // Initiate Google OAuth sign-in with Supabase
-        await supabase.auth.signInWithOAuth({
+        const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: `${window.location.origin}?onboarding=true`,
             queryParams: {
               access_type: 'offline',
               prompt: 'consent',
@@ -247,6 +247,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
             scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
           }
         });
+        
+        if (error) {
+          throw error;
+        }
       }
     } catch (error) {
       console.error('Error connecting Google My Business:', error);
