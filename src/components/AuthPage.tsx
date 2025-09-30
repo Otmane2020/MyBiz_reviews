@@ -143,6 +143,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ initiateGoogleOAuth, onEmailAuth })
       </div>
     </div>
   );
-          onClick={() => initiateGoogleOAuth(false)}
+};
 
 export default AuthPage;
