@@ -257,7 +257,14 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
           <div className="flex flex-col sm:flex-row gap-3">
             {isTokenError ? (
               <button
-                onClick={onTokenExpired}
+                onClick={() => {
+                  if (onTokenExpired) {
+                    onTokenExpired();
+                  } else {
+                    // Fallback si onTokenExpired n'est pas défini
+                    window.location.reload();
+                  }
+                }}
                 className="flex items-center justify-center px-4 py-2 bg-[#4285F4] text-white rounded-lg hover:bg-[#3367D6] transition-colors font-medium"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />

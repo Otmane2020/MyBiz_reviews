@@ -221,6 +221,10 @@ serve(async (req) => {
               throw new Error(`Token d'accès invalide pour les locations (401). Reconnectez-vous.`);
             }
             
+            if (locationsResponse.status === 429) {
+              throw new Error(`Limite de taux dépassée pour les locations (429). Veuillez patienter quelques minutes.`);
+            }
+            
             throw new Error(`Google API Error (locations - ${locationsResponse.status}): ${locationsData.error?.message || locationsData.error || 'Erreur inconnue'}`);
           }
           
