@@ -151,27 +151,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       type: 'plan-selection'
     },
     {
-      icon: <MessageSquare className="w-16 h-16 text-[#EA4335]" />,
-      title: "IA de réponse intelligente",
-      description: "Notre intelligence artificielle analyse chaque avis et génère des réponses personnalisées et professionnelles en quelques secondes. Testez gratuitement pendant 14 jours !",
-      color: "from-[#EA4335] to-[#4285F4]",
-      type: 'feature'
-    },
-    {
-      icon: <TrendingUp className="w-16 h-16 text-[#4285F4]" />,
-      title: "Tableau de bord analytique",
-      description: "Suivez l'évolution de votre réputation avec des statistiques détaillées : note moyenne, taux de réponse, tendances et rapports PDF mensuels.",
-      color: "from-[#4285F4] to-[#34A853]",
-      type: 'feature'
-    },
-    {
-      icon: <Smartphone className="w-16 h-16 text-[#34A853]" />,
-      title: "Notifications en temps réel",
-      description: "Recevez des alertes instantanées pour chaque nouvel avis et ne manquez jamais une opportunité d'interaction avec vos clients.",
-      color: "from-[#34A853] to-[#FBBC05]",
-      type: 'feature'
-    },
-    {
       icon: <Check className="w-16 h-16 text-[#FBBC05]" />,
       title: "Tout est prêt !",
       description: "Votre compte est configuré et prêt à l'emploi. Commencez dès maintenant votre essai gratuit de 14 jours et améliorez votre réputation en ligne !",

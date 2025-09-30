@@ -73,9 +73,15 @@ function App() {
       
       // Check onboarding status
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
+      const isTrialSignup = localStorage.getItem('isTrialSignup');
+      
       if (completedOnboarding) {
         setHasCompletedOnboarding(true);
         setCurrentView('app');
+      } else if (isTrialSignup) {
+        // Clear the trial signup flag and go to onboarding
+        localStorage.removeItem('isTrialSignup');
+        setCurrentView('onboarding');
       } else {
         setCurrentView('google-setup');
       }
@@ -116,8 +122,8 @@ function App() {
 
 
   const handleGoogleAuth = (userData: any, token: string) => {
-    // This function is no longer needed as Supabase handles auth state
-    // The auth state listener will handle user data and navigation
+    // Mark as trial signup to go directly to onboarding
+    localStorage.setItem('isTrialSignup', 'true');
   };
 
   const handleEmailAuth = (userData: any) => {
