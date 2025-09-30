@@ -158,8 +158,8 @@ const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
                   className="w-10 h-10 rounded-full mr-3"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">{user?.name}</div>
-                  <div className="text-sm text-gray-500 truncate">{user?.email}</div>
+                  <div className="font-medium text-gray-900 truncate">Utilisateur</div>
+                  <div className="text-sm text-gray-500 truncate">Mode démo</div>
                 </div>
               </div>
               <button

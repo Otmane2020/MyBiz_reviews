@@ -109,8 +109,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 className="w-12 h-12 rounded-full mr-3 border-2 border-white/30"
               />
               <div>
-                <div className="font-medium">{user.name}</div>
-                <div className="text-sm text-white/80">{user.email}</div>
+                <div className="font-medium">Utilisateur</div>
+                <div className="text-sm text-white/80">Mode démo</div>
               </div>
             </div>
           )}

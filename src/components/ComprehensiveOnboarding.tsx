@@ -129,7 +129,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const steps = [
     {
       icon: <Gift className="w-16 h-16 text-[#FBBC05]" />,
-      title: `Bienvenue ${user?.name?.split(' ')[0]} !`,
+      title: "Bienvenue !",
       description: "Félicitations ! Vous venez de rejoindre Starlinko, la plateforme qui va révolutionner la gestion de vos avis Google My Business. Commencez avec 14 jours d'essai gratuit !",
       color: "from-[#4285F4] to-[#34A853]",
       type: 'welcome'

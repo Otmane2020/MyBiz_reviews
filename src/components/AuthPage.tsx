@@ -22,9 +22,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     // Simulate a basic user for onboarding
     const mockUser = {
       id: 'demo-user-' + Date.now(),
-      name: 'Demo User',
-      email: 'demo@example.com',
-      picture: 'https://ui-avatars.com/api/?name=Demo+User&background=4285F4&color=fff',
+      name: 'Utilisateur',
+      email: 'utilisateur@demo.com',
+      picture: 'https://ui-avatars.com/api/?name=U&background=4285F4&color=fff',
       authMethod: 'demo'
     };
     localStorage.setItem('user', JSON.stringify(mockUser));
