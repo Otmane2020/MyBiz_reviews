@@ -276,7 +276,25 @@ function App() {
     }
   };
   const handleLogout = () => {
-    // Use Supabase signOut which will trigger the auth state listener
+    // Check if it's a demo user
+    const currentUser = localStorage.getItem('user');
+    if (currentUser) {
+      const userData = JSON.parse(currentUser);
+      if (userData.authMethod === 'demo') {
+        // For demo users, clear everything manually
+        localStorage.clear();
+        setUser(null);
+        setAccessToken('');
+        setSelectedAccountId('');
+        setSelectedLocationId('');
+        setCurrentPage('dashboard');
+        setHasCompletedOnboarding(false);
+        setCurrentView('landing');
+        return;
+      }
+    }
+    
+    // For real users, use Supabase signOut
     supabase.auth.signOut();
   };
 
