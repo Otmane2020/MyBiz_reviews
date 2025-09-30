@@ -39,9 +39,6 @@ function App() {
   // Check if current path is /success
   const isSuccessRoute = window.location.pathname === '/success';
   
-  // Check if current path is /auth
-  const isAuthRoute = window.location.pathname === '/auth';
-
   // Consolidated session handling function
   const handleSession = (session: any) => {
     if (session) {
@@ -250,17 +247,6 @@ function App() {
     return <SuccessPage />;
   }
   
-  // Handle Auth route
-  if (isAuthRoute) {
-    return (
-      <AuthPage 
-        onGoogleAuth={handleGoogleAuth}
-        onEmailAuth={handleEmailAuth}
-        onGetStarted={handleGetStarted}
-      />
-    );
-  }
-
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
   };
@@ -268,6 +254,7 @@ function App() {
   if (currentView === 'landing') {
     return (
       <LandingPage onGetStarted={handleGetStarted} />
+      <LandingPage onGetStarted={handleGetStarted} onNavigateToAuth={() => setCurrentView('auth')} />
     );
   }
 
