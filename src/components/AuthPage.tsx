@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 interface AuthPageProps {
-  onGoogleAuth: (userData: any, token: string) => void;
+  onGoogleAuth: (isTrial: boolean) => void;
   onEmailAuth: (userData: any) => void;
 }
 
@@ -15,8 +15,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = (isTrial: boolean = false) => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
+    console.log('Is trial signup:', isTrial);
+    
+    // Set the trial signup flag before OAuth redirect
+    localStorage.setItem('isTrialSignup', isTrial.toString());
+    
+    // Call the parent handler
+    onGoogleAuth(isTrial);
     
     try {
       // Use Supabase native Google OAuth
@@ -103,7 +110,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           {isLogin && (
             <div className="mb-6">
               <button
-                onClick={handleGoogleAuth}
+                onClick={() => handleGoogleAuth(true)}
                 className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-[#34A853] to-[#4285F4] text-white rounded-lg hover:from-[#2D8A47] hover:to-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-all duration-200 shadow-lg transform hover:scale-105"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -122,7 +129,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
 
           {/* Google Auth Button */}
           <button
-            onClick={handleGoogleAuth}
+            onClick={() => handleGoogleAuth(false)}
             disabled={loading}
             className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 shadow-sm mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >

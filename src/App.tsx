@@ -74,14 +74,22 @@ function App() {
       if (savedAccountId) setSelectedAccountId(savedAccountId);
       if (savedLocationId) setSelectedLocationId(savedLocationId);
       
-      // Check onboarding status
+      // Check trial signup flag and onboarding status
+      const isTrialSignup = localStorage.getItem('isTrialSignup') === 'true';
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
       
-      if (completedOnboarding || isDashboardRoute) {
+      // Clear the trial signup flag after reading it
+      localStorage.removeItem('isTrialSignup');
+      
+      if (isTrialSignup || (!completedOnboarding && !isDashboardRoute)) {
+        // New trial user or user who hasn't completed onboarding
+        setCurrentView('onboarding');
+      } else if (completedOnboarding || isDashboardRoute) {
+        // Existing user with completed onboarding or direct dashboard access
         setHasCompletedOnboarding(true);
         setCurrentView('app');
       } else {
-        // Pour les nouveaux utilisateurs, aller directement à l'onboarding
+        // Fallback to onboarding for safety
         setCurrentView('onboarding');
       }
     } else {
@@ -97,6 +105,7 @@ function App() {
       localStorage.removeItem('selectedAccountId');
       localStorage.removeItem('selectedLocationId');
       localStorage.removeItem('onboardingCompleted');
+      localStorage.removeItem('isTrialSignup');
       // Si on est sur /dashboard, rediriger vers auth, sinon landing
       setCurrentView(isDashboardRoute ? 'auth' : 'landing');
     }
@@ -122,8 +131,8 @@ function App() {
 
 
   const handleGoogleAuth = (userData: any, token: string) => {
-    // Mark as trial signup to go directly to onboarding
-    localStorage.setItem('isTrialSignup', 'true');
+    // This function is called from AuthPage before OAuth redirect
+    // The isTrial flag is already set in localStorage by AuthPage
   };
 
   const handleEmailAuth = (userData: any) => {
