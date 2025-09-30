@@ -231,6 +231,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         }),
       });
       const data = await response.json();
+      console.log('DEBUG: Data from Google Accounts API:', data);
       
       if (data.accounts && data.accounts.length > 0) {
         setAccounts(data.accounts);
@@ -268,6 +269,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         }),
       });
       const data = await response.json();
+      console.log('DEBUG: Data from Google Locations API:', data);
       
       if (data.locations && data.locations.length > 0) {
         setLocations(data.locations);
