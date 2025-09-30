@@ -316,6 +316,9 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       } else {
         console.error('❌ Aucun établissement trouvé dans onboarding:', data);
       }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des établissements:', error);
+      alert(`Erreur lors de la récupération des établissements: ${error.message}`);
     }
   }
 }
