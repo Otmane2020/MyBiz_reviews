@@ -326,7 +326,7 @@ const GDPRPage: React.FC = () => {
               </p>
               <div className="space-y-2 text-sm text-red-800">
                 <div><strong>CNIL</strong> - Commission Nationale de l'Informatique et des Libertés</div>
-                <div><strong>Site web :</strong> <a href="https://www.cnil.fr" target=\"_blank\" rel="noopener noreferrer\" className=\"underline">www.cnil.fr</a></div>
+                <div><strong>Site web :</strong> <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" className="underline">www.cnil.fr</a></div>
                 <div><strong>Adresse :</strong> 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07</div>
                 <div><strong>Téléphone :</strong> 01 53 73 22 22</div> 
               </div>
