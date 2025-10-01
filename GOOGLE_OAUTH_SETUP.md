@@ -26,7 +26,8 @@ Vous devez configurer **EXACTEMENT** ces URIs de redirection dans Google Cloud C
 5. Dans **Authorized redirect URIs**, ajoutez :
 
 ```
-https://gadwucduwbpddvtdyokr.supabase.co/auth/v1/callback
+https://0ec90b57d6e95fcbda19832f.supabase.co/auth/v1/callback
+http://localhost:5173/
 https://starlinko.pro/
 https://starlinko.pro
 ```
@@ -58,9 +59,9 @@ https://www.googleapis.com/auth/userinfo.profile
 https://www.googleapis.com/auth/userinfo.email
 ```
 
-**Redirect URL** : Laissez celle par défaut
+**Redirect URL** : Laissez celle par défaut de votre projet
 ```
-https://gadwucduwbpddvtdyokr.supabase.co/auth/v1/callback
+https://0ec90b57d6e95fcbda19832f.supabase.co/auth/v1/callback
 ```
 
 ### 4. Vérifications supplémentaires
@@ -101,7 +102,7 @@ Vérifiez que votre `.env` contient :
 
 ```env
 # Frontend
-VITE_SUPABASE_URL=https://gadwucduwbpddvtdyokr.supabase.co
+VITE_SUPABASE_URL=https://0ec90b57d6e95fcbda19832f.supabase.co
 VITE_SUPABASE_ANON_KEY=votre_anon_key
 VITE_GOOGLE_CLIENT_ID=votre_google_client_id
 
@@ -151,11 +152,11 @@ Pour tester si tout fonctionne :
    ↓
 4. Utilisateur accepte les permissions
    ↓
-5. Google redirige vers https://gadwucduwbpddvtdyokr.supabase.co/auth/v1/callback
+5. Google redirige vers https://0ec90b57d6e95fcbda19832f.supabase.co/auth/v1/callback
    ↓
 6. Supabase traite le callback et crée la session
    ↓
-7. Supabase redirige vers https://starlinko.pro/
+7. Supabase redirige vers votre site (localhost ou starlinko.pro)
    ↓
 8. Frontend détecte la session et charge l'app
 ```
