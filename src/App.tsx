@@ -138,7 +138,6 @@ function App() {
     } else {
       console.log('❌ No session found - user not authenticated');
       
-      // Check for direct onboarding access with demo user
       // No session - clear everything
       setUser(null);
       setAccessToken('');
@@ -153,6 +152,7 @@ function App() {
       localStorage.removeItem('selectedLocationId');
       localStorage.removeItem('onboardingCompleted');
       localStorage.removeItem('isTrialSignup');
+      localStorage.removeItem('directOnboarding');
       // Always redirect to landing page when not authenticated
       console.log('🎯 Setting currentView to: landing');
       setCurrentView('landing');
