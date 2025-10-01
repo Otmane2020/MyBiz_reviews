@@ -18,12 +18,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const handleDirectOnboarding = () => {
     handleGoogleAuth(true);
   };
-  const handleGoogleAuth = (isTrial: boolean = false) => {
+  const handleGoogleAuth = async (isTrial: boolean = false) => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
     console.log('Is trial signup:', isTrial);
     console.log('🔄 Starting Google OAuth process...');
-    
-    // Set the trial signup flag before OAuth redirect
+
     if (isTrial) {
       localStorage.setItem('isTrialSignup', 'true');
       console.log('✅ Set isTrialSignup = true for trial signup');
@@ -33,18 +32,17 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
       console.log('✅ Set isTrialSignup = false for regular login');
       console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     }
-    
-    // Set loading state
+
     setLoading(true);
     console.log('⏳ Loading state set to true');
-    
+
     try {
-      // Use Supabase native Google OAuth
       console.log('🚀 Initiating Supabase OAuth...');
-      supabase.auth.signInWithOAuth({
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -52,13 +50,17 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
       });
-      console.log('✅ OAuth request sent');
+
+      if (error) {
+        console.error('❌ OAuth error:', error);
+        throw error;
+      }
+
+      console.log('✅ OAuth request sent, redirecting to Google...');
     } catch (error) {
       console.error('Error signing in with Google:', error);
       alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
-    } finally {
       setLoading(false);
-      console.log('⏳ Loading state set to false');
     }
   };
 
