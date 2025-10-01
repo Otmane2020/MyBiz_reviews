@@ -28,6 +28,7 @@ function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   // Notifications hook - must be at top level
   const {
@@ -51,9 +52,12 @@ function App() {
   const isGDPRRoute = window.location.pathname === '/gdpr';
 
   // Consolidated session handling function
-  const handleSession = (session: any) => {
+  const handleSession = (session: any, isInitialCheck: boolean = false) => {
     console.log('🔍 handleSession called with session:', !!session);
     console.log('📍 Current location:', window.location.pathname);
+    console.log('🎬 Is initial check:', isInitialCheck);
+
+    const isRootPath = window.location.pathname === '/' || window.location.pathname === '';
 
     if (session) {
       console.log('✅ Valid session found');
@@ -126,18 +130,15 @@ function App() {
        setHasCompletedOnboarding(true);
        setCurrentView('app');
      }
-     // Priority 3: User has session but needs to complete onboarding
+     // Priority 3: User has incomplete setup, send to onboarding
      else {
-       console.log('⚠️ User needs to complete setup - redirecting to onboarding');
+       console.log('⚠️ User has session but incomplete setup - redirecting to onboarding');
        console.log('🔍 Reason: completedOnboarding =', completedOnboarding, ', hasSelectedLocation =', hasSelectedLocation);
        console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
      }
     } else {
       console.log('❌ No session found - user not authenticated');
-
-      // Check if we're on the root path
-      const isRootPath = window.location.pathname === '/';
 
       // No session - clear everything
       setUser(null);
@@ -155,34 +156,33 @@ function App() {
       localStorage.removeItem('isTrialSignup');
       localStorage.removeItem('directOnboarding');
 
-      // Redirect to landing page when not authenticated and on root path
-      if (isRootPath) {
-        console.log('🎯 Root path detected - Setting currentView to: landing');
-        setCurrentView('landing');
-      }
+      // Always show landing page when not authenticated
+      console.log('🎯 No session - Setting currentView to: landing');
+      setCurrentView('landing');
     }
   };
   // Initialize Supabase auth state listener
   useEffect(() => {
     console.log('🚀 Initializing Supabase auth state listener');
-    
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🔍 Initial session check:', !!session);
-      handleSession(session);
+      handleSession(session, true); // Pass true for initial check
+      setIsInitialLoad(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔄 Auth state change event:', event);
       console.log('🔍 Session in auth change:', !!session);
-      
+
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         console.log('✅ User signed in or token refreshed');
-        handleSession(session);
+        handleSession(session, false); // Not initial check
       } else if (event === 'SIGNED_OUT') {
         console.log('❌ User signed out');
-        handleSession(null);
+        handleSession(null, false); // Not initial check
       }
     });
 
