@@ -320,7 +320,7 @@ const GDPRPage: React.FC = () => {
               <h3 className="text-lg font-semibold text-red-900 mb-3">
                 Droit de réclamation auprès de la CNIL
               </h3>
-              <p className="text-red-800 mb-4">
+              <p className="text-red-800 mb-4"> 
                 Si vous estimez que vos droits ne sont pas respectés, vous pouvez déposer une 
                 réclamation auprès de l'autorité de contrôle française.
               </p>
@@ -328,7 +328,7 @@ const GDPRPage: React.FC = () => {
                 <div><strong>CNIL</strong> - Commission Nationale de l'Informatique et des Libertés</div>
                 <div><strong>Site web :</strong> <a href="https://www.cnil.fr" target=\"_blank" rel="noopener noreferrer\" className="underline">www.cnil.fr</a></div>
                 <div><strong>Adresse :</strong> 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07</div>
-                <div><strong>Téléphone :</strong> 01 53 73 22 22</div>
+                <div><strong>Téléphone :</strong> 01 53 73 22 22</div> 
               </div>
             </div>
           </div>
