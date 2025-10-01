@@ -15,6 +15,10 @@ import SuccessPage from './pages/SuccessPage';
 import AISettingsPage from './components/AISettingsPage';
 import DesktopDashboard from './components/DesktopDashboard';
 import { useReviewsNotifications } from './hooks/useReviewsNotifications';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
+import CookiesPage from './pages/CookiesPage';
+import GDPRPage from './pages/GDPRPage';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
@@ -39,6 +43,12 @@ function App() {
   
   // Check if current path is /success
   const isSuccessRoute = window.location.pathname === '/success';
+
+  // Check for legal pages routes
+  const isPrivacyRoute = window.location.pathname === '/privacy';
+  const isTermsRoute = window.location.pathname === '/terms';
+  const isCookiesRoute = window.location.pathname === '/cookies';
+  const isGDPRRoute = window.location.pathname === '/gdpr';
 
   // Consolidated session handling function
   const handleSession = (session: any) => {
@@ -268,6 +278,23 @@ function App() {
   // Handle Success route
   if (isSuccessRoute) {
     return <SuccessPage />;
+  }
+
+  // Handle legal pages routes
+  if (isPrivacyRoute) {
+    return <PrivacyPage />;
+  }
+  
+  if (isTermsRoute) {
+    return <TermsPage />;
+  }
+  
+  if (isCookiesRoute) {
+    return <CookiesPage />;
+  }
+  
+  if (isGDPRRoute) {
+    return <GDPRPage />;
   }
 
   const handleNavigate = (page: string) => {
