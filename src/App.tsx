@@ -123,17 +123,19 @@ function App() {
        console.log('🧹 Cleared isTrialSignup and directOnboarding from localStorage');
        setCurrentView('onboarding');
      }
-     // Priority 2: If user has completed onboarding AND has selected location, go to dashboard
-     else if (completedOnboarding === 'true' && hasSelectedLocation) {
+     // Priority 2: If user has completed onboarding, go to dashboard
+     // Note: Location selection is now optional and can be done later in Reviews page
+     else if (completedOnboarding === 'true') {
        console.log('✅ Onboarding completed - redirecting to app dashboard');
        console.log('🎯 Setting currentView to: app');
+       console.log('📍 Selected location:', hasSelectedLocation ? 'Yes' : 'No (will be selected in Reviews page)');
        setHasCompletedOnboarding(true);
        setCurrentView('app');
      }
-     // Priority 3: User has incomplete setup, send to onboarding
+     // Priority 3: User has not completed onboarding, send to onboarding
      else {
-       console.log('⚠️ User has session but incomplete setup - redirecting to onboarding');
-       console.log('🔍 Reason: completedOnboarding =', completedOnboarding, ', hasSelectedLocation =', hasSelectedLocation);
+       console.log('⚠️ User has not completed onboarding - redirecting to onboarding');
+       console.log('🔍 Reason: completedOnboarding =', completedOnboarding);
        console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
      }
