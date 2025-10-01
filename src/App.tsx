@@ -98,6 +98,12 @@ function App() {
       // Check trial signup flag and onboarding status
       const isTrialSignup = localStorage.getItem('isTrialSignup') === 'true';
       const isDirectOnboarding = localStorage.getItem('directOnboarding') === 'true';
+      
+      // Clear the trial signup flags immediately after reading them
+      localStorage.removeItem('isTrialSignup');
+      localStorage.removeItem('directOnboarding');
+      console.log('🧹 Cleared isTrialSignup and directOnboarding from localStorage immediately');
+      
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
       const hasSelectedLocation = !!savedLocationId;
       
@@ -106,14 +112,7 @@ function App() {
       console.log('🔍 Session handling - completedOnboarding:', completedOnboarding);
       console.log('🔍 Session handling - hasSelectedLocation:', hasSelectedLocation);
       console.log('📝 All localStorage keys:', Object.keys(localStorage));
-      console.log('📝 localStorage isTrialSignup value:', localStorage.getItem('isTrialSignup'));
       console.log('📝 localStorage onboardingCompleted value:', localStorage.getItem('onboardingCompleted'));
-     
-     // Clear the trial signup flag after reading it
-     localStorage.removeItem('isTrialSignup');
-     localStorage.removeItem('directOnboarding');
-     console.log('🧹 Cleared isTrialSignup from localStorage');
-     console.log('🧹 Cleared directOnboarding from localStorage');
      
      // Priority 1: If user clicked "Essayer gratuitement", always go to onboarding
      if (isTrialSignup || isDirectOnboarding) {
