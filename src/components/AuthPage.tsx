@@ -18,7 +18,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const handleDirectOnboarding = () => {
     handleGoogleAuth(true);
   };
-  const handleGoogleAuth = (isTrial: boolean = false) => {
+  const handleGoogleAuth = async (isTrial: boolean = false) => {
     console.log('Google Client ID:', GOOGLE_CLIENT_ID);
     console.log('Is trial signup:', isTrial);
     console.log('🔄 Starting Google OAuth process...');
@@ -39,12 +39,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     console.log('⏳ Loading state set to true');
     
     try {
-      // Use Supabase native Google OAuth
       console.log('🚀 Initiating Supabase OAuth...');
-      supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -52,7 +50,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
           scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
       });
-      console.log('✅ OAuth request sent');
+
+      if (error) {
+        console.error('Error signing in with Google:', error);
+        alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
+      } else {
+        console.log('✅ OAuth request sent');
+      }
     } catch (error) {
       console.error('Error signing in with Google:', error);
       alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');

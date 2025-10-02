@@ -242,16 +242,15 @@ function App() {
   const handleGoogleTokenExpired = async () => {
     try {
       console.log('Token expired, initiating Google re-authentication...');
-      
+
       // Clear expired token data
       setAccessToken('');
       localStorage.removeItem('accessToken');
-      
+
       // Initiate Google OAuth sign-in with Supabase
-      await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -259,9 +258,13 @@ function App() {
           scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
       });
+
+      if (error) {
+        console.error('Error during Google re-authentication:', error);
+        setCurrentView('auth');
+      }
     } catch (error) {
       console.error('Error during Google re-authentication:', error);
-      // Fallback: redirect to auth page
       setCurrentView('auth');
     }
   };
