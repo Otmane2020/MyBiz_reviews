@@ -1,108 +1,134 @@
-# 🚨 SOLUTION IMMÉDIATE - Erreur OAuth
+# ✅ OAuth Direct - Configuration Simple
 
-## Le problème
-```
-Unable to exchange external code
-```
+## 🎯 Ce qui a changé
 
-**Cause** : Les URIs de redirection ne sont pas configurées dans Google Cloud Console.
+Nous avons **contourné Supabase OAuth** qui causait l'erreur "Unable to exchange external code".
 
-## ✅ LA SOLUTION (5 minutes)
+Maintenant, OAuth est géré **directement** par votre app via une Edge Function.
 
-### 1️⃣ Google Cloud Console
+## 📋 Configuration - 3 étapes simples
 
-Allez ici : https://console.cloud.google.com/apis/credentials
+### ÉTAPE 1 : Google Cloud Console
 
-1. Cliquez sur votre **OAuth 2.0 Client ID**
-2. Section **"Authorized redirect URIs"**
-3. Ajoutez **CES 4 LIGNES EXACTEMENT** :
+1. Allez sur : https://console.cloud.google.com/apis/credentials
 
-```
-https://0ec90b57d6e95fcbda19832f.supabase.co/auth/v1/callback
-http://localhost:5173/
-https://starlinko.pro/
-https://starlinko.pro
-```
+2. Cliquez sur votre **OAuth 2.0 Client ID**
 
-4. **SAVE** en bas de page
-5. **Attendez 2 minutes** (propagation Google)
-
-### 2️⃣ Supabase Dashboard
-
-Allez ici : https://supabase.com/dashboard/project/0ec90b57d6e95fcbda19832f/auth/providers
-
-1. Trouvez **Google** dans la liste
-2. Cliquez dessus pour l'éditer
-3. Vérifiez que c'est activé (toggle ON)
-4. Dans **"Additional Scopes"**, ajoutez :
+3. Dans **"Authorized redirect URIs"**, remplacez TOUTES les URIs par :
 
 ```
-https://www.googleapis.com/auth/business.manage
+http://localhost:5173/oauth/callback
+https://starlinko.pro/oauth/callback
 ```
 
-5. **Save**
+**Supprimez toutes les autres URIs** (surtout celle de Supabase)
 
-### 3️⃣ Test
+4. **SAVE**
 
-1. **Ouvrez un onglet en mode incognito**
-2. Allez sur `http://localhost:5173`
-3. Cliquez sur "Se connecter avec Google"
-4. ✅ Ça devrait marcher !
+5. **Copiez vos identifiants** :
+   - Client ID
+   - Client Secret
 
-## ⚠️ Si ça ne marche TOUJOURS pas
+---
 
-### Vérification A : Client ID et Secret
+### ÉTAPE 2 : Variables d'environnement .env
 
-Dans Google Cloud Console, copiez :
-- **Client ID** (ressemble à : `123456-abc.apps.googleusercontent.com`)
-- **Client Secret** (ressemble à : `GOCSPX-abcdefg`)
+Ouvrez votre fichier `.env` et remplacez les valeurs :
 
-Dans Supabase Dashboard (même lien que ci-dessus), collez exactement les mêmes valeurs.
+```env
+VITE_SUPABASE_URL=https://0ec90b57d6e95fcbda19832f.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJib2x0IiwicmVmIjoiMGVjOTBiNTdkNmU5NWZjYmRhMTk4MzJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4ODE1NzQsImV4cCI6MTc1ODg4MTU3NH0.9I8-U0x86Ak8t2DGaIk0HfvTSLsAyzdnz-Nw00mMkKw
 
-### Vérification B : OAuth Consent Screen
+VITE_GOOGLE_CLIENT_ID=VOTRE_CLIENT_ID_ICI
+VITE_GOOGLE_CLIENT_SECRET=VOTRE_CLIENT_SECRET_ICI
+```
 
-Google Cloud Console > OAuth consent screen
+Remplacez :
+- `VITE_GOOGLE_CLIENT_ID` par votre Client ID Google
+- `VITE_GOOGLE_CLIENT_SECRET` par votre Client Secret Google
 
-1. **Publishing status** doit être "In production" (ou "Testing")
-2. **Authorized domains** : Ajoutez `starlinko.pro` et `supabase.co`
-3. **Scopes** : Ajoutez `.../auth/business.manage` si absent
+---
 
-### Vérification C : APIs activées
+### ÉTAPE 3 : Variables Supabase Edge Function
 
-Google Cloud Console > APIs & Services > Library
+Les Edge Functions ont besoin des mêmes variables. Allez sur :
 
-Activez ces 3 APIs :
-1. ✅ My Business Account Management API
-2. ✅ My Business Business Information API
-3. ✅ My Business Verifications API
+https://supabase.com/dashboard/project/0ec90b57d6e95fcbda19832f/settings/functions
 
-**IMPORTANT** : Attendez 10 minutes après activation !
+Ajoutez ces **secrets** :
 
-## 🎯 Checklist rapide
+| Name | Value |
+|------|-------|
+| `GOOGLE_CLIENT_ID` | Votre Client ID Google |
+| `GOOGLE_CLIENT_SECRET` | Votre Client Secret Google |
+| `GOOGLE_REDIRECT_URI` | `http://localhost:5173/oauth/callback` |
 
-Cochez chaque point :
+---
 
-- [ ] 4 Redirect URIs ajoutées dans Google Cloud Console
-- [ ] Sauvegardé et attendu 2 minutes
-- [ ] Scope `business.manage` ajouté dans Supabase
-- [ ] Client ID et Secret identiques dans Google et Supabase
-- [ ] Testé en mode incognito
-- [ ] Cache navigateur vidé
+## 🧪 Test
 
-## 💬 Message d'erreur précis
+1. **Redémarrez le dev server** :
+```bash
+npm run dev
+```
 
-Si vous voyez une autre erreur, lisez-la attentivement :
+2. Ouvrez : `http://localhost:5173`
 
-| Erreur | Solution |
-|--------|----------|
-| `redirect_uri_mismatch` | URIs mal configurées → Vérifiez étape 1 |
-| `invalid_client` | Client ID/Secret incorrect → Vérifiez étape 2 |
-| `access_denied` | Utilisateur a refusé OU consent screen mal configuré |
-| `insufficient_scope` | Scope `business.manage` manquant → Vérifiez étape 2 |
+3. Cliquez sur **"Se connecter avec Google"**
 
-## 📞 Toujours bloqué ?
+4. Vous devriez :
+   - Être redirigé vers Google
+   - Autoriser l'accès
+   - Être redirigé vers `/oauth/callback`
+   - Voir un écran de chargement
+   - Être connecté à l'app
 
-1. Faites une capture d'écran de l'URL d'erreur complète
-2. Vérifiez les logs : https://supabase.com/dashboard/project/0ec90b57d6e95fcbda19832f/logs/auth-logs
-3. Attendez 15 minutes si vous venez de modifier les configs Google
-4. Testez avec un compte Gmail différent
+---
+
+## ✅ Comment ça marche maintenant
+
+### Avant (qui ne marchait pas) :
+```
+App → Supabase OAuth → Google → Supabase → ❌ ERROR
+```
+
+### Maintenant (qui marche) :
+```
+App → Edge Function → Google → App Callback → Create Supabase Session → ✅ SUCCESS
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Erreur : "Redirect URI mismatch"
+
+Vérifiez que dans Google Cloud Console, vous avez **EXACTEMENT** :
+```
+http://localhost:5173/oauth/callback
+```
+
+Pas de slash à la fin, pas de `www.`, protocole `http://` pour localhost.
+
+### Erreur : "Client ID not found"
+
+Vérifiez que vous avez bien ajouté les variables dans :
+1. Le fichier `.env` (pour l'app frontend)
+2. Supabase Edge Functions secrets (pour la backend)
+
+### Les variables ne sont pas prises en compte
+
+Redémarrez le dev server :
+```bash
+npm run dev
+```
+
+---
+
+## 📝 Résumé en 30 secondes
+
+1. **Google Console** : Changez redirect URI vers `http://localhost:5173/oauth/callback`
+2. **`.env`** : Ajoutez `VITE_GOOGLE_CLIENT_ID` et `VITE_GOOGLE_CLIENT_SECRET`
+3. **Supabase Secrets** : Ajoutez `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+4. Redémarrez : `npm run dev`
+5. Testez : http://localhost:5173

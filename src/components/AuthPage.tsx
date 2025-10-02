@@ -19,43 +19,31 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     handleGoogleAuth(true);
   };
   const handleGoogleAuth = async (isTrial: boolean = false) => {
-    console.log('Google Client ID:', GOOGLE_CLIENT_ID);
-    console.log('Is trial signup:', isTrial);
-    console.log('🔄 Starting Google OAuth process...');
+    console.log('🔄 Starting Direct Google OAuth process...');
 
     if (isTrial) {
       localStorage.setItem('isTrialSignup', 'true');
       console.log('✅ Set isTrialSignup = true for trial signup');
-      console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     } else {
       localStorage.setItem('isTrialSignup', 'false');
       console.log('✅ Set isTrialSignup = false for regular login');
-      console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     }
 
     setLoading(true);
-    console.log('⏳ Loading state set to true');
 
     try {
-      console.log('🚀 Initiating Supabase OAuth...');
+      console.log('🚀 Calling direct-google-oauth edge function...');
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/direct-google-oauth?action=login`);
+      const data = await response.json();
 
-      if (error) {
-        console.error('❌ OAuth error:', error);
-        throw error;
+      if (data.url) {
+        console.log('✅ Got OAuth URL, redirecting to Google...');
+        window.location.href = data.url;
+      } else {
+        throw new Error('No OAuth URL returned');
       }
-
-      console.log('✅ OAuth request sent, redirecting to Google...');
     } catch (error) {
       console.error('Error signing in with Google:', error);
       alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');

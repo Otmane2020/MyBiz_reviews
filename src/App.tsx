@@ -19,6 +19,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import CookiesPage from './pages/CookiesPage';
 import GDPRPage from './pages/GDPRPage';
+import OAuthCallback from './pages/OAuthCallback';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
@@ -50,6 +51,7 @@ function App() {
   const isTermsRoute = window.location.pathname === '/terms';
   const isCookiesRoute = window.location.pathname === '/cookies';
   const isGDPRRoute = window.location.pathname === '/gdpr';
+  const isOAuthCallbackRoute = window.location.pathname === '/oauth/callback' || window.location.search.includes('code=');
 
   // Consolidated session handling function
   const handleSession = (session: any, isInitialCheck: boolean = false) => {
@@ -314,9 +316,13 @@ function App() {
     );
   }
 
+  if (isOAuthCallbackRoute) {
+    return <OAuthCallback />;
+  }
+
   if (currentView === 'auth') {
     return (
-      <AuthPage 
+      <AuthPage
         onGoogleAuth={handleGoogleAuth}
         onEmailAuth={handleEmailAuth}
       />
