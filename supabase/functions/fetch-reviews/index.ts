@@ -10,7 +10,6 @@ const corsHeaders = {
 // Récupérer les identifiants depuis les variables d'environnement
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
-const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -22,8 +21,8 @@ serve(async (req: Request) => {
 
   try {
     // Vérifier que les variables d'environnement sont configurées
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_API_KEY) {
-      console.error('Google credentials not configured')
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      console.error('Google OAuth credentials not configured')
     }
 
     // Initialize Supabase client
@@ -39,7 +38,7 @@ serve(async (req: Request) => {
 
     // Fetch reviews from Google My Business API
     const reviewsResponse = await fetch(
-      `https://mybusiness.googleapis.com/v4/${locationId}/reviews?key=${GOOGLE_API_KEY}`,
+      `https://mybusiness.googleapis.com/v4/${locationId}/reviews`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
