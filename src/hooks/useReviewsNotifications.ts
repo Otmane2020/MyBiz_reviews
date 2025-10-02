@@ -1,13 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Only create client if environment variables are available
-const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+import { supabase } from '../lib/supabase';
 
 interface Review {
   id: number;
@@ -36,7 +28,7 @@ export const useReviewsNotifications = (locationId?: string) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!locationId || !supabase) return;
+    if (!locationId) return;
 
     // Subscribe to new reviews
     const channel = supabase
@@ -78,9 +70,7 @@ export const useReviewsNotifications = (locationId?: string) => {
       .subscribe();
 
     return () => {
-      if (supabase) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
   }, [locationId]);
 
