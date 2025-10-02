@@ -18,36 +18,47 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
   const handleDirectOnboarding = () => {
     handleGoogleAuth(true);
   };
-  const handleGoogleAuth = async (isTrial: boolean = false) => {
-    console.log('🔄 Starting Direct Google OAuth process...');
-
+  const handleGoogleAuth = (isTrial: boolean = false) => {
+    console.log('Google Client ID:', GOOGLE_CLIENT_ID);
+    console.log('Is trial signup:', isTrial);
+    console.log('🔄 Starting Google OAuth process...');
+    
+    // Set the trial signup flag before OAuth redirect
     if (isTrial) {
       localStorage.setItem('isTrialSignup', 'true');
       console.log('✅ Set isTrialSignup = true for trial signup');
+      console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     } else {
       localStorage.setItem('isTrialSignup', 'false');
       console.log('✅ Set isTrialSignup = false for regular login');
+      console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     }
-
+    
+    // Set loading state
     setLoading(true);
-
+    console.log('⏳ Loading state set to true');
+    
     try {
-      console.log('🚀 Calling direct-google-oauth edge function...');
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/direct-google-oauth?action=login`);
-      const data = await response.json();
-
-      if (data.url) {
-        console.log('✅ Got OAuth URL, redirecting to Google...');
-        window.location.href = data.url;
-      } else {
-        throw new Error('No OAuth URL returned');
-      }
+      // Use Supabase native Google OAuth
+      console.log('🚀 Initiating Supabase OAuth...');
+      supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+        }
+      });
+      console.log('✅ OAuth request sent');
     } catch (error) {
       console.error('Error signing in with Google:', error);
       alert('Erreur lors de la connexion avec Google. Veuillez réessayer.');
+    } finally {
       setLoading(false);
+      console.log('⏳ Loading state set to false');
     }
   };
 

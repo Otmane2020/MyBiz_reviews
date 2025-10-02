@@ -19,7 +19,6 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import CookiesPage from './pages/CookiesPage';
 import GDPRPage from './pages/GDPRPage';
-import OAuthCallback from './pages/OAuthCallback';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
@@ -51,7 +50,6 @@ function App() {
   const isTermsRoute = window.location.pathname === '/terms';
   const isCookiesRoute = window.location.pathname === '/cookies';
   const isGDPRRoute = window.location.pathname === '/gdpr';
-  const isOAuthCallbackRoute = window.location.pathname === '/oauth/callback' || window.location.search.includes('code=');
 
   // Consolidated session handling function
   const handleSession = (session: any, isInitialCheck: boolean = false) => {
@@ -125,19 +123,17 @@ function App() {
        console.log('🧹 Cleared isTrialSignup and directOnboarding from localStorage');
        setCurrentView('onboarding');
      }
-     // Priority 2: If user has completed onboarding, go to dashboard
-     // Note: Location selection is now optional and can be done later in Reviews page
-     else if (completedOnboarding === 'true') {
+     // Priority 2: If user has completed onboarding AND has selected location, go to dashboard
+     else if (completedOnboarding === 'true' && hasSelectedLocation) {
        console.log('✅ Onboarding completed - redirecting to app dashboard');
        console.log('🎯 Setting currentView to: app');
-       console.log('📍 Selected location:', hasSelectedLocation ? 'Yes' : 'No (will be selected in Reviews page)');
        setHasCompletedOnboarding(true);
        setCurrentView('app');
      }
-     // Priority 3: User has not completed onboarding, send to onboarding
+     // Priority 3: User has incomplete setup, send to onboarding
      else {
-       console.log('⚠️ User has not completed onboarding - redirecting to onboarding');
-       console.log('🔍 Reason: completedOnboarding =', completedOnboarding);
+       console.log('⚠️ User has session but incomplete setup - redirecting to onboarding');
+       console.log('🔍 Reason: completedOnboarding =', completedOnboarding, ', hasSelectedLocation =', hasSelectedLocation);
        console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
      }
@@ -250,27 +246,26 @@ function App() {
   const handleGoogleTokenExpired = async () => {
     try {
       console.log('Token expired, initiating Google re-authentication...');
-
+      
+      // Clear expired token data
       setAccessToken('');
       localStorage.removeItem('accessToken');
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      
+      // Initiate Google OAuth sign-in with Supabase
+      await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: window.location.origin,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-          }
+          },
+          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
         }
       });
-
-      if (error) {
-        console.error('❌ Re-authentication error:', error);
-        throw error;
-      }
     } catch (error) {
       console.error('Error during Google re-authentication:', error);
+      // Fallback: redirect to auth page
       setCurrentView('auth');
     }
   };
@@ -316,13 +311,9 @@ function App() {
     );
   }
 
-  if (isOAuthCallbackRoute) {
-    return <OAuthCallback />;
-  }
-
   if (currentView === 'auth') {
     return (
-      <AuthPage
+      <AuthPage 
         onGoogleAuth={handleGoogleAuth}
         onEmailAuth={handleEmailAuth}
       />
