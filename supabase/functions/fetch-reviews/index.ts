@@ -1,10 +1,10 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 }
 
 // Récupérer les identifiants depuis les variables d'environnement
@@ -12,7 +12,7 @@ const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
 const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')
 
-Deno.serve(async (req: Request) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -21,11 +21,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      console.error('❌ Google credentials not configured');
-      console.error('Available env vars:', Object.keys(Deno.env.toObject()));
-    } else {
-      console.log('✅ Google credentials found');
+    // Vérifier que les variables d'environnement sont configurées
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_API_KEY) {
+      console.error('Google credentials not configured')
     }
 
     // Initialize Supabase client
@@ -39,29 +37,21 @@ Deno.serve(async (req: Request) => {
       throw new Error('Access token and location ID are required')
     }
 
-    console.log('📡 Fetching reviews for location:', locationId);
-    console.log('🔑 Access token:', accessToken.substring(0, 20) + '...');
-
+    // Fetch reviews from Google My Business API
     const reviewsResponse = await fetch(
-      `https://mybusiness.googleapis.com/v4/${locationId}/reviews`,
+      `https://mybusiness.googleapis.com/v4/${locationId}/reviews?key=${GOOGLE_API_KEY}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
         },
       }
     )
 
-    console.log('📥 Reviews API response status:', reviewsResponse.status);
-
     if (!reviewsResponse.ok) {
-      const errorData = await reviewsResponse.json();
-      console.error('❌ Google API error:', errorData);
-      throw new Error(`Google API error (${reviewsResponse.status}): ${errorData.error?.message || 'Unknown error'}`);
+      throw new Error(`Google API error: ${reviewsResponse.status}`)
     }
 
     const reviewsData = await reviewsResponse.json()
-    console.log('📦 Reviews API response data:', JSON.stringify(reviewsData, null, 2));
     const googleReviews = reviewsData.reviews || []
 
     let newReviewsCount = 0
@@ -76,7 +66,7 @@ Deno.serve(async (req: Request) => {
         .from('reviews')
         .select('id')
         .eq('review_id', reviewId)
-        .maybeSingle()
+        .single()
 
       if (!existingReview) {
         // Convert Google rating to number
@@ -128,13 +118,11 @@ Deno.serve(async (req: Request) => {
     )
 
   } catch (error) {
-    console.error('❌ Error fetching reviews:', error)
-    console.error('Error stack:', error.stack);
+    console.error('Error fetching reviews:', error)
     return new Response(
-      JSON.stringify({
+      JSON.stringify({ 
         error: error.message,
-        success: false,
-        details: error.stack
+        success: false 
       }),
       {
         status: 500,

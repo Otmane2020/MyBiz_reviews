@@ -28,7 +28,6 @@ function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
-  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   // Notifications hook - must be at top level
   const {
@@ -52,18 +51,15 @@ function App() {
   const isGDPRRoute = window.location.pathname === '/gdpr';
 
   // Consolidated session handling function
-  const handleSession = (session: any, isInitialCheck: boolean = false) => {
+  const handleSession = (session: any) => {
     console.log('🔍 handleSession called with session:', !!session);
     console.log('📍 Current location:', window.location.pathname);
-    console.log('🎬 Is initial check:', isInitialCheck);
-
-    const isRootPath = window.location.pathname === '/' || window.location.pathname === '';
-
+    
     if (session) {
       console.log('✅ Valid session found');
       console.log('👤 User ID:', session.user.id);
       console.log('📧 User email:', session.user.email);
-
+      
       // Create user data from session
       const userData = {
         id: session.user.id,
@@ -72,12 +68,12 @@ function App() {
         picture: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.email)}&background=4285F4&color=fff`,
         authMethod: 'google'
       };
-
+      
       console.log('👤 Created user data:', userData);
-
+      
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
-
+      
       // Set access token from session or localStorage
       let token = '';
       if (session.provider_token) {
@@ -90,7 +86,7 @@ function App() {
         console.log('🔑 Access token from localStorage:', token ? 'Present' : 'Missing');
       }
       setAccessToken(token);
-
+      
       // Load saved account and location IDs
       const savedAccountId = localStorage.getItem('selectedAccountId');
       const savedLocationId = localStorage.getItem('selectedLocationId');
@@ -98,48 +94,50 @@ function App() {
       console.log('📍 Saved location ID:', savedLocationId);
       if (savedAccountId) setSelectedAccountId(savedAccountId);
       if (savedLocationId) setSelectedLocationId(savedLocationId);
-
+      
       // Check trial signup flag and onboarding status
       const isTrialSignup = localStorage.getItem('isTrialSignup') === 'true';
       const isDirectOnboarding = localStorage.getItem('directOnboarding') === 'true';
-
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
       const hasSelectedLocation = !!savedLocationId;
-
+      
       console.log('🔍 Session handling - isTrialSignup:', isTrialSignup);
       console.log('🔍 Session handling - isDirectOnboarding:', isDirectOnboarding);
       console.log('🔍 Session handling - completedOnboarding:', completedOnboarding);
       console.log('🔍 Session handling - hasSelectedLocation:', hasSelectedLocation);
       console.log('📝 All localStorage keys:', Object.keys(localStorage));
+      console.log('📝 localStorage isTrialSignup value:', localStorage.getItem('isTrialSignup'));
       console.log('📝 localStorage onboardingCompleted value:', localStorage.getItem('onboardingCompleted'));
-
+     
+     // Clear the trial signup flag after reading it
+     localStorage.removeItem('isTrialSignup');
+     localStorage.removeItem('directOnboarding');
+     console.log('🧹 Cleared isTrialSignup from localStorage');
+     console.log('🧹 Cleared directOnboarding from localStorage');
+     
      // Priority 1: If user clicked "Essayer gratuitement", always go to onboarding
      if (isTrialSignup || isDirectOnboarding) {
        console.log('✅ Trial signup detected - redirecting to onboarding');
        console.log('🎯 Setting currentView to: onboarding');
-       // Clear the trial signup flags after reading them
-       localStorage.removeItem('isTrialSignup');
-       localStorage.removeItem('directOnboarding');
-       console.log('🧹 Cleared isTrialSignup and directOnboarding from localStorage');
        setCurrentView('onboarding');
-     }
+     } 
      // Priority 2: If user has completed onboarding AND has selected location, go to dashboard
      else if (completedOnboarding === 'true' && hasSelectedLocation) {
        console.log('✅ Onboarding completed - redirecting to app dashboard');
        console.log('🎯 Setting currentView to: app');
        setHasCompletedOnboarding(true);
        setCurrentView('app');
-     }
-     // Priority 3: User has incomplete setup, send to onboarding
+     } 
+     // Priority 3: Default fallback - users without complete setup go to onboarding
      else {
-       console.log('⚠️ User has session but incomplete setup - redirecting to onboarding');
+       console.log('✅ User needs to complete setup - redirecting to onboarding');
        console.log('🔍 Reason: completedOnboarding =', completedOnboarding, ', hasSelectedLocation =', hasSelectedLocation);
        console.log('🎯 Setting currentView to: onboarding');
        setCurrentView('onboarding');
      }
     } else {
       console.log('❌ No session found - user not authenticated');
-
+      
       // No session - clear everything
       setUser(null);
       setAccessToken('');
@@ -155,34 +153,32 @@ function App() {
       localStorage.removeItem('onboardingCompleted');
       localStorage.removeItem('isTrialSignup');
       localStorage.removeItem('directOnboarding');
-
-      // Always show landing page when not authenticated
-      console.log('🎯 No session - Setting currentView to: landing');
+      // Always redirect to landing page when not authenticated
+      console.log('🎯 Setting currentView to: landing');
       setCurrentView('landing');
     }
   };
   // Initialize Supabase auth state listener
   useEffect(() => {
     console.log('🚀 Initializing Supabase auth state listener');
-
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🔍 Initial session check:', !!session);
-      handleSession(session, true); // Pass true for initial check
-      setIsInitialLoad(false);
+      handleSession(session);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔄 Auth state change event:', event);
       console.log('🔍 Session in auth change:', !!session);
-
+      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         console.log('✅ User signed in or token refreshed');
-        handleSession(session, false); // Not initial check
+        handleSession(session);
       } else if (event === 'SIGNED_OUT') {
         console.log('❌ User signed out');
-        handleSession(null, false); // Not initial check
+        handleSession(null);
       }
     });
 

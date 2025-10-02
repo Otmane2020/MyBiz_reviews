@@ -10,27 +10,18 @@ interface GoogleBusinessSetupProps {
 
 interface Account {
   name: string;
-  accountName?: string;
-  accountNumber?: string;
-  type?: string;
+  accountName: string;
 }
 
 interface Location {
   name: string;
-  title?: string;
-  locationName?: string;
-  storefrontAddress?: {
-    locality?: string;
-    administrativeArea?: string;
-    addressLines?: string[];
-  };
+  locationName: string;
   primaryCategory?: {
-    displayName?: string;
+    displayName: string;
   };
-  categories?: {
-    primary?: {
-      displayName?: string;
-    };
+  address?: {
+    locality: string;
+    administrativeArea: string;
   };
 }
 
@@ -105,18 +96,8 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
       setAccounts(data.accounts || []);
       debugLog(`Found ${data.accounts?.length || 0} accounts`);
 
-      const formattedAccounts = (data.accounts || []).map((acc: any) => ({
-        name: acc.name,
-        accountName: acc.accountName || acc.name.split('/').pop() || 'Unknown Account',
-        accountNumber: acc.accountNumber,
-        type: acc.type
-      }));
-
-      setAccounts(formattedAccounts);
-      debugLog(`Found ${formattedAccounts.length} formatted accounts`);
-
-      if (formattedAccounts.length > 0) {
-        setSelectedAccount(formattedAccounts[0]);
+      if (data.accounts && data.accounts.length > 0) {
+        setSelectedAccount(data.accounts[0]);
       }
 
     } catch (err) {
@@ -165,20 +146,11 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
         throw new Error(data.error || 'Échec de récupération des établissements');
       }
 
-      const formattedLocations = (data.locations || []).map((loc: any) => ({
-        name: loc.name,
-        locationName: loc.title || loc.locationName || loc.name.split('/').pop() || 'Unknown Location',
-        title: loc.title,
-        storefrontAddress: loc.storefrontAddress,
-        primaryCategory: loc.categories?.primary || loc.primaryCategory,
-        categories: loc.categories
-      }));
+      setLocations(data.locations || []);
+      debugLog(`Found ${data.locations?.length || 0} locations`);
 
-      setLocations(formattedLocations);
-      debugLog(`Found ${formattedLocations.length} formatted locations`);
-
-      if (formattedLocations.length > 0) {
-        setSelectedLocation(formattedLocations[0]);
+      if (data.locations && data.locations.length > 0) {
+        setSelectedLocation(data.locations[0]);
       }
 
       setStep('locations');
@@ -405,8 +377,8 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
                             <Building2 className="w-5 h-5" />
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium text-gray-900">{account.accountName || account.name}</div>
-                            <div className="text-sm text-gray-500">{account.accountNumber || account.type || account.name}</div>
+                            <div className="font-medium text-gray-900">{account.accountName}</div>
+                            <div className="text-sm text-gray-500">{account.name}</div>
                           </div>
                           {selectedAccount?.name === account.name && (
                             <CheckCircle className="w-5 h-5 text-[#4285F4]" />
@@ -455,16 +427,13 @@ const GoogleBusinessSetup: React.FC<GoogleBusinessSetupProps> = ({
                               <MapPin className="w-5 h-5" />
                             </div>
                             <div className="flex-1">
-                              <div className="font-medium text-gray-900">{location.locationName || location.title || 'Établissement sans nom'}</div>
+                              <div className="font-medium text-gray-900">{location.locationName}</div>
                               <div className="text-sm text-gray-500">
-                                {location.primaryCategory?.displayName || location.categories?.primary?.displayName || 'Non catégorisé'}
+                                {location.primaryCategory?.displayName}
                               </div>
-                              {location.storefrontAddress && (
+                              {location.address && (
                                 <div className="text-xs text-gray-400">
-                                  {location.storefrontAddress.locality && location.storefrontAddress.administrativeArea
-                                    ? `${location.storefrontAddress.locality}, ${location.storefrontAddress.administrativeArea}`
-                                    : location.storefrontAddress.addressLines?.join(', ') || 'Adresse non disponible'
-                                  }
+                                  {location.address.locality}, {location.address.administrativeArea}
                                 </div>
                               )}
                             </div>

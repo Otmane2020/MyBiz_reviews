@@ -1,15 +1,13 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey"
+  "Access-Control-Allow-Headers": "Content-Type, Authorization"
 };
 // Récupérer les identifiants depuis les variables d'environnement
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
-
-Deno.serve(async (req: Request) => {
+serve(async (req)=>{
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -18,14 +16,11 @@ Deno.serve(async (req: Request) => {
   }
   try {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      console.error('❌ Google credentials not configured');
-      console.error('Available env vars:', Object.keys(Deno.env.toObject()));
+      console.error('Google credentials not configured');
       throw new Error('Google credentials not configured in environment variables');
     }
-
-    console.log('✅ Google credentials found');
     const { action, accessToken, locationId, accountId, code, redirectUri, refreshToken, reviewId, comment } = await req.json();
-    console.log(`🔄 Processing action: ${action}`);
+    console.log(`Processing action: ${action}`);
     switch(action){
       case 'exchange-code':
         {
@@ -106,32 +101,15 @@ Deno.serve(async (req: Request) => {
       case 'get-accounts':
         {
           if (!accessToken) throw new Error('Access token is required for get-accounts action');
-
-          console.log('📡 Fetching accounts from Google Business Profile API...');
-          console.log('🔑 Access token:', accessToken.substring(0, 20) + '...');
-
           const accountsResponse = await fetch(`https://mybusinessaccountmanagement.googleapis.com/v1/accounts`, {
             headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
+              Authorization: `Bearer ${accessToken}`
             }
           });
-
-          console.log('📥 Accounts API response status:', accountsResponse.status);
-
           const accountsData = await accountsResponse.json();
-          console.log('📦 Accounts API response data:', JSON.stringify(accountsData, null, 2));
-
           if (!accountsResponse.ok) {
-            const errorDetails = accountsData.error?.details || [];
-            const errorMessage = accountsData.error?.message || 'Unknown error';
-            console.error('❌ Google API Error:', errorMessage);
-            console.error('Error details:', errorDetails);
-            throw new Error(`Google API Error (${accountsResponse.status}): ${errorMessage}`);
+            throw new Error(`Google API Error (${accountsResponse.status}): ${accountsData.error?.message || 'Unknown error'}`);
           }
-
-          console.log('✅ Successfully fetched accounts:', accountsData.accounts?.length || 0);
-
           return new Response(JSON.stringify({
             success: true,
             accounts: accountsData.accounts || []
@@ -145,29 +123,15 @@ Deno.serve(async (req: Request) => {
       case 'get-locations':
         {
           if (!accessToken || !accountId) throw new Error('Access token and accountId are required for get-locations action');
-
-          console.log('📡 Fetching locations for account:', accountId);
-
           const locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations`, {
             headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
+              Authorization: `Bearer ${accessToken}`
             }
           });
-
-          console.log('📥 Locations API response status:', locationsResponse.status);
-
           const locationsData = await locationsResponse.json();
-          console.log('📦 Locations API response data:', JSON.stringify(locationsData, null, 2));
-
           if (!locationsResponse.ok) {
-            const errorMessage = locationsData.error?.message || 'Unknown error';
-            console.error('❌ Google API Error:', errorMessage);
-            throw new Error(`Google API Error (${locationsResponse.status}): ${errorMessage}`);
+            throw new Error(`Google API Error (${locationsResponse.status}): ${locationsData.error?.message || 'Unknown error'}`);
           }
-
-          console.log('✅ Successfully fetched locations:', locationsData.locations?.length || 0);
-
           return new Response(JSON.stringify({
             success: true,
             locations: locationsData.locations || []
@@ -183,10 +147,7 @@ Deno.serve(async (req: Request) => {
           if (!accessToken || !locationId || !reviewId || !comment) {
             throw new Error('Access token, locationId, reviewId, and comment are required');
           }
-
-          console.log('📡 Replying to review:', reviewId);
-
-          const replyResponse = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/reply`, {
+          const replyResponse = await fetch(`https://mybusiness.googleapis.com/v4/${locationId}/reviews/${reviewId}/replies`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -196,19 +157,10 @@ Deno.serve(async (req: Request) => {
               comment
             })
           });
-
-          console.log('📥 Reply API response status:', replyResponse.status);
-
           const replyData = await replyResponse.json();
-
           if (!replyResponse.ok) {
-            const errorMessage = replyData.error?.message || 'Unknown error';
-            console.error('❌ Google API Error:', errorMessage);
-            throw new Error(`Google API Error (${replyResponse.status}): ${errorMessage}`);
+            throw new Error(`Google API Error (${replyResponse.status}): ${replyData.error?.message || 'Unknown error'}`);
           }
-
-          console.log('✅ Successfully replied to review');
-
           return new Response(JSON.stringify({
             success: true,
             reply: replyData
@@ -223,12 +175,10 @@ Deno.serve(async (req: Request) => {
         throw new Error(`Unsupported action: ${action}`);
     }
   } catch (error) {
-    console.error('❌ Error in google-oauth function:', error);
-    console.error('Error stack:', error.stack);
+    console.error('Error in google-oauth function:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
-      details: error.stack
+      error: error.message
     }), {
       status: 500,
       headers: {
