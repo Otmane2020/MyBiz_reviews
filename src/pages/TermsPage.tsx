@@ -1,5 +1,14 @@
 import React from 'react';
-import { FileText, ArrowLeft, CheckCircle, AlertTriangle, CreditCard, Shield, Users } from 'lucide-react';
+import {
+  FileText,
+  ArrowLeft,
+  CheckCircle,
+  AlertTriangle,
+  CreditCard,
+  Shield,
+  Users,
+  Mail,
+} from 'lucide-react';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 const TermsPage: React.FC = () => {
@@ -20,15 +29,16 @@ const TermsPage: React.FC = () => {
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
-              <StarlinkoLogo size="md" showText={true} />
+              <StarlinkoLogo size="md" showText />
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Main content */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="bg-white rounded-xl shadow-sm p-8">
-          {/* Header */}
+          {/* Page title */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-[#34A853]/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <FileText className="w-8 h-8 text-[#34A853]" />
@@ -36,9 +46,7 @@ const TermsPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Conditions Générales d'Utilisation
             </h1>
-            <p className="text-gray-600">
-              Dernière mise à jour : 1er janvier 2024
-            </p>
+            <p className="text-gray-600">Dernière mise à jour : 1er janvier 2024</p>
           </div>
 
           {/* Content */}
@@ -49,24 +57,22 @@ const TermsPage: React.FC = () => {
                 Acceptation des conditions
               </h2>
               <p className="text-gray-700">
-                En utilisant Starlinko, vous acceptez ces conditions d'utilisation. Si vous n'acceptez 
+                En utilisant Starlinko, vous acceptez ces conditions d'utilisation. Si vous n'acceptez
                 pas ces termes, veuillez ne pas utiliser notre service.
               </p>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Description du service</h2>
-            <p className="mb-4">
-              Starlinko est une plateforme SaaS qui permet aux entreprises de :
-            </p>
+            <p className="mb-4">Starlinko est une plateforme SaaS qui permet aux entreprises de :</p>
             <ul className="list-disc pl-6 mb-6 space-y-2">
               <li>Synchroniser automatiquement leurs avis Google My Business</li>
-              <li>Générer des réponses personnalisées avec l'intelligence artificielle</li>
+              <li>Générer des réponses personnalisées grâce à l’intelligence artificielle</li>
               <li>Analyser les performances de leur réputation en ligne</li>
               <li>Gérer plusieurs établissements depuis une interface unique</li>
             </ul>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Inscription et compte utilisateur</h2>
-            
+
             <h3 className="text-xl font-semibold text-gray-800 mb-3">2.1 Conditions d'inscription</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
               <li>Vous devez être âgé d'au moins 18 ans ou représenter une entreprise</li>
@@ -83,7 +89,7 @@ const TermsPage: React.FC = () => {
             </ul>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Utilisation acceptable</h2>
-            
+
             <div className="bg-[#EA4335]/5 rounded-lg p-6 mb-6">
               <h3 className="text-xl font-semibold text-gray-800 mb-3 flex items-center">
                 <AlertTriangle className="w-5 h-5 mr-2 text-[#EA4335]" />
@@ -95,12 +101,12 @@ const TermsPage: React.FC = () => {
                 <li>Tenter de contourner les limitations techniques</li>
                 <li>Partager votre compte avec des tiers non autorisés</li>
                 <li>Utiliser le service à des fins illégales ou frauduleuses</li>
-                <li>Reverse engineering ou tentative d'accès non autorisé</li>
+                <li>Pratiquer du reverse engineering ou tenter un accès non autorisé</li>
               </ul>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Plans et facturation</h2>
-            
+
             <h3 className="text-xl font-semibold text-gray-800 mb-3">4.1 Essai gratuit</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
               <li>14 jours d'essai gratuit pour tous les nouveaux utilisateurs</li>
@@ -150,14 +156,14 @@ const TermsPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Limitation de responsabilité</h2>
             <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 mb-6">
               <p className="text-gray-700">
-                <strong>Service fourni "en l'état" :</strong> Starlinko s'efforce de fournir un service 
-                de qualité mais ne peut garantir une disponibilité de 100%. Nous ne sommes pas responsables 
-                des dommages indirects ou de la perte de données due à des facteurs externes.
+                <strong>Service fourni "en l'état" :</strong> Starlinko s'efforce de fournir un service
+                de qualité, mais ne peut garantir une disponibilité à 100%. Nous ne sommes pas responsables
+                des dommages indirects ou de la perte de données dus à des facteurs externes.
               </p>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Résiliation</h2>
-            
+
             <h3 className="text-xl font-semibold text-gray-800 mb-3">7.1 Résiliation par l'utilisateur</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
               <li>Vous pouvez résilier votre compte à tout moment depuis les paramètres</li>
@@ -170,19 +176,19 @@ const TermsPage: React.FC = () => {
               <li>En cas de violation des conditions d'utilisation</li>
               <li>En cas de non-paiement après 30 jours</li>
               <li>Pour des raisons de sécurité ou de conformité légale</li>
-              <li>Préavis de 30 jours sauf cas de violation grave</li>
+              <li>Préavis de 30 jours sauf en cas de violation grave</li>
             </ul>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Modifications des conditions</h2>
             <p className="mb-6">
-              Nous nous réservons le droit de modifier ces conditions. Les utilisateurs seront 
-              notifiés par email 30 jours avant l'entrée en vigueur des modifications importantes. 
+              Nous nous réservons le droit de modifier ces conditions. Les utilisateurs seront
+              notifiés par e-mail 30 jours avant l'entrée en vigueur des modifications importantes.
               L'utilisation continue du service après notification constitue une acceptation des nouvelles conditions.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">9. Droit applicable</h2>
             <p className="mb-8">
-              Ces conditions sont régies par le droit français. Tout litige sera soumis à la 
+              Ces conditions sont régies par le droit français. Tout litige sera soumis à la
               compétence exclusive des tribunaux de Paris, France.
             </p>
 
@@ -208,7 +214,7 @@ const TermsPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
