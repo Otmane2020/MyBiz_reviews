@@ -143,6 +143,95 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
+{/* Pricing Plans */}
+<section className="py-20 bg-white/10 backdrop-blur-md">
+  <div className="max-w-6xl mx-auto px-4 text-center">
+    <h2 className="text-4xl font-bold text-white mb-12">Nos 3 formules simples</h2>
+
+    <div className="grid md:grid-cols-3 gap-8">
+      {/* Starter */}
+      <div className="bg-white/10 rounded-2xl p-8 shadow-lg border border-white/20 hover:scale-105 transition-transform">
+        <h3 className="text-2xl font-semibold text-[#34A853] mb-2">Starter — “Découverte”</h3>
+        <p className="text-white text-4xl font-bold mb-6">9,90€<span className="text-lg text-white/70 font-normal"> /mois</span></p>
+        <ul className="text-left text-white/90 space-y-2 mb-6">
+          <li>✅ Connexion 1 établissement Google</li>
+          <li>✅ 50 avis / réponses automatiques par mois</li>
+          <li>✅ Réponses IA basiques (GPT-4 mini)</li>
+          <li>✅ Alertes email sur nouveaux avis</li>
+        </ul>
+        <p className="text-white/70 text-sm mb-6">Idéal pour petits restos & commerces qui veulent tester.</p>
+        <button
+          onClick={onGetStarted}
+          className="bg-white text-[#34A853] px-6 py-3 rounded-full font-semibold hover:bg-gray-100 transition-all"
+        >
+          Essayer
+        </button>
+      </div>
+
+      {/* Pro */}
+      <div className="bg-white/10 rounded-2xl p-8 shadow-lg border border-white/20 hover:scale-105 transition-transform">
+        <h3 className="text-2xl font-semibold text-[#4285F4] mb-2">Pro — “Visibilité”</h3>
+        <p className="text-white text-4xl font-bold mb-6">29,90€<span className="text-lg text-white/70 font-normal"> /mois</span></p>
+        <ul className="text-left text-white/90 space-y-2 mb-6">
+          <li>✅ Jusqu’à 3 établissements connectés</li>
+          <li>✅ 300 avis / réponses automatiques par mois</li>
+          <li>✅ Réponses IA premium (GPT-4.1, ton personnalisé)</li>
+          <li>✅ Notifications temps réel + dashboard complet</li>
+          <li>✅ Statistiques : note moyenne, évolution, tendances</li>
+        </ul>
+        <p className="text-white/70 text-sm mb-6">Parfait pour les commerces actifs avec beaucoup d’avis.</p>
+        <button
+          onClick={onGetStarted}
+          className="bg-white text-[#4285F4] px-6 py-3 rounded-full font-semibold hover:bg-gray-100 transition-all"
+        >
+          Choisir Pro
+        </button>
+      </div>
+
+      {/* Business */}
+      <div className="bg-white/10 rounded-2xl p-8 shadow-lg border border-white/20 hover:scale-105 transition-transform">
+        <h3 className="text-2xl font-semibold text-[#EA4335] mb-2">Business — “Croissance”</h3>
+        <p className="text-white text-4xl font-bold mb-6">79,90€<span className="text-lg text-white/70 font-normal"> /mois</span></p>
+        <ul className="text-left text-white/90 space-y-2 mb-6">
+          <li>✅ Connexion illimitée d’établissements</li>
+          <li>✅ 1 000 avis / réponses automatiques par mois</li>
+          <li>✅ Réponses IA premium + posts auto Google My Business</li>
+          <li>✅ Rapports PDF mensuels pro</li>
+          <li>✅ Support prioritaire</li>
+        </ul>
+        <p className="text-white/70 text-sm mb-6">Conçu pour agences, chaînes de restos & franchises.</p>
+        <button
+          onClick={onGetStarted}
+          className="bg-white text-[#EA4335] px-6 py-3 rounded-full font-semibold hover:bg-gray-100 transition-all"
+        >
+          Passer à Business
+        </button>
+      </div>
+    </div>
+
+    {/* Pay as you go */}
+    <div className="mt-12 bg-white/5 rounded-xl p-6 text-white/90 border border-white/10 max-w-3xl mx-auto">
+      <h4 className="text-lg font-semibold mb-2">⚡ Pay as you go</h4>
+      <p className="text-white/80">
+        Chaque réponse IA supplémentaire : <strong>0,10 € / avis</strong> au-dessus du quota.  
+        <br />Simple, clair, vos coûts restent alignés avec votre usage réel.
+      </p>
+    </div>
+
+    {/* Avantages */}
+    <div className="mt-10 text-white/90 max-w-3xl mx-auto">
+      <h4 className="text-xl font-semibold mb-3">🔑 Avantages de cette grille</h4>
+      <ul className="text-left list-disc list-inside space-y-1">
+        <li>💡 Accessible dès 9,90 €/mois pour les petits commerçants.</li>
+        <li>📈 Scalable : plus d’établissements et d’avis inclus selon votre croissance.</li>
+        <li>📞 Clair à présenter au téléphone : “3 formules simples, sans jargon.”</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+      
       {/* CTA */}
       <section className="py-16 bg-white/10 backdrop-blur-md">
         <div className="max-w-4xl mx-auto text-center px-4">
