@@ -1,209 +1,216 @@
 import React from 'react';
-import { Star, MessageSquare, Smartphone, TrendingUp, Users, Shield, Check, Building } from 'lucide-react';
-import StarlinkoLogo from './StarlinkoLogo';
+import { Shield, ArrowLeft, Eye, Lock, Database, UserCheck, Mail, Phone } from 'lucide-react';
+import StarlinkoLogo from '../components/StarlinkoLogo';
 
-interface LandingPageProps {
-  onGetStarted: () => void;
-}
-
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
-  const plans = [
-    {
-      name: 'Gratuit',
-      price: '0€',
-      description: 'Idéal pour découvrir Starlinko',
-      features: [
-        '1 fiche Google Business',
-        '10 réponses automatiques par mois',
-        'Accès mobile',
-        'Tableau de bord basique',
-      ],
-      color: 'from-[#34A853] to-[#34A853]/80',
-    },
-    {
-      name: 'Pro',
-      price: '29€',
-      description: 'Pour les petites entreprises ambitieuses',
-      features: [
-        '5 fiches Google Business',
-        'Réponses IA illimitées',
-        'Statistiques avancées',
-        'Support prioritaire',
-      ],
-      color: 'from-[#4285F4] to-[#34A853]',
-    },
-    {
-      name: 'Agence',
-      price: '99€',
-      description: 'Pour les agences et réseaux multi-sites',
-      features: [
-        'Fiches illimitées',
-        'Automatisation complète',
-        'Rapports personnalisés',
-        'Support dédié 24/7',
-      ],
-      color: 'from-[#FBBC05] to-[#EA4335]',
-    },
-  ];
+const PrivacyPage: React.FC = () => {
+  const goBack = () => {
+    window.history.back();
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05]">
+    <div className="min-h-screen bg-[#F1F3F4]">
       {/* Header */}
-      <header className="bg-white/10 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <StarlinkoLogo size="md" showGoogleIcon={true} className="text-white" />
-            </div>
-            <div className="flex items-center space-x-4">
               <button
-                onClick={onGetStarted}
-                className="hidden md:block bg-white/20 text-white px-4 py-2 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
+                onClick={goBack}
+                className="mr-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                Se connecter
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
-              <button
-                onClick={onGetStarted}
-                className="bg-white text-[#4285F4] px-4 py-2 rounded-full font-medium hover:bg-gray-100 transition-colors"
-              >
-                Commencer
-              </button>
+              <StarlinkoLogo size="md" showText={true} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="pt-20 pb-16 px-4 min-h-screen flex items-center">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-            Connectez vos avis Google
-            <span className="block text-[#FBBC05]">en un clic</span>
-          </h1>
-          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Starlinko vous aide à gérer et répondre automatiquement à vos avis Google My Business avec l'IA. 
-            Boostez votre réputation en ligne facilement.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button
-              onClick={onGetStarted}
-              className="bg-white text-[#4285F4] px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
-            >
-              Essayer gratuitement
-            </button>
-            <div className="text-white/80 text-sm">
-              ✨ 14 jours d'essai gratuit • Aucune carte requise
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white rounded-xl shadow-sm p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-[#4285F4]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-[#4285F4]" />
             </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Politique de Confidentialité
+            </h1>
+            <p className="text-gray-600">
+              Dernière mise à jour : 1er janvier 2024
+            </p>
           </div>
-        </div>
-      </section>
 
-      {/* Features */}
-      <section className="py-16 bg-white/10 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">
-            Pourquoi choisir Starlinko ?
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="text-center">
-              <div className="bg-white/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Réponses IA</h3>
-              <p className="text-white/80">
-                Répondez automatiquement avec des messages personnalisés générés par l'IA.
+          {/* Content */}
+          <div className="prose prose-lg max-w-none">
+            <div className="bg-[#4285F4]/5 rounded-lg p-6 mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-3 flex items-center">
+                <Eye className="w-5 h-5 mr-2 text-[#4285F4]" />
+                Résumé de notre engagement
+              </h2>
+              <p className="text-gray-700">
+                Chez Starlinko, nous nous engageons à protéger votre vie privée et vos données personnelles. 
+                Cette politique explique comment nous collectons, utilisons et protégeons vos informations 
+                lorsque vous utilisez notre plateforme de gestion d'avis Google My Business.
               </p>
             </div>
-            <div className="text-center">
-              <div className="bg-white/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Smartphone className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Mobile First</h3>
-              <p className="text-white/80">
-                Interface optimisée pour mobile, gérez vos avis partout.
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Informations que nous collectons</h2>
+            
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">1.1 Informations d'identification</h3>
+            <ul className="list-disc pl-6 mb-4 space-y-2">
+              <li>Nom complet et adresse email (via Google OAuth)</li>
+              <li>Photo de profil Google (optionnelle)</li>
+              <li>Identifiant unique Google</li>
+            </ul>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">1.2 Données Google My Business</h3>
+            <ul className="list-disc pl-6 mb-4 space-y-2">
+              <li>Informations sur vos établissements (nom, adresse, catégorie)</li>
+              <li>Avis clients et leurs métadonnées (auteur, note, commentaire, date)</li>
+              <li>Réponses aux avis que vous publiez</li>
+              <li>Statistiques de performance de vos établissements</li>
+            </ul>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">1.3 Données d'utilisation</h3>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>Logs de connexion et d'activité</li>
+              <li>Préférences de configuration IA</li>
+              <li>Historique des réponses générées</li>
+              <li>Données de facturation et d'abonnement</li>
+            </ul>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Comment nous utilisons vos informations</h2>
+            
+            <div className="bg-[#34A853]/5 rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-3 flex items-center">
+                <Database className="w-5 h-5 mr-2 text-[#34A853]" />
+                Finalités du traitement
+              </h3>
+              <ul className="list-disc pl-6 space-y-2">
+                <li><strong>Fourniture du service</strong> : Synchronisation et gestion de vos avis Google My Business</li>
+                <li><strong>Génération IA</strong> : Création de réponses personnalisées aux avis clients</li>
+                <li><strong>Analytics</strong> : Analyse de performance et statistiques de vos établissements</li>
+                <li><strong>Support client</strong> : Assistance technique et résolution de problèmes</li>
+                <li><strong>Facturation</strong> : Gestion des abonnements et paiements</li>
+                <li><strong>Amélioration du service</strong> : Développement de nouvelles fonctionnalités</li>
+              </ul>
+            </div>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Partage et divulgation des données</h2>
+            
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">3.1 Partenaires technologiques</h3>
+            <ul className="list-disc pl-6 mb-4 space-y-2">
+              <li><strong>Google</strong> : Pour l'authentification OAuth et l'accès aux APIs Google My Business</li>
+              <li><strong>Supabase</strong> : Pour le stockage sécurisé des données et l'authentification</li>
+              <li><strong>Stripe</strong> : Pour le traitement des paiements et la gestion des abonnements</li>
+              <li><strong>DeepSeek AI</strong> : Pour la génération de réponses IA (données anonymisées)</li>
+            </ul>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">3.2 Nous ne vendons jamais vos données</h3>
+            <div className="bg-[#EA4335]/5 border-l-4 border-[#EA4335] rounded-lg p-4 mb-6">
+              <p className="text-gray-700">
+                <strong>Engagement ferme :</strong> Starlinko ne vend, ne loue et ne partage jamais vos données 
+                personnelles ou commerciales à des tiers à des fins marketing ou publicitaires.
               </p>
             </div>
-            <div className="text-center">
-              <div className="bg-white/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-8 h-8 text-white" />
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Sécurité des données</h2>
+            
+            <div className="bg-[#FBBC05]/5 rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-3 flex items-center">
+                <Lock className="w-5 h-5 mr-2 text-[#FBBC05]" />
+                Mesures de protection
+              </h3>
+              <ul className="list-disc pl-6 space-y-2">
+                <li><strong>Chiffrement</strong> : Toutes les données sont chiffrées en transit (TLS 1.3) et au repos (AES-256)</li>
+                <li><strong>Authentification</strong> : OAuth 2.0 sécurisé avec Google, pas de stockage de mots de passe</li>
+                <li><strong>Accès limité</strong> : Principe du moindre privilège, accès aux données strictement nécessaire</li>
+                <li><strong>Surveillance</strong> : Monitoring 24/7 et alertes de sécurité automatiques</li>
+                <li><strong>Sauvegardes</strong> : Sauvegardes automatiques et chiffrées de vos données</li>
+                <li><strong>Conformité</strong> : Infrastructure conforme SOC 2 Type II et ISO 27001</li>
+              </ul>
+            </div>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Vos droits (RGPD)</h2>
+            
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2">Droit d'accès</h4>
+                <p className="text-sm text-gray-600">Consultez toutes les données que nous détenons sur vous</p>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Analytics</h3>
-              <p className="text-white/80">
-                Suivez vos performances et l'évolution de votre réputation.
-              </p>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2">Droit de rectification</h4>
+                <p className="text-sm text-gray-600">Corrigez ou mettez à jour vos informations personnelles</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2">Droit à l'effacement</h4>
+                <p className="text-sm text-gray-600">Demandez la suppression de vos données personnelles</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2">Droit à la portabilité</h4>
+                <p className="text-sm text-gray-600">Exportez vos données dans un format structuré</p>
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Cookies et technologies similaires</h2>
+            <p className="mb-4">
+              Nous utilisons des cookies essentiels pour le fonctionnement de notre service :
+            </p>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li><strong>Cookies d'authentification</strong> : Pour maintenir votre session connectée</li>
+              <li><strong>Cookies de préférences</strong> : Pour sauvegarder vos paramètres IA</li>
+              <li><strong>Cookies de sécurité</strong> : Pour protéger contre les attaques CSRF</li>
+              <li><strong>Analytics anonymes</strong> : Pour améliorer notre service (données agrégées uniquement)</li>
+            </ul>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Conservation des données</h2>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li><strong>Données de compte</strong> : Conservées tant que votre compte est actif</li>
+              <li><strong>Avis et réponses</strong> : Conservés pendant 3 ans après la fin de votre abonnement</li>
+              <li><strong>Logs de sécurité</strong> : Conservés 1 an pour la sécurité et la conformité</li>
+              <li><strong>Données de facturation</strong> : Conservées 10 ans pour les obligations légales</li>
+            </ul>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Transferts internationaux</h2>
+            <p className="mb-6">
+              Vos données peuvent être traitées dans l'Union Européenne et aux États-Unis par nos 
+              partenaires technologiques (Google, Supabase, Stripe). Tous nos partenaires respectent 
+              les standards de protection des données européens et disposent de certifications appropriées.
+            </p>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">9. Contact et réclamations</h2>
+            <div className="bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Pour exercer vos droits ou poser des questions :</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="flex items-center">
+                  <Mail className="w-5 h-5 text-[#4285F4] mr-3" />
+                  <div>
+                    <div className="font-medium text-gray-900">Email</div>
+                    <div className="text-sm text-gray-600">privacy@starlinko.com</div>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <UserCheck className="w-5 h-5 text-[#34A853] mr-3" />
+                  <div>
+                    <div className="font-medium text-gray-900">Délégué à la protection des données</div>
+                    <div className="text-sm text-gray-600">dpo@starlinko.com</div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  <strong>Droit de réclamation :</strong> Vous avez le droit de déposer une réclamation 
+                  auprès de la CNIL (Commission Nationale de l'Informatique et des Libertés) si vous 
+                  estimez que vos droits ne sont pas respectés.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Pricing */}
-      <section className="py-20 bg-white/20 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Nos Tarifs</h2>
-          <p className="text-white/80 mb-12">
-            Choisissez le plan qui correspond à votre entreprise
-          </p>
-          <div className="grid md:grid-cols-3 gap-8">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`bg-gradient-to-br ${plan.color} rounded-2xl p-8 text-white shadow-lg hover:scale-105 transition-transform`}
-              >
-                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                <p className="text-4xl font-extrabold mb-4">{plan.price}</p>
-                <p className="mb-6 text-white/80">{plan.description}</p>
-                <ul className="text-left mb-6 space-y-2">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center text-sm">
-                      <Check className="w-4 h-4 mr-2" /> {feature}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={onGetStarted}
-                  className="bg-white text-[#4285F4] font-semibold px-6 py-3 rounded-full hover:bg-gray-100 transition-all w-full"
-                >
-                  Choisir ce plan
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Mentions légales */}
-      <section className="py-16 bg-black/30 backdrop-blur-md border-t border-white/20 text-white">
-        <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-2xl font-bold mb-6 text-center">Mentions légales</h2>
-          <div className="space-y-4 text-sm text-white/80 leading-relaxed">
-            <p><strong>Éditeur du site :</strong> SWEET DECO / Starlinko</p>
-            <p><strong>Raison sociale :</strong> SWEET DECO — société spécialisée dans la création d’outils numériques pour la gestion d’avis clients et la communication d’entreprise.</p>
-            <p><strong>Siège social :</strong> 280 Boulevard de la Boissière, 93100 Montreuil, France</p>
-            <p><strong>Directeur de publication :</strong> Benyahya Otmane</p>
-            <p><strong>Email :</strong> contact@starlinko.com</p>
-            <p><strong>Hébergement :</strong> Bolt / Vercel — hébergement cloud sécurisé en Europe</p>
-            <p><strong>Propriété intellectuelle :</strong> Le contenu, les visuels et le logo Starlinko / Sweet Deco sont protégés par le droit d’auteur. Toute reproduction est interdite sans autorisation préalable.</p>
-            <p><strong>RGPD :</strong> Starlinko collecte uniquement les données nécessaires au bon fonctionnement de la plateforme. Vous disposez d’un droit d’accès, de modification et de suppression de vos données personnelles via l’adresse ci-dessus.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-black/30 backdrop-blur-md py-6 border-t border-white/10">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <div className="flex flex-col sm:flex-row justify-center gap-4 text-white/70 text-sm">
-            <a href="/privacy" className="hover:text-white transition-colors">Confidentialité</a>
-            <a href="/terms" className="hover:text-white transition-colors">Conditions d'utilisation</a>
-            <a href="/cookies" className="hover:text-white transition-colors">Politique des cookies</a>
-            <a href="/gdpr" className="hover:text-white transition-colors">RGPD</a>
-          </div>
-          <p className="text-white/50 text-xs mt-4">
-            © {new Date().getFullYear()} SWEET DECO / Starlinko — Tous droits réservés.
-          </p>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };
 
-export default LandingPage;
+export default PrivacyPage;
