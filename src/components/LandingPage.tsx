@@ -120,43 +120,68 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* Footer - uniquement la partie Légal */}
+      {/* Stats */}
+      <section className="py-16">
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-white text-center mb-8">
+            Ils nous font confiance
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            <div>
+              <div className="text-4xl font-bold text-white mb-2">10k+</div>
+              <div className="text-white/80">Avis traités</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-white mb-2">500+</div>
+              <div className="text-white/80">Entreprises</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-white mb-2">98%</div>
+              <div className="text-white/80">Satisfaction</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-16 bg-white/10 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto text-center px-4">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Prêt à connecter vos avis ?
+          </h2>
+          <p className="text-xl text-white/90 mb-8">
+            Rejoignez des centaines d'entreprises qui font confiance à Starlinko
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={onGetStarted}
+              className="bg-[#EA4335] text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#d33b2c] transition-all transform hover:scale-105 shadow-lg"
+            >
+              Commencer maintenant
+            </button>
+            <div className="text-white/80 text-sm">
+              🚀 Configuration en 2 minutes
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Footer simplifié (Légal uniquement) */}
       <footer className="bg-black/20 backdrop-blur-md py-8">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center mb-4">
             <StarlinkoLogo size="md" showText={true} className="text-white" />
           </div>
+          
+          <ul className="flex flex-col sm:flex-row justify-center gap-6 mb-6">
+            <li><a href="/privacy" className="text-white/70 hover:text-white transition-colors text-sm">Confidentialité</a></li>
+            <li><a href="/terms" className="text-white/70 hover:text-white transition-colors text-sm">Conditions d'utilisation</a></li>
+            <li><a href="/cookies" className="text-white/70 hover:text-white transition-colors text-sm">Politique des cookies</a></li>
+            <li><a href="/gdpr" className="text-white/70 hover:text-white transition-colors text-sm">RGPD</a></li>
+          </ul>
 
-          {/* Rubrique Légal uniquement */}
-          <div className="text-center mb-8">
-            <h4 className="text-white font-semibold mb-4">Légal</h4>
-            <ul className="flex flex-col sm:flex-row justify-center gap-6">
-              <li>
-                <a href="/privacy" className="text-white/70 hover:text-white transition-colors text-sm">
-                  Confidentialité
-                </a>
-              </li>
-              <li>
-                <a href="/terms" className="text-white/70 hover:text-white transition-colors text-sm">
-                  Conditions d'utilisation
-                </a>
-              </li>
-              <li>
-                <a href="/cookies" className="text-white/70 hover:text-white transition-colors text-sm">
-                  Politique des cookies
-                </a>
-              </li>
-              <li>
-                <a href="/gdpr" className="text-white/70 hover:text-white transition-colors text-sm">
-                  RGPD
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Séparateur */}
           <div className="border-t border-white/20 pt-6">
-            <p className="text-white/60 text-center text-sm">
+            <p className="text-white/60 text-sm">
               © 2024 Starlinko. Tous droits réservés. Gérez vos avis Google My Business avec l'IA.
             </p>
           </div>
