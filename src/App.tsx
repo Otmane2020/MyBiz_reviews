@@ -28,7 +28,6 @@ import DemoPage from './pages/DemoPage';
 import IntegrationsPage from './pages/IntegrationsPage';
 import AboutPage from './pages/AboutPage';
 import BlogPage from './pages/BlogPage';
-import PressPage from './pages/PressPage';
 import HelpPage from './pages/HelpPage';
 import ContactPage from './pages/ContactPage';
 import StatusPage from './pages/StatusPage';
@@ -67,8 +66,6 @@ function App() {
     '/integrations': <IntegrationsPage />,
     '/about': <AboutPage />,
     '/blog': <BlogPage />,
-    '/careers': <CareersPage />,
-    '/press': <PressPage />,
     '/help': <HelpPage />,
     '/contact': <ContactPage />,
     '/status': <StatusPage />,
