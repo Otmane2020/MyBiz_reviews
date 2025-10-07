@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, MessageSquare, Smartphone, TrendingUp, Users, Shield } from 'lucide-react';
+import { Star, MessageSquare, Smartphone, TrendingUp, Users, Shield, Check } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 
 interface LandingPageProps {
@@ -7,6 +7,45 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+  const plans = [
+    {
+      name: 'Gratuit',
+      price: '0€',
+      description: 'Idéal pour découvrir Starlinko',
+      features: [
+        '1 fiche Google Business',
+        '10 réponses automatiques par mois',
+        'Accès mobile',
+        'Tableau de bord basique',
+      ],
+      color: 'from-[#34A853] to-[#34A853]/80',
+    },
+    {
+      name: 'Pro',
+      price: '29€',
+      description: 'Pour les petites entreprises ambitieuses',
+      features: [
+        '5 fiches Google Business',
+        'Réponses IA illimitées',
+        'Statistiques avancées',
+        'Support prioritaire',
+      ],
+      color: 'from-[#4285F4] to-[#34A853]',
+    },
+    {
+      name: 'Agence',
+      price: '99€',
+      description: 'Pour les agences et réseaux multi-sites',
+      features: [
+        'Fiches illimitées',
+        'Automatisation complète',
+        'Rapports personnalisés',
+        'Support dédié 24/7',
+      ],
+      color: 'from-[#FBBC05] to-[#EA4335]',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05]">
       {/* Header */}
@@ -118,6 +157,42 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section className="py-20 bg-white/20 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">Nos Tarifs</h2>
+          <p className="text-white/80 mb-12">
+            Choisissez le plan qui correspond à votre entreprise
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`bg-gradient-to-br ${plan.color} rounded-2xl p-8 text-white shadow-lg hover:scale-105 transition-transform`}
+              >
+                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                <p className="text-4xl font-extrabold mb-4">{plan.price}</p>
+                <p className="mb-6 text-white/80">{plan.description}</p>
+                <ul className="text-left mb-6 space-y-2">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-center text-sm">
+                      <Check className="w-4 h-4 mr-2" /> {feature}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={onGetStarted}
+                  className="bg-white text-[#4285F4] font-semibold px-6 py-3 rounded-full hover:bg-gray-100 transition-all w-full"
+                >
+                  Choisir ce plan
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-16 bg-white/10 backdrop-blur-md">
         <div className="max-w-4xl mx-auto text-center px-4">
@@ -136,7 +211,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* Footer — version simplifiée */}
+      {/* Footer */}
       <footer className="bg-black/30 backdrop-blur-md py-6 border-t border-white/10">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <div className="flex flex-col sm:flex-row justify-center gap-4 text-white/70 text-sm">
