@@ -16,20 +16,7 @@
   Cross-Origin-Opener-Policy: same-origin-allow-popups
 
 
-  <!DOCTYPE html>
-<html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Starlinko</title>
-
-    <!-- ✅ Vérification Google Search Console -->
     <meta
       name="google-site-verification"
       content="8UShVdWjtS9fN8xvQU4oab5LiOF5Ir3bWwyDxSoIJ6Y"
-    />
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>
+    /
