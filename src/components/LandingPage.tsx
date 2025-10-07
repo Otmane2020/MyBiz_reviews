@@ -286,11 +286,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 © 2024 Starlinko. Tous droits réservés. Gérez vos avis Google My Business avec l'IA.
               </p>
               
-            
-        </div>
-      </footer>
-    </div>
-  );
+              {/* Réseaux sociaux */}
+             </div>
+</div>
+</footer>
+</div>
+);
 };
 
 export default LandingPage;
