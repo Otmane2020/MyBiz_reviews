@@ -18,8 +18,8 @@ const ContactPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
-    // 👉 Ici tu peux plus tard connecter Supabase ou Formspree pour l’envoi réel
     console.log("Message envoyé :", formData);
+    // 📨 Tu pourras plus tard connecter Supabase, EmailJS ou Formspree ici.
   };
 
   return (
@@ -51,7 +51,7 @@ const ContactPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Contact form */}
+        {/* Form */}
         {!submitted ? (
           <form
             onSubmit={handleSubmit}
@@ -144,7 +144,9 @@ const ContactPage: React.FC = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <MapPin className="w-8 h-8 text-[#FBBC05] mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-1">Adresse</h3>
-            <p className="text-gray-600 text-sm">280 Boulevard de la Boissière<br />93100 Montreuil, France</p>
+            <p className="text-gray-600 text-sm">
+              280 Boulevard de la Boissière<br />93100 Montreuil, France
+            </p>
           </div>
         </div>
 
@@ -152,4 +154,17 @@ const ContactPage: React.FC = () => {
         <div className="max-w-4xl mx-auto mt-12">
           <iframe
             title="Starlinko Map"
-            src="https://www.google.com/m
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2622.349628179697!2d2.472341715674345!3d48.875733779289824!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e612a8a8c29ad5%3A0xb3cfd979848d04f9!2s280%20Bd%20de%20la%20Boissi%C3%A8re%2C%2093100%20Montreuil!5e0!3m2!1sfr!2sfr!4v1699999999999!5m2!1sfr!2sfr"
+            width="100%"
+            height="300"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+          ></iframe>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default ContactPage;
