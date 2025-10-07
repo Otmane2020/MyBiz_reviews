@@ -287,10 +287,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </p>
               
             
-                </a>
-              </div>
-            </div>
-          </div>
         </div>
       </footer>
     </div>
