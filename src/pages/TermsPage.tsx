@@ -8,6 +8,7 @@ import {
   Shield,
   Users,
   Mail,
+  Building,
 } from 'lucide-react';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
@@ -44,7 +45,7 @@ const TermsPage: React.FC = () => {
               <FileText className="w-8 h-8 text-[#34A853]" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Conditions Générales d'Utilisation
+              Conditions Générales d’Utilisation
             </h1>
             <p className="text-gray-600">Dernière mise à jour : 1er janvier 2024</p>
           </div>
@@ -57,143 +58,122 @@ const TermsPage: React.FC = () => {
                 Acceptation des conditions
               </h2>
               <p className="text-gray-700">
-                En utilisant Starlinko, vous acceptez ces conditions d'utilisation. Si vous n'acceptez
-                pas ces termes, veuillez ne pas utiliser notre service.
+                En accédant ou en utilisant le service <strong>Starlinko</strong>, développé et
+                exploité par la société <strong>SWEET DECO</strong>, vous acceptez sans réserve les
+                présentes Conditions Générales d’Utilisation (CGU). Si vous n’acceptez pas ces
+                conditions, vous ne devez pas utiliser la plateforme.
               </p>
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Description du service</h2>
-            <p className="mb-4">Starlinko est une plateforme SaaS qui permet aux entreprises de :</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Objet du service</h2>
+            <p className="mb-4">
+              <strong>Starlinko</strong> est une application SaaS qui permet aux entreprises de
+              connecter leurs comptes Google Business Profile afin de :
+            </p>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>Synchroniser automatiquement leurs avis Google My Business</li>
-              <li>Générer des réponses personnalisées grâce à l’intelligence artificielle</li>
-              <li>Analyser les performances de leur réputation en ligne</li>
-              <li>Gérer plusieurs établissements depuis une interface unique</li>
+              <li>Synchroniser et gérer automatiquement leurs fiches et avis</li>
+              <li>Analyser les performances locales et statistiques</li>
+              <li>Générer des réponses et rapports automatisés</li>
+              <li>Centraliser la gestion multi-établissements</li>
             </ul>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Inscription et compte utilisateur</h2>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">2.1 Conditions d'inscription</h3>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Création de compte</h2>
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">
+              2.1 Conditions d’inscription
+            </h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li>Vous devez être âgé d'au moins 18 ans ou représenter une entreprise</li>
-              <li>Vous devez posséder un compte Google My Business actif</li>
-              <li>Les informations fournies doivent être exactes et à jour</li>
-              <li>Un seul compte par utilisateur/entreprise est autorisé</li>
+              <li>L’utilisateur doit être majeur ou représenter une personne morale.</li>
+              <li>Un compte Google valide est requis pour l’authentification OAuth.</li>
+              <li>Les informations transmises doivent être exactes et à jour.</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">2.2 Responsabilités du compte</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">
+              2.2 Responsabilité de l’utilisateur
+            </h3>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>Vous êtes responsable de la sécurité de votre compte Google</li>
-              <li>Vous devez nous notifier immédiatement de tout usage non autorisé</li>
-              <li>Vous êtes responsable de toutes les activités sous votre compte</li>
+              <li>L’utilisateur est responsable de la sécurité de son compte Google.</li>
+              <li>
+                Toute activité réalisée via le compte est réputée effectuée par l’utilisateur
+                concerné.
+              </li>
+              <li>
+                En cas d’usage non autorisé, l’utilisateur doit immédiatement contacter le support.
+              </li>
             </ul>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Utilisation acceptable</h2>
-
             <div className="bg-[#EA4335]/5 rounded-lg p-6 mb-6">
               <h3 className="text-xl font-semibold text-gray-800 mb-3 flex items-center">
                 <AlertTriangle className="w-5 h-5 mr-2 text-[#EA4335]" />
                 Utilisations interdites
               </h3>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Générer de faux avis ou manipuler les évaluations</li>
-                <li>Utiliser le service pour du spam ou du harcèlement</li>
-                <li>Tenter de contourner les limitations techniques</li>
-                <li>Partager votre compte avec des tiers non autorisés</li>
-                <li>Utiliser le service à des fins illégales ou frauduleuses</li>
-                <li>Pratiquer du reverse engineering ou tenter un accès non autorisé</li>
+                <li>Génération de faux avis ou manipulation de notations Google.</li>
+                <li>Usage du service à des fins illégales, frauduleuses ou diffamatoires.</li>
+                <li>Partage d’accès non autorisé ou revente du service.</li>
+                <li>Tentative de contournement des restrictions de sécurité.</li>
               </ul>
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Plans et facturation</h2>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">4.1 Essai gratuit</h3>
-            <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li>14 jours d'essai gratuit pour tous les nouveaux utilisateurs</li>
-              <li>Accès complet aux fonctionnalités pendant l'essai</li>
-              <li>Aucune carte de crédit requise pour commencer</li>
-              <li>Annulation possible à tout moment pendant l'essai</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">4.2 Abonnements payants</h3>
-            <div className="bg-[#4285F4]/5 rounded-lg p-6 mb-6">
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="font-bold text-[#4285F4] text-lg">Starter</div>
-                  <div className="text-sm text-gray-600">9,90€/mois</div>
-                  <div className="text-xs text-gray-500">1 établissement</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-bold text-[#FBBC05] text-lg">Pro</div>
-                  <div className="text-sm text-gray-600">29,90€/mois</div>
-                  <div className="text-xs text-gray-500">3 établissements</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-bold text-[#EA4335] text-lg">Business</div>
-                  <div className="text-sm text-gray-600">79,90€/mois</div>
-                  <div className="text-xs text-gray-500">Illimité</div>
-                </div>
-              </div>
-            </div>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">4.3 Conditions de paiement</h3>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Abonnement et facturation</h2>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>Facturation mensuelle ou annuelle (20% de réduction sur l'annuel)</li>
-              <li>Paiement par carte bancaire via Stripe (sécurisé)</li>
-              <li>Renouvellement automatique sauf résiliation</li>
-              <li>Remboursement au prorata en cas de résiliation anticipée</li>
-              <li>Pay-as-you-go : 0,10€ par réponse IA supplémentaire</li>
+              <li>Le service est proposé sous forme d’abonnement mensuel ou annuel.</li>
+              <li>Paiement via <strong>Stripe</strong>, conforme aux normes PCI-DSS.</li>
+              <li>Annulation possible à tout moment depuis l’espace utilisateur.</li>
+              <li>
+                En cas de résiliation, le compte reste actif jusqu’à la fin de la période déjà
+                réglée.
+              </li>
             </ul>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Propriété intellectuelle</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              5. Propriété intellectuelle
+            </h2>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>Starlinko et ses fonctionnalités sont protégés par le droit d'auteur</li>
-              <li>Vous conservez la propriété de vos données et contenus</li>
-              <li>Vous nous accordez une licence d'utilisation pour fournir le service</li>
-              <li>Les réponses IA générées vous appartiennent</li>
+              <li>Starlinko et son contenu sont la propriété exclusive de SWEET DECO.</li>
+              <li>Les utilisateurs conservent la propriété de leurs données et établissements.</li>
+              <li>
+                Toute reproduction, copie ou diffusion non autorisée du logiciel est interdite.
+              </li>
             </ul>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Limitation de responsabilité</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              6. Limitation de responsabilité
+            </h2>
             <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 mb-6">
               <p className="text-gray-700">
-                <strong>Service fourni "en l'état" :</strong> Starlinko s'efforce de fournir un service
-                de qualité, mais ne peut garantir une disponibilité à 100%. Nous ne sommes pas responsables
-                des dommages indirects ou de la perte de données dus à des facteurs externes.
+                Le service est fourni “tel quel”. SWEET DECO ne saurait être tenue responsable de
+                tout dommage indirect, perte de données ou interruption due à des causes externes
+                (pannes réseau, API Google, etc.).
               </p>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Résiliation</h2>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">7.1 Résiliation par l'utilisateur</h3>
-            <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li>Vous pouvez résilier votre compte à tout moment depuis les paramètres</li>
-              <li>La résiliation prend effet à la fin de la période de facturation en cours</li>
-              <li>Vos données seront supprimées 30 jours après la résiliation</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">7.2 Résiliation par Starlinko</h3>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>En cas de violation des conditions d'utilisation</li>
-              <li>En cas de non-paiement après 30 jours</li>
-              <li>Pour des raisons de sécurité ou de conformité légale</li>
-              <li>Préavis de 30 jours sauf en cas de violation grave</li>
+              <li>
+                L’utilisateur peut supprimer son compte à tout moment via l’interface Starlinko.
+              </li>
+              <li>
+                SWEET DECO peut suspendre un compte en cas de fraude, non-paiement ou violation des
+                présentes conditions.
+              </li>
+              <li>
+                Les données seront supprimées dans un délai maximum de 30 jours après résiliation.
+              </li>
             </ul>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Modifications des conditions</h2>
-            <p className="mb-6">
-              Nous nous réservons le droit de modifier ces conditions. Les utilisateurs seront
-              notifiés par e-mail 30 jours avant l'entrée en vigueur des modifications importantes.
-              L'utilisation continue du service après notification constitue une acceptation des nouvelles conditions.
-            </p>
-
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">9. Droit applicable</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              8. Modifications et droit applicable
+            </h2>
             <p className="mb-8">
-              Ces conditions sont régies par le droit français. Tout litige sera soumis à la
-              compétence exclusive des tribunaux de Paris, France.
+              SWEET DECO se réserve le droit de modifier les présentes CGU à tout moment. Les
+              utilisateurs seront informés par e-mail avant leur entrée en vigueur.  
+              Le présent contrat est régi par le droit français.  
+              En cas de litige, les tribunaux compétents seront ceux du ressort de Paris, France.
             </p>
 
             {/* Contact */}
-            <div className="bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 rounded-lg p-6">
+            <div className="bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 rounded-lg p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="flex items-center">
@@ -211,6 +191,21 @@ const TermsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Footer / Legal info */}
+            <div className="text-sm text-gray-500 border-t pt-6">
+              <div className="flex items-center mb-2">
+                <Building className="w-4 h-4 text-gray-400 mr-2" />
+                <span>
+                  Éditeur : <strong>SWEET DECO</strong> – 280 Boulevard de la Boissière, 93100
+                  Montreuil, France
+                </span>
+              </div>
+              <p>SIRET : 897 801 775 00015 – contact@starlinko.com</p>
+              <p className="mt-2">
+                © {new Date().getFullYear()} SWEET DECO / Starlinko – Tous droits réservés.
+              </p>
             </div>
           </div>
         </div>
