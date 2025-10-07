@@ -21,14 +21,14 @@ import TermsPage from './pages/TermsPage';
 import CookiesPage from './pages/CookiesPage';
 import GDPRPage from './pages/GDPRPage';
 
-// ✅ Nouvelles pages statiques (à créer)
+// ✅ Pages statiques principales
 import FeaturesPage from './pages/FeaturesPage';
 import PricingPage from './pages/PricingPage';
 import DemoPage from './pages/DemoPage';
 import IntegrationsPage from './pages/IntegrationsPage';
 import AboutPage from './pages/AboutPage';
 import BlogPage from './pages/BlogPage';
-import HelpPage from './pages/HelpPage';
+import CareersPage from './pages/CareersPage';
 import ContactPage from './pages/ContactPage';
 import StatusPage from './pages/StatusPage';
 import CommunityPage from './pages/CommunityPage';
@@ -66,7 +66,7 @@ function App() {
     '/integrations': <IntegrationsPage />,
     '/about': <AboutPage />,
     '/blog': <BlogPage />,
-    '/help': <HelpPage />,
+    '/careers': <CareersPage />,
     '/contact': <ContactPage />,
     '/status': <StatusPage />,
     '/community': <CommunityPage />,
@@ -77,7 +77,7 @@ function App() {
     return staticRoutes[path];
   }
 
-  // ✅ (Le reste de ton code handleSession et Supabase ne change pas)
+  // ✅ Gestion session Supabase
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => handleSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -86,8 +86,16 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ... tout ton handleSession() ici (inchangé)
-  // ... tout ton onboarding, logout, etc. inchangé
+  // ⚙️ handleSession (placeholder)
+  const handleSession = (session: any) => {
+    if (session) {
+      setUser(session.user);
+      setCurrentView('app');
+    } else {
+      setUser(null);
+      setCurrentView('landing');
+    }
+  };
 
   // ✅ Affichage de base selon currentView
   if (currentView === 'landing') {
@@ -141,6 +149,7 @@ function App() {
     }
   }
 
+  // ✅ Mobile dashboard
   return (
     <div className="min-h-screen bg-[#F1F3F4]">
       <MobileMenu
