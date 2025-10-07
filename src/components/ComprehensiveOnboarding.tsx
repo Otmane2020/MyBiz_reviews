@@ -42,8 +42,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(false);
   const [gmbConnected, setGmbConnected] = useState(!!initialAccessToken);
-  const [autoLoadingGMB, setAutoLoadingGMB] = useState(false);
-  
+
   const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
 
   const plans = [
@@ -138,8 +137,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     {
       icon: <Building2 className="w-16 h-16 text-[#4285F4]" />,
       title: "Connectez Google My Business",
-      description: gmbConnected 
-        ? "Votre compte Google My Business est connecté ! Sélectionnez les établissements à gérer."
+      description: gmbConnected
+        ? "Votre compte Google My Business est connecté ! Vous pourrez sélectionner vos établissements depuis la page Avis."
         : "Connectez votre compte Google My Business pour commencer à gérer vos avis automatiquement.",
       color: "from-[#34A853] to-[#FBBC05]",
       type: 'gmb-connection'
@@ -201,40 +200,21 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     }
   };
 
-  // Auto-load GMB accounts and locations when user is already connected
-  useEffect(() => {
-    const autoLoadGMBData = async () => {
-      // Only auto-load if:
-      // 1. User is connected to GMB (has access token)
-      // 2. We haven't loaded accounts yet
-      // 3. We're not already loading
-      // 4. We're on the GMB connection step
-      if (gmbConnected && accessToken && accounts.length === 0 && !loading && !autoLoadingGMB && steps[currentStep]?.type === 'gmb-connection') {
-        console.log('🔄 Auto-loading GMB accounts and locations...');
-        setAutoLoadingGMB(true);
-        try {
-          await fetchAccounts();
-        } catch (error) {
-          console.error('Error auto-loading GMB data:', error);
-        } finally {
-          setAutoLoadingGMB(false);
-        }
-      }
-    };
-
-    autoLoadGMBData();
-  }, [gmbConnected, accessToken, accounts.length, loading, currentStep]);
+  // DO NOT auto-load GMB data - only load when user explicitly requests it
+  // This prevents unnecessary API calls during onboarding
+  // Data will be fetched when user navigates to the Reviews page
 
   const connectGoogleMyBusiness = async () => {
     // Check if user is already authenticated with Google via Supabase
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (session && session.provider_token) {
       console.log('🔑 Found provider token, setting up GMB connection');
       setAccessToken(session.provider_token);
       setGmbConnected(true);
-      console.log('📞 Calling fetchAccounts...');
-      await fetchAccounts();
+      console.log('✅ GMB connection confirmed - data will be fetched when needed');
+      // DO NOT fetch accounts here - let the user navigate to Reviews page first
+      // This saves API calls and improves onboarding speed
     } else {
       // User needs to authenticate with Google
       alert('Veuillez d\'abord vous connecter avec Google depuis la page de connexion.');
@@ -357,15 +337,17 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
   const canProceed = () => {
     const currentStepData = steps[currentStep];
-    
+
     if (currentStepData.type === 'gmb-connection') {
-      return gmbConnected && selectedStores.length > 0;
+      // Only require GMB connection, not store selection
+      // Stores will be selected later when user visits Reviews page
+      return gmbConnected;
     }
-    
+
     if (currentStepData.type === 'plan-selection') {
       return selectedPlan !== '';
     }
-    
+
     return true;
   };
 
@@ -391,74 +373,29 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
             </button>
           ) : (
             <div className="space-y-4">
-              <div className="bg-[#34A853]/10 rounded-lg p-4 text-center">
-                <Check className="w-8 h-8 text-[#34A853] mx-auto mb-2" />
-                <p className="text-[#34A853] font-medium">Google My Business connecté !</p>
+              <div className="bg-[#34A853]/10 rounded-lg p-6 text-center">
+                <Check className="w-12 h-12 text-[#34A853] mx-auto mb-3" />
+                <p className="text-[#34A853] font-semibold text-lg mb-2">Google My Business connecté !</p>
+                <p className="text-gray-600 text-sm">
+                  Vos établissements seront chargés automatiquement lorsque vous accéderez à la page Avis.
+                </p>
               </div>
-              
-              {(loading || autoLoadingGMB) && accounts.length === 0 && (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4285F4] mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-500">Chargement de vos établissements...</p>
-                </div>
-              )}
-              
-              {locations.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">
-                    Sélectionnez vos établissements ({selectedStores.length} sélectionné{selectedStores.length > 1 ? 's' : ''})
-                  </h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {locations.map((location) => (
-                      <label
-                        key={location.name}
-                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedStores.includes(location.name)}
-                          onChange={() => toggleStoreSelection(location.name)}
-                          className="mr-3 h-4 w-4 text-[#4285F4] focus:ring-[#4285F4] border-gray-300 rounded"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900 text-sm">
-                            {location.locationName}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {location.primaryCategory?.displayName}
-                          </div>
-                          {location.address && (
-                            <div className="text-xs text-gray-400">
-                              {location.address.locality}, {location.address.administrativeArea}
-                            </div>
-                          )}
-                        </div>
-                      </label>
-                    ))}
+
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-blue-700 font-medium">Prochaine étape</p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Une fois votre plan choisi, rendez-vous dans la section "Avis" pour sélectionner les établissements à gérer.
+                    </p>
                   </div>
                 </div>
-              )}
-              
-              {!loading && !autoLoadingGMB && accounts.length === 0 && gmbConnected && (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-4">Aucun compte Google My Business trouvé.</p>
-                  <button
-                    onClick={fetchAccounts}
-                    className="text-[#4285F4] hover:underline text-sm"
-                  >
-                    Réessayer le chargement
-                  </button>
-                </div>
-              )}
-              
-              {!loading && !autoLoadingGMB && accounts.length > 0 && locations.length === 0 && (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-4">Aucun établissement trouvé dans vos comptes Google My Business.</p>
-                  <p className="text-sm text-gray-500">
-                    Assurez-vous d'avoir créé au moins un établissement dans votre profil Google My Business.
-                  </p>
-                </div>
-              )}
+              </div>
             </div>
           )}
         </div>
