@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, RefreshCw, AlertCircle } from 'lucide-react';
-import ReviewCard from '../components/ReviewCard';
-import { supabase } from '../lib/supabase';
+import { Star, MessageSquare, User, Calendar } from 'lucide-react';
+import StarlinkoLogo from '../components/StarlinkoLogo';
 
 interface GoogleReview {
   reviewId: string;
   reviewer: {
-    profilePhotoUrl: string;
+    profilePhotoUrl?: string;
     displayName: string;
   };
   starRating: 'ONE' | 'TWO' | 'THREE' | 'FOUR' | 'FIVE';
@@ -18,10 +17,16 @@ interface GoogleReview {
   };
 }
 
+interface GoogleAccount {
+  name: string;
+  type: string;
+  role: string;
+}
+
 interface GoogleLocation {
   name: string;
   locationName: string;
-  primaryCategory: {
+  primaryCategory?: {
     displayName: string;
   };
 }
@@ -37,403 +42,305 @@ interface GoogleReviewsProps {
 }
 
 const GoogleReviews: React.FC<GoogleReviewsProps> = ({
-  user,
-  accessToken,
-  selectedLocationId,
-  setSelectedLocationId,
-  selectedAccountId,
+  user: propUser,
+  accessToken: propAccessToken,
+  selectedLocationId: propSelectedLocationId,
+  setSelectedLocationId: propSetSelectedLocationId,
+  selectedAccountId: propSelectedAccountId,
   onNavigate,
-  onTokenExpired
+  onTokenExpired,
 }) => {
-  const [reviews, setReviews] = useState<GoogleReview[]>([]);
+  const [accessToken, setAccessToken] = useState<string>(propAccessToken || '');
+  const [user, setUser] = useState<any>(propUser || null);
+  const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
   const [locations, setLocations] = useState<GoogleLocation[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(propSelectedAccountId || '');
+  const [reviews, setReviews] = useState<GoogleReview[]>([]);
   const [loading, setLoading] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [usageInfo, setUsageInfo] = useState<any>(null);
+  const [replyingTo, setReplyingTo] = useState<string>('');
 
-  useEffect(() => {
-    if (user?.id) {
-      loadUserLocations();
-      loadUsageInfo();
-    }
-  }, [user]);
+  const selectedLocationId = propSelectedLocationId;
+  const setSelectedLocationId = propSetSelectedLocationId;
 
-  useEffect(() => {
-    if (selectedLocationId && user?.id) {
-      loadReviews();
-    }
-  }, [selectedLocationId, user]);
-
-  const loadUserLocations = async () => {
+  // === FETCH ACCOUNTS ===
+  const fetchAccounts = async (token: string) => {
     try {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: true });
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      if (error) throw error;
+      const res = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          action: 'get-accounts',
+          accessToken: token,
+        }),
+      });
 
-      const formattedLocations = data.map(loc => ({
-        name: loc.location_id,
-        locationName: loc.location_name,
-        primaryCategory: {
-          displayName: loc.category || 'Business'
+      const data = await res.json();
+
+      if (data.success && data.accounts) {
+        setAccounts(data.accounts);
+        const firstAccount = data.accounts[0]?.name;
+        if (!selectedAccountId && firstAccount) {
+          setSelectedAccountId(firstAccount);
+          fetchLocations(token, firstAccount);
         }
-      }));
-
-      setLocations(formattedLocations);
-
-      if (formattedLocations.length > 0 && !selectedLocationId) {
-        setSelectedLocationId(formattedLocations[0].name);
+      } else if (data.error) {
+        throw new Error(data.error.message || 'Erreur API comptes');
       }
     } catch (err: any) {
-      console.error('Error loading locations:', err);
-      setError('Erreur lors du chargement des établissements');
+      console.error('Erreur fetchAccounts:', err);
+      alert('Erreur lors de la connexion à Google My Business.');
     }
   };
 
-  const loadUsageInfo = async () => {
+  // === FETCH LOCATIONS ===
+  const fetchLocations = async (token: string, accountId: string) => {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) return;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
+      const res = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          action: 'get-locations',
+          accessToken: token,
+          accountId,
+        }),
+      });
 
-      const { data, error } = await supabase
-        .from('usage_tracking')
-        .select('*')
-        .eq('month', currentMonth)
-        .maybeSingle();
+      const data = await res.json();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading usage info:', error);
-      } else {
-        setUsageInfo(data);
+      if (data.success && data.locations) {
+        setLocations(data.locations);
+        const firstLocation = data.locations[0]?.name;
+        if (!selectedLocationId && firstLocation) {
+          setSelectedLocationId(firstLocation);
+        }
+      } else if (data.error) {
+        throw new Error(data.error.message || 'Erreur API locations');
       }
-    } catch (err) {
-      console.error('Error loading usage:', err);
+    } catch (err: any) {
+      console.error('Erreur fetchLocations:', err);
+      if (err.message.includes('401') && onTokenExpired) onTokenExpired();
     }
   };
 
-  const loadReviews = async () => {
-    if (!selectedLocationId) return;
+  // === FETCH REVIEWS ===
+  const fetchReviews = async () => {
+    if (!selectedLocationId || !accessToken) return;
 
     setLoading(true);
-    setError(null);
-
     try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('location_id', selectedLocationId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const convertedReviews = data.map((review: any) => ({
-        reviewId: review.review_id,
-        reviewer: {
-          displayName: review.author,
-          profilePhotoUrl: '',
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        starRating: ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][review.rating],
-        comment: review.comment,
-        createTime: review.review_date,
-        reviewReply: review.replied ? {
-          comment: review.reply_content || 'Répondu',
-          updateTime: review.replied_at || review.updated_at
-        } : undefined,
-      }));
+        body: JSON.stringify({
+          accessToken,
+          locationId: selectedLocationId,
+        }),
+      });
 
-      setReviews(convertedReviews);
+      const data = await res.json();
+      if (data.success) {
+        await fetchStoredReviews();
+        if (data.newReviews > 0) console.log(`✅ ${data.newReviews} nouveaux avis ajoutés`);
+      } else {
+        throw new Error(data.error || 'Erreur API fetch-reviews');
+      }
     } catch (err: any) {
-      console.error('Error loading reviews:', err);
-      setError('Erreur lors du chargement des avis');
+      console.error('Erreur fetchReviews:', err);
+      if (err.message.includes('401') && onTokenExpired) onTokenExpired();
     } finally {
       setLoading(false);
     }
   };
 
-  const syncReviews = async () => {
-    if (!selectedLocationId || !accessToken) {
-      setError('Token d\'accès manquant. Veuillez vous reconnecter.');
-      if (onTokenExpired) onTokenExpired();
-      return;
-    }
-
-    setSyncing(true);
-    setError(null);
-
+  // === FETCH STORED REVIEWS ===
+  const fetchStoredReviews = async () => {
+    if (!selectedLocationId) return;
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) throw new Error('Session expirée');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-reviews`,
+      const res = await fetch(
+        `${supabaseUrl}/rest/v1/reviews?location_id=eq.${selectedLocationId}&order=created_at.desc`,
         {
-          method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.session.access_token}`,
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
           },
-          body: JSON.stringify({
-            accessToken,
-            locationId: selectedLocationId,
-          }),
         }
       );
 
-      const data = await response.json();
+      const stored = await res.json();
 
-      if (!data.success) {
-        throw new Error(data.error || 'Erreur lors de la synchronisation');
-      }
+      const converted = stored.map((r: any) => ({
+        reviewId: r.review_id,
+        reviewer: {
+          displayName: r.author,
+        },
+        starRating: ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][r.rating] as any,
+        comment: r.comment,
+        createTime: r.review_date,
+        reviewReply: r.replied
+          ? { comment: 'Répondu', updateTime: r.updated_at }
+          : undefined,
+      }));
 
-      await loadReviews();
-      await loadUsageInfo();
+      setReviews(converted);
+    } catch (err) {
+      console.error('Erreur fetchStoredReviews:', err);
+    }
+  };
 
-      if (data.newReviews > 0) {
-        alert(`${data.newReviews} nouveaux avis synchronisés !`);
+  // === REPLY TO REVIEW ===
+  const replyToReview = async (reviewId: string) => {
+    if (!selectedLocationId || !accessToken) return;
+
+    setReplyingTo(reviewId);
+    try {
+      const response = await fetch('/api/google-oauth?action=reply-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reply-review',
+          accessToken,
+          locationId: selectedLocationId,
+          reviewId,
+          comment: 'Merci beaucoup pour votre retour 🙏',
+        }),
+      });
+
+      if (response.ok) {
+        await fetchReviews();
       } else {
-        alert('Aucun nouvel avis trouvé');
+        console.error('Erreur lors de la réponse:', await response.text());
       }
-    } catch (err: any) {
-      console.error('Error syncing reviews:', err);
-      setError(err.message || 'Erreur lors de la synchronisation des avis');
-
-      if (err.message?.includes('401') || err.message?.includes('Token')) {
-        if (onTokenExpired) onTokenExpired();
-      }
+    } catch (err) {
+      console.error('Erreur replyToReview:', err);
     } finally {
-      setSyncing(false);
+      setReplyingTo('');
     }
   };
 
-  const handleReplyManual = async (reviewId: string, replyText: string) => {
-    setReplyingTo(reviewId);
-    setError(null);
-
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) throw new Error('Session expirée');
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reply-to-review`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.session.access_token}`,
-          },
-          body: JSON.stringify({
-            reviewId,
-            replyText,
-            replySource: 'manual',
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Erreur lors de l\'envoi de la réponse');
-      }
-
-      await loadReviews();
-      await loadUsageInfo();
-
-      alert('Réponse envoyée avec succès !');
-    } catch (err: any) {
-      console.error('Error replying to review:', err);
-      setError(err.message || 'Erreur lors de l\'envoi de la réponse');
-
-      if (err.message?.includes('401') || err.message?.includes('Token')) {
-        if (onTokenExpired) onTokenExpired();
-      }
-    } finally {
-      setReplyingTo(null);
+  useEffect(() => {
+    if (accessToken && user) {
+      fetchAccounts(accessToken);
+      if (selectedLocationId) fetchStoredReviews();
     }
-  };
+  }, [accessToken, user, selectedLocationId]);
 
-  const handleReplyAI = async (reviewId: string) => {
-    setReplyingTo(reviewId);
-    setError(null);
+  const getStarRating = (rating: string): number =>
+    ({ ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rating] || 0);
 
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) throw new Error('Session expirée');
+  const renderStars = (rating: number) => (
+    <div className="flex items-center">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Star key={s} className={`w-4 h-4 ${s <= rating ? 'text-[#FBBC05] fill-current' : 'text-gray-300'}`} />
+      ))}
+      <span className="ml-2 text-sm text-gray-600">({rating}/5)</span>
+    </div>
+  );
 
-      const review = reviews.find(r => r.reviewId === reviewId);
-      if (!review) throw new Error('Avis introuvable');
-
-      const ratingMap: { [key: string]: number } = {
-        'ONE': 1,
-        'TWO': 2,
-        'THREE': 3,
-        'FOUR': 4,
-        'FIVE': 5,
-      };
-      const rating = ratingMap[review.starRating] || 5;
-
-      const aiResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-generate-reply`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.session.access_token}`,
-          },
-          body: JSON.stringify({
-            reviewText: review.comment,
-            rating: rating,
-            reviewerName: review.reviewer.displayName,
-            businessName: locations.find(l => l.name === selectedLocationId)?.locationName,
-          }),
-        }
-      );
-
-      const aiData = await aiResponse.json();
-
-      if (!aiData.success) {
-        throw new Error(aiData.error || 'Erreur lors de la génération de la réponse IA');
-      }
-
-      const replyResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reply-to-review`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.session.access_token}`,
-          },
-          body: JSON.stringify({
-            reviewId,
-            replyText: aiData.reply,
-            replySource: 'ai',
-          }),
-        }
-      );
-
-      const replyData = await replyResponse.json();
-
-      if (!replyData.success) {
-        throw new Error(replyData.error || 'Erreur lors de l\'envoi de la réponse');
-      }
-
-      await loadReviews();
-      await loadUsageInfo();
-
-      alert('Réponse IA envoyée avec succès !');
-    } catch (err: any) {
-      console.error('Error with AI reply:', err);
-      setError(err.message || 'Erreur lors de la réponse IA');
-
-      if (err.message?.includes('limit')) {
-        alert('Limite de réponses IA atteinte pour ce mois. Passez à un plan supérieur ou attendez le mois prochain.');
-      }
-    } finally {
-      setReplyingTo(null);
-    }
-  };
-
-  if (loading && reviews.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4285F4] mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement des avis...</p>
-        </div>
-      </div>
-    );
-  }
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#F1F3F4]">
-      <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8 pt-20">
+    <div className="min-h-screen bg-[#F1F3F4] pt-20">
+      <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Avis Google My Business</h1>
           <p className="text-gray-600">Gérez et répondez à vos avis clients</p>
         </div>
 
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-start">
-              <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
-              <div>
-                <h3 className="text-sm font-medium text-red-800">Erreur</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
+        {/* Établissement sélectionné */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                Établissement sélectionné
-              </h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Établissement sélectionné</h2>
 
-              {locations.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="font-medium text-gray-900">
-                    {locations.find(l => l.name === selectedLocationId)?.locationName || 'Chargement...'}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {locations.find(l => l.name === selectedLocationId)?.primaryCategory?.displayName}
-                  </div>
-                </div>
-              )}
-
-              {locations.length === 0 && (
-                <p className="text-sm text-gray-600">
-                  Aucun établissement trouvé. Veuillez en ajouter un dans les paramètres.
-                </p>
-              )}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="font-medium text-gray-900">
+              {locations.find((l) => l.name === selectedLocationId)?.locationName || 'Chargement...'}
             </div>
-
-            {usageInfo && (
-              <div className="text-right">
-                <div className="text-sm text-gray-600 mb-1">Réponses IA ce mois</div>
-                <div className="text-2xl font-bold text-[#4285F4]">
-                  {usageInfo.ai_replies_used}/{usageInfo.ai_replies_limit}
-                </div>
-              </div>
-            )}
+            <div className="text-sm text-gray-500">
+              {locations.find((l) => l.name === selectedLocationId)?.primaryCategory?.displayName}
+            </div>
           </div>
 
           <button
-            onClick={syncReviews}
-            disabled={syncing || !selectedLocationId}
-            className="inline-flex items-center px-6 py-3 bg-[#4285F4] text-white rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+            onClick={fetchReviews}
+            disabled={loading}
+            className="bg-[#4285F4] text-white px-6 py-3 rounded-lg hover:bg-[#3367D6] transition disabled:opacity-50 font-medium"
           >
-            <RefreshCw className={`w-5 h-5 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Synchronisation...' : 'Synchroniser les avis'}
+            {loading ? 'Synchronisation...' : 'Synchroniser les avis'}
           </button>
         </div>
 
+        {/* Liste des avis */}
         <div className="space-y-6">
           {reviews.length === 0 && !loading && (
             <div className="text-center py-12 bg-white rounded-xl shadow-sm">
               <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun avis</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Cliquez sur "Synchroniser les avis" pour charger vos avis
-              </p>
+              <p className="mt-1 text-sm text-gray-500">Cliquez sur "Synchroniser les avis" pour les charger</p>
             </div>
           )}
 
-          {reviews.map((review) => (
-            <ReviewCard
-              key={review.reviewId}
-              review={review}
-              onReplyManual={handleReplyManual}
-              onReplyAI={handleReplyAI}
-              isReplying={replyingTo === review.reviewId}
-            />
+          {reviews.map((r) => (
+            <div key={r.reviewId} className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center">
+                  {r.reviewer.profilePhotoUrl ? (
+                    <img
+                      src={r.reviewer.profilePhotoUrl}
+                      alt={r.reviewer.displayName}
+                      className="w-10 h-10 rounded-full mr-3"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-3">
+                      <User className="w-6 h-6 text-gray-600" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{r.reviewer.displayName}</h3>
+                    {renderStars(getStarRating(r.starRating))}
+                  </div>
+                </div>
+                <div className="flex items-center text-gray-500 text-sm">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  {formatDate(r.createTime)}
+                </div>
+              </div>
+
+              <p className="text-gray-700 mb-4">{r.comment}</p>
+
+              {r.reviewReply ? (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="text-sm font-medium text-gray-800 mb-1">Votre réponse :</div>
+                  <p className="text-gray-700">{r.reviewReply.comment}</p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => replyToReview(r.reviewId)}
+                  disabled={replyingTo === r.reviewId}
+                  className="inline-flex items-center px-4 py-2 bg-[#4285F4] text-white rounded-lg text-sm font-medium hover:bg-[#3367D6] transition disabled:opacity-50"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  {replyingTo === r.reviewId ? 'Envoi...' : 'Répondre avec IA'}
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </main>
