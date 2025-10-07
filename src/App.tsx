@@ -28,7 +28,6 @@ import DemoPage from './pages/DemoPage';
 import IntegrationsPage from './pages/IntegrationsPage';
 import AboutPage from './pages/AboutPage';
 import BlogPage from './pages/BlogPage';
-import CareersPage from './pages/CareersPage';
 import PressPage from './pages/PressPage';
 import HelpPage from './pages/HelpPage';
 import ContactPage from './pages/ContactPage';
