@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, MessageSquare, Smartphone, TrendingUp, Users, Shield, Check } from 'lucide-react';
+import { Star, MessageSquare, Smartphone, TrendingUp, Users, Shield, Check, Building } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 
 interface LandingPageProps {
@@ -111,7 +111,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Réponses IA</h3>
               <p className="text-white/80">
-                Répondez automatiquement avec des messages personnalisés générés par l'IA
+                Répondez automatiquement avec des messages personnalisés générés par l'IA.
               </p>
             </div>
             <div className="text-center">
@@ -120,7 +120,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Mobile First</h3>
               <p className="text-white/80">
-                Interface optimisée pour mobile, gérez vos avis partout
+                Interface optimisée pour mobile, gérez vos avis partout.
               </p>
             </div>
             <div className="text-center">
@@ -129,42 +129,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Analytics</h3>
               <p className="text-white/80">
-                Suivez vos performances et l'évolution de votre réputation
-              </p>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white/10 rounded-xl p-6">
-              <div className="flex items-center mb-4">
-                <Shield className="w-8 h-8 text-[#34A853] mr-3" />
-                <h3 className="text-xl font-semibold text-white">Sécurisé & Fiable</h3>
-              </div>
-              <p className="text-white/80">
-                Connexion sécurisée avec Google OAuth 2.0. Vos données sont protégées et chiffrées.
-              </p>
-            </div>
-            <div className="bg-white/10 rounded-xl p-6">
-              <div className="flex items-center mb-4">
-                <Users className="w-8 h-8 text-[#FBBC05] mr-3" />
-                <h3 className="text-xl font-semibold text-white">Support Expert</h3>
-              </div>
-              <p className="text-white/80">
-                Équipe support dédiée pour vous accompagner dans l'optimisation de votre réputation.
+                Suivez vos performances et l'évolution de votre réputation.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Pricing */}
       <section className="py-20 bg-white/20 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Nos Tarifs</h2>
           <p className="text-white/80 mb-12">
             Choisissez le plan qui correspond à votre entreprise
           </p>
-
           <div className="grid md:grid-cols-3 gap-8">
             {plans.map((plan) => (
               <div
@@ -193,21 +171,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-16 bg-white/10 backdrop-blur-md">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Prêt à connecter vos avis ?
-          </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Rejoignez des centaines d'entreprises qui font confiance à Starlinko
-          </p>
-          <button
-            onClick={onGetStarted}
-            className="bg-[#EA4335] text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#d33b2c] transition-all transform hover:scale-105 shadow-lg"
-          >
-            Commencer maintenant
-          </button>
+      {/* Mentions légales */}
+      <section className="py-16 bg-black/30 backdrop-blur-md border-t border-white/20 text-white">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-2xl font-bold mb-6 text-center">Mentions légales</h2>
+          <div className="space-y-4 text-sm text-white/80 leading-relaxed">
+            <p><strong>Éditeur du site :</strong> SWEET DECO / Starlinko</p>
+            <p><strong>Raison sociale :</strong> SWEET DECO — société spécialisée dans la création d’outils numériques pour la gestion d’avis clients et la communication d’entreprise.</p>
+            <p><strong>Siège social :</strong> 280 Boulevard de la Boissière, 93100 Montreuil, France</p>
+            <p><strong>Directeur de publication :</strong> Benyahya Otmane</p>
+            <p><strong>Email :</strong> contact@starlinko.com</p>
+            <p><strong>Hébergement :</strong> Bolt / Vercel — hébergement cloud sécurisé en Europe</p>
+            <p><strong>Propriété intellectuelle :</strong> Le contenu, les visuels et le logo Starlinko / Sweet Deco sont protégés par le droit d’auteur. Toute reproduction est interdite sans autorisation préalable.</p>
+            <p><strong>RGPD :</strong> Starlinko collecte uniquement les données nécessaires au bon fonctionnement de la plateforme. Vous disposez d’un droit d’accès, de modification et de suppression de vos données personnelles via l’adresse ci-dessus.</p>
+          </div>
         </div>
       </section>
 
@@ -221,7 +198,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <a href="/gdpr" className="hover:text-white transition-colors">RGPD</a>
           </div>
           <p className="text-white/50 text-xs mt-4">
-            © {new Date().getFullYear()} Starlinko. Tous droits réservés.
+            © {new Date().getFullYear()} SWEET DECO / Starlinko — Tous droits réservés.
           </p>
         </div>
       </footer>
