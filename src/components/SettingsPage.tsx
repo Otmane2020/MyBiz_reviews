@@ -206,11 +206,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                 className="w-20 h-20 rounded-full"
               />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
-                <p className="text-gray-600">{user?.email}</p>
+                <h3 className="text-xl font-semibold text-gray-900">Utilisateur</h3>
+                <p className="text-gray-600">Mode démo</p>
                 <div className="flex items-center mt-2 space-x-2">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#34A853]/10 text-[#34A853]">
-                    Compte vérifié
+                    Mode démo
                   </span>
                   {isTrialActive && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FBBC05]/10 text-[#FBBC05]">
@@ -655,7 +655,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
                 className="flex items-center text-[#EA4335] hover:bg-[#EA4335]/10 px-4 py-2 rounded-lg transition-colors"
               >
                 <LogOut className="w-5 h-5 mr-2" />
-                Déconnexion
+                {user?.authMethod === 'demo' ? 'Quitter le mode démo' : 'Déconnexion'}
               </button>
             </div>
           </div>
