@@ -28,7 +28,6 @@ import DemoPage from './pages/DemoPage';
 import IntegrationsPage from './pages/IntegrationsPage';
 import AboutPage from './pages/AboutPage';
 import BlogPage from './pages/BlogPage';
-import CareersPage from './pages/CareersPage';
 import ContactPage from './pages/ContactPage';
 import StatusPage from './pages/StatusPage';
 import CommunityPage from './pages/CommunityPage';
@@ -66,7 +65,6 @@ function App() {
     '/integrations': <IntegrationsPage />,
     '/about': <AboutPage />,
     '/blog': <BlogPage />,
-    '/careers': <CareersPage />,
     '/contact': <ContactPage />,
     '/status': <StatusPage />,
     '/community': <CommunityPage />,
@@ -86,7 +84,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ⚙️ handleSession (placeholder)
+  // ⚙️ handleSession
   const handleSession = (session: any) => {
     if (session) {
       setUser(session.user);
