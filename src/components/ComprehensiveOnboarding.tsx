@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap, Gift, Shield } from 'lucide-react';
 import { useStripe } from '../hooks/useStripe';
-import { supabase } from '../lib/supabase';
 
 interface GoogleAccount {
   name: string;
@@ -42,7 +41,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(false);
   const [gmbConnected, setGmbConnected] = useState(!!initialAccessToken);
-
+  
   const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
 
   const plans = [
@@ -129,7 +128,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const steps = [
     {
       icon: <Gift className="w-16 h-16 text-[#FBBC05]" />,
-      title: "Bienvenue !",
+      title: `Bienvenue ${user?.name?.split(' ')[0]} !`,
       description: "Félicitations ! Vous venez de rejoindre Starlinko, la plateforme qui va révolutionner la gestion de vos avis Google My Business. Commencez avec 14 jours d'essai gratuit !",
       color: "from-[#4285F4] to-[#34A853]",
       type: 'welcome'
@@ -137,8 +136,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     {
       icon: <Building2 className="w-16 h-16 text-[#4285F4]" />,
       title: "Connectez Google My Business",
-      description: gmbConnected
-        ? "Votre compte Google My Business est connecté ! Vous pourrez sélectionner vos établissements depuis la page Avis."
+      description: gmbConnected 
+        ? "Votre compte Google My Business est connecté ! Sélectionnez les établissements à gérer."
         : "Connectez votre compte Google My Business pour commencer à gérer vos avis automatiquement.",
       color: "from-[#34A853] to-[#FBBC05]",
       type: 'gmb-connection'
@@ -149,6 +148,27 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       description: "Sélectionnez le plan qui correspond le mieux à vos besoins. Tous les plans incluent 14 jours d'essai gratuit avec réponses IA incluses !",
       color: "from-[#FBBC05] to-[#EA4335]",
       type: 'plan-selection'
+    },
+    {
+      icon: <MessageSquare className="w-16 h-16 text-[#EA4335]" />,
+      title: "IA de réponse intelligente",
+      description: "Notre intelligence artificielle analyse chaque avis et génère des réponses personnalisées et professionnelles en quelques secondes. Testez gratuitement pendant 14 jours !",
+      color: "from-[#EA4335] to-[#4285F4]",
+      type: 'feature'
+    },
+    {
+      icon: <TrendingUp className="w-16 h-16 text-[#4285F4]" />,
+      title: "Tableau de bord analytique",
+      description: "Suivez l'évolution de votre réputation avec des statistiques détaillées : note moyenne, taux de réponse, tendances et rapports PDF mensuels.",
+      color: "from-[#4285F4] to-[#34A853]",
+      type: 'feature'
+    },
+    {
+      icon: <Smartphone className="w-16 h-16 text-[#34A853]" />,
+      title: "Notifications en temps réel",
+      description: "Recevez des alertes instantanées pour chaque nouvel avis et ne manquez jamais une opportunité d'interaction avec vos clients.",
+      color: "from-[#34A853] to-[#FBBC05]",
+      type: 'feature'
     },
     {
       icon: <Check className="w-16 h-16 text-[#FBBC05]" />,
@@ -200,54 +220,166 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     }
   };
 
-  // DO NOT auto-load GMB data - only load when user explicitly requests it
-  // This prevents unnecessary API calls during onboarding
-  // Data will be fetched when user navigates to the Reviews page
-
   const connectGoogleMyBusiness = async () => {
-    // Check if user is already authenticated with Google via Supabase
-    const { data: { session } } = await supabase.auth.getSession();
+    if (accessToken) {
+      // Already connected, fetch accounts and locations
+      await fetchAccounts();
+      return;
+    }
 
-    if (session && session.provider_token) {
-      console.log('🔑 Found provider token, setting up GMB connection');
-      setAccessToken(session.provider_token);
-      setGmbConnected(true);
-      console.log('✅ GMB connection confirmed - data will be fetched when needed');
-      // DO NOT fetch accounts here - let the user navigate to Reviews page first
-      // This saves API calls and improves onboarding speed
-    } else {
-      // User needs to authenticate with Google
-      alert('Veuillez d\'abord vous connecter avec Google depuis la page de connexion.');
+    setLoading(true);
+    
+    // Utiliser la variable d'environnement
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+    console.log('GMB Client ID:', clientId);
+    
+    if (!clientId || clientId === 'your_google_client_id_here') {
+      alert('Configuration Google OAuth manquante. Client ID: ' + clientId);
+      setLoading(false);
+      return;
+    }
+    
+    const redirectUri = window.location.origin;
+    console.log('GMB Redirect URI:', redirectUri);
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=code&` +
+      `scope=${encodeURIComponent('https://www.googleapis.com/auth/business.manage')}&` +
+      `access_type=offline&` +
+      `prompt=consent`;
+    
+    console.log('GMB Auth URL:', authUrl);
+    
+    const popup = window.open(
+      authUrl,
+      'google-oauth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+    
+    if (!popup) {
+      alert('Les popups sont bloquées. Veuillez autoriser les popups pour ce site.');
+      setLoading(false);
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        console.log('GMB Received auth code:', event.data.code);
+        handleOAuthCallback(event.data.code);
+        window.removeEventListener('message', handleMessage);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        setLoading(false);
+        window.removeEventListener('message', handleMessage);
+      }
+    }, 1000);
+  };
+
+  const handleOAuthCallback = async (code: string) => {
+    try {
+      console.log('GMB Exchanging code for token...');
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Supabase configuration missing in onboarding:', {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey,
+          url: supabaseUrl ? 'Present' : 'Missing',
+          key: supabaseKey ? 'Present' : 'Missing'
+        });
+        alert('Configuration Supabase manquante. Veuillez vérifier les variables d\'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.');
+        return;
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          action: 'exchange-code',
+          code,
+          redirectUri: window.location.origin,
+        }),
+      });
+
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Si ce n'est pas du JSON, c'est probablement une erreur HTML
+        const text = await response.text();
+        console.error('GMB Non-JSON response received:', text);
+        
+        if (text.includes('<!DOCTYPE')) {
+          throw new Error('Fonction google-oauth non disponible. Vérifiez la configuration Supabase.');
+        } else {
+          throw new Error(`Réponse inattendue du serveur GMB: ${text.substring(0, 100)}...`);
+        }
+      }
+      
+      console.log('GMB OAuth response:', data);
+      
+      if (response.ok) {
+        setAccessToken(data.access_token);
+        localStorage.setItem('accessToken', data.access_token);
+        setGmbConnected(true);
+        await fetchAccounts();
+      } else {
+        console.error('OAuth error:', data.error);
+        alert(`Erreur lors de la connexion Google My Business: ${data.error || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'échange du code:', error);
+      alert(`Erreur lors de la connexion GMB: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchAccounts = async () => {
-    console.log('🚀 fetchAccounts called with accessToken:', accessToken ? 'Present' : 'Missing');
     if (!accessToken) return;
 
     setLoading(true);
     try {
-      console.log('📡 Making request to google-oauth function...');
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseKey}`,
         },
         body: JSON.stringify({
           action: 'get-accounts',
           accessToken: accessToken,
         }),
       });
-      console.log('📡 Response status:', response.status);
       const data = await response.json();
-      console.log('DEBUG: Data from Google Accounts API:', data);
       
       if (data.accounts && data.accounts.length > 0) {
-        console.log('✅ Found', data.accounts.length, 'accounts');
         setAccounts(data.accounts);
         // Fetch locations for the first account
-        console.log('📞 Calling fetchLocations for first account...');
         await fetchLocations(data.accounts[0].name);
       } else {
         console.error('❌ Aucun compte trouvé dans onboarding:', data);
@@ -267,14 +399,19 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   };
 
   const fetchLocations = async (accountId: string) => {
-    console.log('🏢 fetchLocations called with accountId:', accountId);
     try {
-      console.log('📡 Making request to get locations...');
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseKey}`,
         },
         body: JSON.stringify({
           action: 'get-locations',
@@ -282,12 +419,9 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
           accountId: accountId,
         }),
       });
-      console.log('📡 Locations response status:', response.status);
       const data = await response.json();
-      console.log('DEBUG: Data from Google Locations API:', data);
       
       if (data.locations && data.locations.length > 0) {
-        console.log('✅ Found', data.locations.length, 'locations');
         setLocations(data.locations);
       } else {
         console.error('❌ Aucun établissement trouvé dans onboarding:', data);
@@ -337,17 +471,15 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
   const canProceed = () => {
     const currentStepData = steps[currentStep];
-
+    
     if (currentStepData.type === 'gmb-connection') {
-      // Only require GMB connection, not store selection
-      // Stores will be selected later when user visits Reviews page
-      return gmbConnected;
+      return gmbConnected && selectedStores.length > 0;
     }
-
+    
     if (currentStepData.type === 'plan-selection') {
       return selectedPlan !== '';
     }
-
+    
     return true;
   };
 
@@ -373,29 +505,46 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
             </button>
           ) : (
             <div className="space-y-4">
-              <div className="bg-[#34A853]/10 rounded-lg p-6 text-center">
-                <Check className="w-12 h-12 text-[#34A853] mx-auto mb-3" />
-                <p className="text-[#34A853] font-semibold text-lg mb-2">Google My Business connecté !</p>
-                <p className="text-gray-600 text-sm">
-                  Vos établissements seront chargés automatiquement lorsque vous accéderez à la page Avis.
-                </p>
+              <div className="bg-[#34A853]/10 rounded-lg p-4 text-center">
+                <Check className="w-8 h-8 text-[#34A853] mx-auto mb-2" />
+                <p className="text-[#34A853] font-medium">Google My Business connecté !</p>
               </div>
-
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-blue-700 font-medium">Prochaine étape</p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Une fois votre plan choisi, rendez-vous dans la section "Avis" pour sélectionner les établissements à gérer.
-                    </p>
+              
+              {locations.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">
+                    Sélectionnez vos établissements ({selectedStores.length} sélectionné{selectedStores.length > 1 ? 's' : ''})
+                  </h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {locations.map((location) => (
+                      <label
+                        key={location.name}
+                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedStores.includes(location.name)}
+                          onChange={() => toggleStoreSelection(location.name)}
+                          className="mr-3 h-4 w-4 text-[#4285F4] focus:ring-[#4285F4] border-gray-300 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 text-sm">
+                            {location.locationName}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {location.primaryCategory?.displayName}
+                          </div>
+                          {location.address && (
+                            <div className="text-xs text-gray-400">
+                              {location.address.locality}, {location.address.administrativeArea}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>

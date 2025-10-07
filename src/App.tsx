@@ -1,6 +1,5 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase';
 import SuperAdmin from './pages/SuperAdmin';
 import AuthPage from './components/AuthPage';
 import LandingPage from './components/LandingPage';
@@ -9,16 +8,10 @@ import ComprehensiveOnboarding from './components/ComprehensiveOnboarding';
 import MobileMenu from './components/MobileMenu';
 import Dashboard from './components/Dashboard';
 import GoogleReviews from './pages/GoogleReviews';
-import GoogleMyBusinessPage from './pages/GoogleMyBusinessPage';
 import SettingsPage from './components/SettingsPage';
 import SuccessPage from './pages/SuccessPage';
 import AISettingsPage from './components/AISettingsPage';
-import DesktopDashboard from './components/DesktopDashboard';
 import { useReviewsNotifications } from './hooks/useReviewsNotifications';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import CookiesPage from './pages/CookiesPage';
-import GDPRPage from './pages/GDPRPage';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
@@ -27,10 +20,14 @@ function App() {
   const [accessToken, setAccessToken] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
-  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
-  // Notifications hook - must be at top level
+  // Check if current path is /superadmin
+  const isSuperAdminRoute = window.location.pathname === '/superadmin';
+  
+  // Check if current path is /success
+  const isSuccessRoute = window.location.pathname === '/success';
+
+  // Notifications hook
   const {
     notifications,
     unreadCount,
@@ -39,168 +36,138 @@ function App() {
     clearNotifications,
   } = useReviewsNotifications(selectedLocationId);
 
-  // Check if current path is /superadmin
-  const isSuperAdminRoute = window.location.pathname === '/superadmin';
-  
-  // Check if current path is /success
-  const isSuccessRoute = window.location.pathname === '/success';
+  // Check for existing session
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    const savedToken = localStorage.getItem('accessToken');
+    const savedAccountId = localStorage.getItem('selectedAccountId');
+    const savedLocationId = localStorage.getItem('selectedLocationId');
 
-  // Check for legal pages routes
-  const isPrivacyRoute = window.location.pathname === '/privacy';
-  const isTermsRoute = window.location.pathname === '/terms';
-  const isCookiesRoute = window.location.pathname === '/cookies';
-  const isGDPRRoute = window.location.pathname === '/gdpr';
-
-  // Consolidated session handling function
-  const handleSession = (session: any, isInitialCheck: boolean = false) => {
-    console.log('🔍 handleSession called with session:', !!session);
-    console.log('📍 Current location:', window.location.pathname);
-    console.log('🎬 Is initial check:', isInitialCheck);
-
-    const isRootPath = window.location.pathname === '/' || window.location.pathname === '';
-
-    if (session) {
-      console.log('✅ Valid session found');
-      console.log('👤 User ID:', session.user.id);
-      console.log('📧 User email:', session.user.email);
-
-      // Create user data from session
-      const userData = {
-        id: session.user.id,
-        name: session.user.user_metadata.full_name || session.user.user_metadata.name || session.user.email,
-        email: session.user.email,
-        picture: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.email)}&background=4285F4&color=fff`,
-        authMethod: 'google'
-      };
-
-      console.log('👤 Created user data:', userData);
-
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-
-      // Set access token from session or localStorage
-      let token = '';
-      if (session.provider_token) {
-        token = session.provider_token;
-        localStorage.setItem('accessToken', token);
-        console.log('🔑 Access token saved:', token ? 'Present' : 'Missing');
-      } else {
-        // Try to get from localStorage for restored sessions
-        token = localStorage.getItem('accessToken') || '';
-        console.log('🔑 Access token from localStorage:', token ? 'Present' : 'Missing');
-      }
-      setAccessToken(token);
-
-      // Load saved account and location IDs
-      const savedAccountId = localStorage.getItem('selectedAccountId');
-      const savedLocationId = localStorage.getItem('selectedLocationId');
-      console.log('🏢 Saved account ID:', savedAccountId);
-      console.log('📍 Saved location ID:', savedLocationId);
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+      if (savedToken) setAccessToken(savedToken);
       if (savedAccountId) setSelectedAccountId(savedAccountId);
       if (savedLocationId) setSelectedLocationId(savedLocationId);
-
-      // Check trial signup flag and onboarding status
-      const isTrialSignup = localStorage.getItem('isTrialSignup') === 'true';
-      const isDirectOnboarding = localStorage.getItem('directOnboarding') === 'true';
-
-      const completedOnboarding = localStorage.getItem('onboardingCompleted');
-      const hasSelectedLocation = !!savedLocationId;
-
-      console.log('🔍 Session handling - isTrialSignup:', isTrialSignup);
-      console.log('🔍 Session handling - isDirectOnboarding:', isDirectOnboarding);
-      console.log('🔍 Session handling - completedOnboarding:', completedOnboarding);
-      console.log('🔍 Session handling - hasSelectedLocation:', hasSelectedLocation);
-      console.log('📝 All localStorage keys:', Object.keys(localStorage));
-      console.log('📝 localStorage onboardingCompleted value:', localStorage.getItem('onboardingCompleted'));
-
-     // Priority 1: If user clicked "Essayer gratuitement", always go to onboarding
-     if (isTrialSignup || isDirectOnboarding) {
-       console.log('✅ Trial signup detected - redirecting to onboarding');
-       console.log('🎯 Setting currentView to: onboarding');
-       // Clear the trial signup flags after reading them
-       localStorage.removeItem('isTrialSignup');
-       localStorage.removeItem('directOnboarding');
-       console.log('🧹 Cleared isTrialSignup and directOnboarding from localStorage');
-       setCurrentView('onboarding');
-     }
-     // Priority 2: If user has completed onboarding, go to dashboard
-     // Note: Location selection is now optional and can be done later in Reviews page
-     else if (completedOnboarding === 'true') {
-       console.log('✅ Onboarding completed - redirecting to app dashboard');
-       console.log('🎯 Setting currentView to: app');
-       console.log('📍 Selected location:', hasSelectedLocation ? 'Yes' : 'No (will be selected in Reviews page)');
-       setHasCompletedOnboarding(true);
-       setCurrentView('app');
-     }
-     // Priority 3: User has not completed onboarding, send to onboarding
-     else {
-       console.log('⚠️ User has not completed onboarding - redirecting to onboarding');
-       console.log('🔍 Reason: completedOnboarding =', completedOnboarding);
-       console.log('🎯 Setting currentView to: onboarding');
-       setCurrentView('onboarding');
-     }
+      setCurrentView('app');
     } else {
-      console.log('❌ No session found - user not authenticated');
-
-      // No session - clear everything
-      setUser(null);
-      setAccessToken('');
-      setSelectedAccountId('');
-      setSelectedLocationId('');
-      setCurrentPage('dashboard');
-      setHasCompletedOnboarding(false);
-      console.log('🧹 Clearing all user data from localStorage');
-      localStorage.removeItem('user');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('selectedAccountId');
-      localStorage.removeItem('selectedLocationId');
-      localStorage.removeItem('onboardingCompleted');
-      localStorage.removeItem('isTrialSignup');
-      localStorage.removeItem('directOnboarding');
-
-      // Always show landing page when not authenticated
-      console.log('🎯 No session - Setting currentView to: landing');
+      // Show landing page for new users
       setCurrentView('landing');
     }
-  };
-  // Initialize Supabase auth state listener
-  useEffect(() => {
-    console.log('🚀 Initializing Supabase auth state listener');
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔍 Initial session check:', !!session);
-      handleSession(session, true); // Pass true for initial check
-      setIsInitialLoad(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state change event:', event);
-      console.log('🔍 Session in auth change:', !!session);
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        console.log('✅ User signed in or token refreshed');
-        handleSession(session, false); // Not initial check
-      } else if (event === 'SIGNED_OUT') {
-        console.log('❌ User signed out');
-        handleSession(null, false); // Not initial check
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
+  // Listen for OAuth popup messages
+  useEffect(() => {
+    // Handle OAuth callback directly in main window (not popup)
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code && !user) {
+      console.log('OAuth callback detected with code:', code);
+      handleDirectOAuthCallback(code);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS' && event.data.code) {
+        // This will be handled by AuthPage component
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const handleDirectOAuthCallback = async (code: string) => {
+    try {
+      console.log('Processing OAuth callback...');
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      console.log('Environment variables check:', {
+        supabaseUrl: supabaseUrl || 'MISSING',
+        supabaseKey: supabaseKey ? 'Present' : 'MISSING',
+        allEnvVars: import.meta.env
+      });
+      
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Supabase configuration missing');
+        alert(`Configuration Supabase manquante. URL: ${supabaseUrl || 'MISSING'}, Key: ${supabaseKey ? 'Present' : 'MISSING'}`);
+        return;
+      }
+      
+      if (supabaseUrl.includes('your-project-id')) {
+        alert('ERREUR: Les variables d\'environnement ne sont pas configurées. Veuillez créer un fichier .env avec vos vraies valeurs Supabase.');
+        return;
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          action: 'exchange-code',
+          code,
+          redirectUri: window.location.origin,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.user && data.access_token) {
+        console.log('OAuth success, setting user data');
+        setUser(data.user);
+        setAccessToken(data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('accessToken', data.access_token);
+        setCurrentView('google-setup');
+      } else {
+        console.error('OAuth error:', data);
+        alert(`Erreur lors de la connexion: ${data.error || 'Erreur inconnue'}`);
+      }
+    } catch (error) {
+      console.error('Error processing OAuth callback:', error);
+      alert(`Erreur lors de la connexion: ${error.message}`);
+    }
+  };
+
+  // Check if we're in OAuth popup
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code && window.opener) {
+      // We're in a popup, send code to parent
+      window.opener.postMessage({
+        type: 'GOOGLE_AUTH_SUCCESS',
+        code: code
+      }, window.location.origin);
+      window.close();
+    }
+  }, []);
 
   const handleGoogleAuth = (userData: any, token: string) => {
-    // Cette fonction n'est plus utilisée - l'OAuth est géré directement dans AuthPage
-    // et la logique de redirection est dans handleSession
+    setUser(userData);
+    setAccessToken(token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('accessToken', token);
+    setCurrentView('google-setup');
   };
 
   const handleEmailAuth = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentView('google-setup');
+    setCurrentView('onboarding');
+  };
+
+  const handleGetStarted = () => {
+    setCurrentView('auth');
   };
 
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
@@ -208,20 +175,10 @@ function App() {
     setSelectedLocationId(locationId);
     localStorage.setItem('selectedAccountId', accountId);
     localStorage.setItem('selectedLocationId', locationId);
-    
-    // Check if user has already completed onboarding
-    const completedOnboarding = localStorage.getItem('onboardingCompleted');
-    if (completedOnboarding) {
-      setHasCompletedOnboarding(true);
-      setCurrentView('app');
-    } else {
-      setCurrentView('onboarding');
-    }
+    setCurrentView('onboarding');
   };
 
   const handleOnboardingComplete = () => {
-    localStorage.setItem('onboardingCompleted', 'true');
-    setHasCompletedOnboarding(true);
     setCurrentView('app');
   };
 
@@ -229,8 +186,6 @@ function App() {
     // Save selected stores and plan
     localStorage.setItem('selectedStores', JSON.stringify(selectedStores));
     localStorage.setItem('selectedPlan', selectedPlan);
-    localStorage.setItem('onboardingCompleted', 'true');
-    setHasCompletedOnboarding(true);
     
     // Set the first selected store as the current location
     if (selectedStores.length > 0) {
@@ -241,41 +196,17 @@ function App() {
     setCurrentView('app');
   };
 
-  const handleGetStarted = () => {
-    setCurrentView('auth');
-  };
-
-  const handleGoogleTokenExpired = async () => {
-    try {
-      console.log('Token expired, initiating Google re-authentication...');
-
-      setAccessToken('');
-      localStorage.removeItem('accessToken');
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-        }
-      });
-
-      if (error) {
-        console.error('❌ Re-authentication error:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error during Google re-authentication:', error);
-      setCurrentView('auth');
-    }
-  };
   const handleLogout = () => {
-    // Use Supabase signOut for all users
-    supabase.auth.signOut();
+    setUser(null);
+    setAccessToken('');
+    setSelectedAccountId('');
+    setSelectedLocationId('');
+    setCurrentPage('dashboard');
+    localStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('selectedAccountId');
+    localStorage.removeItem('selectedLocationId');
+    setCurrentView('landing');
   };
 
   // Handle Super Admin route
@@ -286,23 +217,6 @@ function App() {
   // Handle Success route
   if (isSuccessRoute) {
     return <SuccessPage />;
-  }
-
-  // Handle legal pages routes
-  if (isPrivacyRoute) {
-    return <PrivacyPage />;
-  }
-  
-  if (isTermsRoute) {
-    return <TermsPage />;
-  }
-  
-  if (isCookiesRoute) {
-    return <CookiesPage />;
-  }
-  
-  if (isGDPRRoute) {
-    return <GDPRPage />;
   }
 
   const handleNavigate = (page: string) => {
@@ -329,7 +243,6 @@ function App() {
       <GoogleBusinessSetup
         accessToken={accessToken}
         onSetupComplete={handleGoogleSetupComplete}
-        onTokenExpired={handleGoogleTokenExpired}
       />
     );
   }
@@ -342,32 +255,6 @@ function App() {
         onComplete={handleOnboardingCompleteWithData} 
       />
     );
-  }
-
-  // Handle app view - can be either mobile or desktop based on screen size
-  if (currentView === 'app') {
-    // Check if we're on a desktop screen (you can adjust this breakpoint)
-    const isDesktop = window.innerWidth >= 1024;
-    
-    if (isDesktop) {
-      return (
-        <DesktopDashboard 
-          user={user}
-          accessToken={accessToken}
-          selectedLocationId={selectedLocationId}
-          setSelectedLocationId={setSelectedLocationId}
-          selectedAccountId={selectedAccountId}
-          onNavigate={handleNavigate}
-          onLogout={handleLogout}
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onMarkAsRead={markAsRead}
-          onMarkAllAsRead={markAllAsRead}
-          onClearAll={clearNotifications}
-          onTokenExpired={handleGoogleTokenExpired}
-        />
-      );
-    }
   }
 
   return (
@@ -387,17 +274,6 @@ function App() {
       {currentPage === 'dashboard' && <Dashboard user={user} />}
       {currentPage === 'reviews' && (
         <GoogleReviews 
-          user={user} 
-          accessToken={accessToken}
-          selectedLocationId={selectedLocationId}
-          setSelectedLocationId={setSelectedLocationId}
-          onNavigate={handleNavigate}
-          selectedAccountId={selectedAccountId}
-          onTokenExpired={handleGoogleTokenExpired}
-        />
-      )}
-      {currentPage === 'google-my-business' && (
-        <GoogleMyBusinessPage 
           user={user} 
           accessToken={accessToken}
           selectedLocationId={selectedLocationId}
