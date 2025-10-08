@@ -59,7 +59,7 @@ const TermsPage: React.FC = () => {
               </h2>
               <p className="text-gray-700">
                 En accédant ou en utilisant le service <strong>Starlinko</strong>, développé et
-                exploité par la société <strong>SWEET DECO</strong>, vous acceptez sans réserve les
+                exploité par la société <strong>Decora Home - SWEET DECO</strong>, vous acceptez sans réserve les
                 présentes Conditions Générales d’Utilisation (CGU). Si vous n’acceptez pas ces
                 conditions, vous ne devez pas utiliser la plateforme.
               </p>
@@ -130,7 +130,7 @@ const TermsPage: React.FC = () => {
               5. Propriété intellectuelle
             </h2>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>Starlinko et son contenu sont la propriété exclusive de SWEET DECO.</li>
+              <li>Starlinko et son contenu sont la propriété exclusive de Decora Home - SWEET DECO.</li>
               <li>Les utilisateurs conservent la propriété de leurs données et établissements.</li>
               <li>
                 Toute reproduction, copie ou diffusion non autorisée du logiciel est interdite.
@@ -142,7 +142,7 @@ const TermsPage: React.FC = () => {
             </h2>
             <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 mb-6">
               <p className="text-gray-700">
-                Le service est fourni “tel quel”. SWEET DECO ne saurait être tenue responsable de
+                Le service est fourni “tel quel”. Decora Home - SWEET DECO ne saurait être tenue responsable de
                 tout dommage indirect, perte de données ou interruption due à des causes externes
                 (pannes réseau, API Google, etc.).
               </p>
@@ -154,7 +154,7 @@ const TermsPage: React.FC = () => {
                 L’utilisateur peut supprimer son compte à tout moment via l’interface Starlinko.
               </li>
               <li>
-                SWEET DECO peut suspendre un compte en cas de fraude, non-paiement ou violation des
+                Decora Home - SWEET DECO peut suspendre un compte en cas de fraude, non-paiement ou violation des
                 présentes conditions.
               </li>
               <li>
@@ -166,7 +166,7 @@ const TermsPage: React.FC = () => {
               8. Modifications et droit applicable
             </h2>
             <p className="mb-8">
-              SWEET DECO se réserve le droit de modifier les présentes CGU à tout moment. Les
+              Decora Home - SWEET DECO se réserve le droit de modifier les présentes CGU à tout moment. Les
               utilisateurs seront informés par e-mail avant leur entrée en vigueur.  
               Le présent contrat est régi par le droit français.  
               En cas de litige, les tribunaux compétents seront ceux du ressort de Paris, France.
@@ -198,13 +198,13 @@ const TermsPage: React.FC = () => {
               <div className="flex items-center mb-2">
                 <Building className="w-4 h-4 text-gray-400 mr-2" />
                 <span>
-                  Éditeur : <strong>SWEET DECO</strong> – 280 Boulevard de la Boissière, 93100
+                  Éditeur : <strong>Decora Home - SWEET DECO</strong> – 280 Boulevard de la Boissière, 93100
                   Montreuil, France
                 </span>
               </div>
               <p>SIRET : 897 801 775 00015 – contact@starlinko.com</p>
               <p className="mt-2">
-                © {new Date().getFullYear()} SWEET DECO / Starlinko – Tous droits réservés.
+                © {new Date().getFullYear()} Decora Home - SWEET DECO / Starlinko – Tous droits réservés.
               </p>
             </div>
           </div>
