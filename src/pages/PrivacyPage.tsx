@@ -206,7 +206,7 @@ const PrivacyPage: React.FC = () => {
               <div className="flex items-center mb-2">
                 <Building className="w-4 h-4 text-gray-400 mr-2" />
                 <span>
-                  Éditeur : <strong>Decora Home - Decora Home - SWEET DECO</strong> – 280 Boulevard de la Boissière, 93100
+                  Éditeur : <strong>Decora Home - SWEET DECO</strong> – 280 Boulevard de la Boissière, 93100
                   Montreuil, France
                 </span>
               </div>
