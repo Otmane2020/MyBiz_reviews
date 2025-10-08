@@ -57,7 +57,7 @@ const PrivacyPage: React.FC = () => {
               </h2>
               <p className="text-gray-700">
                 Chez <strong>Starlinko</strong>, marque développée par la société{' '}
-                <strong>SWEET DECO</strong>, nous nous engageons à protéger votre vie privée et vos
+                <strong>Decora Home - Decora Home - SWEET DECO</strong>, nous nous engageons à protéger votre vie privée et vos
                 données personnelles. Cette politique décrit comment vos informations sont
                 collectées, utilisées et protégées lorsque vous utilisez notre plateforme SaaS
                 Starlinko.
@@ -113,7 +113,7 @@ const PrivacyPage: React.FC = () => {
 
             <div className="bg-[#EA4335]/5 border-l-4 border-[#EA4335] rounded-lg p-4 mb-6">
               <p className="text-gray-700">
-                <strong>Engagement :</strong> Starlinko et SWEET DECO ne vendent, ne louent et ne
+                <strong>Engagement :</strong> Starlinko et Decora Home - Decora Home - SWEET DECO ne vendent, ne louent et ne
                 partagent jamais vos données personnelles à des tiers à des fins commerciales.
               </p>
             </div>
@@ -206,12 +206,12 @@ const PrivacyPage: React.FC = () => {
               <div className="flex items-center mb-2">
                 <Building className="w-4 h-4 text-gray-400 mr-2" />
                 <span>
-                  Éditeur : <strong>SWEET DECO</strong> – 280 Boulevard de la Boissière, 93100
+                  Éditeur : <strong>Decora Home - Decora Home - SWEET DECO</strong> – 280 Boulevard de la Boissière, 93100
                   Montreuil, France
                 </span>
               </div>
               <p>SIRET : 897 801 775 00015 – contact@starlinko.com</p>
-              <p className="mt-2">© {new Date().getFullYear()} SWEET DECO / Starlinko – Tous droits réservés.</p>
+              <p className="mt-2">© {new Date().getFullYear()} Decora Home - Decora Home - SWEET DECO / Starlinko – Tous droits réservés.</p>
             </div>
           </div>
         </div>
