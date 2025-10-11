@@ -1,5 +1,5 @@
-import React from 'react';
-import { Star, MessageSquare, Smartphone, TrendingUp, Users, Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, MessageSquare, Smartphone, TrendingUp, Users, Shield, Crown, Zap, Check } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 
 interface LandingPageProps {
@@ -7,6 +7,79 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const plans = [
+    {
+      id: 'starter',
+      name: 'Starter',
+      subtitle: 'Découverte',
+      monthlyPrice: '9,90€',
+      annualPrice: '95,04€',
+      period: '/mois',
+      annualPeriod: '/an',
+      description: 'Parfait pour débuter',
+      features: [
+        '1 établissement Google',
+        '50 avis/réponses automatiques par mois',
+        'Réponses IA basiques',
+        'Alertes email sur nouveaux avis',
+        'Tableau de bord basique'
+      ],
+      icon: <Star className="w-6 h-6" />,
+      color: 'from-[#4285F4] to-[#34A853]',
+      popular: false
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      subtitle: 'Visibilité',
+      monthlyPrice: '29,90€',
+      annualPrice: '287,04€',
+      period: '/mois',
+      annualPeriod: '/an',
+      description: 'Pour développer votre visibilité',
+      features: [
+        'Jusqu\'à 3 établissements',
+        '300 avis/réponses automatiques par mois',
+        'Réponses IA premium',
+        'Notifications temps réel',
+        'Statistiques avancées',
+        'Support prioritaire'
+      ],
+      icon: <Crown className="w-6 h-6" />,
+      color: 'from-[#FBBC05] to-[#EA4335]',
+      popular: true
+    },
+    {
+      id: 'business',
+      name: 'Business',
+      subtitle: 'Performance',
+      monthlyPrice: '79,90€',
+      annualPrice: '767,04€',
+      period: '/mois',
+      annualPeriod: '/an',
+      description: 'Solution complète pour entreprises',
+      features: [
+        'Établissements illimités',
+        '1000 avis/réponses automatiques par mois',
+        'IA premium + posts automatiques',
+        'API & webhooks',
+        'Manager dédié',
+        'Rapports personnalisés'
+      ],
+      icon: <Zap className="w-6 h-6" />,
+      color: 'from-[#EA4335] to-[#4285F4]',
+      popular: false
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05]">
@@ -17,6 +90,29 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <div className="flex items-center">
               <StarlinkoLogo size="md" showGoogleIcon={true} className="text-white" />
             </div>
+
+            {/* Navigation Menu */}
+            <nav className="hidden md:flex items-center space-x-8">
+              <button
+                onClick={() => scrollToSection('features')}
+                className="text-white/90 hover:text-white transition-colors font-medium"
+              >
+                Fonctionnalités
+              </button>
+              <button
+                onClick={() => scrollToSection('pricing')}
+                className="text-white/90 hover:text-white transition-colors font-medium"
+              >
+                Tarifs
+              </button>
+              <button
+                onClick={() => scrollToSection('stats')}
+                className="text-white/90 hover:text-white transition-colors font-medium"
+              >
+                À propos
+              </button>
+            </nav>
+
             <div className="flex items-center space-x-4">
               <button
                 onClick={onGetStarted}
@@ -36,7 +132,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-16 px-4 min-h-screen flex items-center">
+      <section id="hero" className="pt-20 pb-16 px-4 min-h-screen flex items-center">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
             Connectez vos avis Google
@@ -61,7 +157,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </section>
 
       {/* Features */}
-      <section className="py-16 bg-white/10 backdrop-blur-md">
+      <section id="features" className="py-16 bg-white/10 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-white text-center mb-12">
             Pourquoi choisir Starlinko ?
@@ -120,8 +216,130 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="py-16 bg-white/10 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Choisissez votre plan
+            </h2>
+            <p className="text-xl text-white/90 mb-8">
+              14 jours d'essai gratuit • Sans engagement • Résiliable à tout moment
+            </p>
+
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center mb-8">
+              <div className="bg-white/20 backdrop-blur-md rounded-full p-1 flex">
+                <button
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                    billingCycle === 'monthly'
+                      ? 'bg-white text-[#4285F4] shadow-lg'
+                      : 'text-white hover:text-white/80'
+                  }`}
+                >
+                  Mensuel
+                </button>
+                <button
+                  onClick={() => setBillingCycle('annual')}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all relative ${
+                    billingCycle === 'annual'
+                      ? 'bg-white text-[#4285F4] shadow-lg'
+                      : 'text-white hover:text-white/80'
+                  }`}
+                >
+                  Annuel
+                  <span className="absolute -top-2 -right-2 bg-[#34A853] text-white text-xs px-2 py-0.5 rounded-full">
+                    -20%
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing Cards */}
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all hover:scale-105 ${
+                  plan.popular ? 'ring-4 ring-[#FBBC05]' : ''
+                }`}
+              >
+                {plan.popular && (
+                  <div className="bg-gradient-to-r from-[#FBBC05] to-[#EA4335] text-white text-center py-2 font-semibold text-sm">
+                    ⭐ Plus populaire
+                  </div>
+                )}
+
+                <div className="p-8">
+                  {/* Plan Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`bg-gradient-to-r ${plan.color} p-3 rounded-xl text-white`}>
+                      {plan.icon}
+                    </div>
+                  </div>
+
+                  <h3 className="text-2xl font-bold text-gray-900 mb-1">{plan.name}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{plan.subtitle}</p>
+
+                  {/* Price */}
+                  <div className="mb-6">
+                    <div className="flex items-baseline">
+                      <span className="text-4xl font-bold text-gray-900">
+                        {billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice}
+                      </span>
+                      <span className="text-gray-600 ml-2">
+                        {billingCycle === 'monthly' ? plan.period : plan.annualPeriod}
+                      </span>
+                    </div>
+                    {billingCycle === 'annual' && (
+                      <p className="text-sm text-[#34A853] font-medium mt-1">
+                        Économisez 20% par an
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-gray-600 mb-6">{plan.description}</p>
+
+                  {/* CTA Button */}
+                  <button
+                    onClick={onGetStarted}
+                    className={`w-full py-3 rounded-lg font-semibold transition-all transform hover:scale-105 ${
+                      plan.popular
+                        ? 'bg-gradient-to-r from-[#FBBC05] to-[#EA4335] text-white shadow-lg'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    Essayer gratuitement
+                  </button>
+
+                  {/* Features List */}
+                  <div className="mt-6 space-y-3">
+                    {plan.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-start">
+                        <Check className="w-5 h-5 text-[#34A853] mr-2 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-gray-700">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Additional Info */}
+          <div className="text-center mt-12">
+            <p className="text-white/90 text-sm">
+              💳 Tous les plans incluent : Paiement sécurisé • Support client • Mises à jour gratuites
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Stats */}
-      <section className="py-16">
+      <section id="stats" className="py-16">
         <div className="max-w-4xl mx-auto px-4">
           <h2 className="text-2xl font-bold text-white text-center mb-8">
             Ils nous font confiance
