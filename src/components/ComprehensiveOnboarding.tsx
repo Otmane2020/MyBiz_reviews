@@ -46,6 +46,73 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   
   const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
 
+  // Save selected locations to database
+  const saveLocationsToDatabase = async () => {
+    if (!user?.id || selectedStores.length === 0) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Get the first account ID from the accounts list
+      const accountId = accounts[0]?.name || '';
+
+      // Save Google account if not already saved
+      if (accessToken && accountId) {
+        const { error: accountError } = await supabase
+          .from('google_accounts')
+          .upsert({
+            user_id: user.id,
+            account_id: accountId,
+            account_name: accounts[0]?.type || 'Google Account',
+            access_token: accessToken,
+            token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+            scopes: ['https://www.googleapis.com/auth/business.manage']
+          }, {
+            onConflict: 'user_id,account_id'
+          });
+
+        if (accountError) {
+          console.error('Error saving Google account:', accountError);
+        }
+      }
+
+      // Get google_account_id for locations
+      const { data: googleAccounts } = await supabase
+        .from('google_accounts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      const googleAccountId = googleAccounts?.id;
+
+      // Save all selected locations
+      for (const locationName of selectedStores) {
+        const location = locations.find(l => l.name === locationName);
+        if (!location) continue;
+
+        await supabase
+          .from('locations')
+          .upsert({
+            user_id: user.id,
+            google_account_id: googleAccountId,
+            location_id: location.name,
+            location_name: location.locationName,
+            address: location.address ?
+              `${location.address.locality}, ${location.address.administrativeArea}` : '',
+            category: location.primaryCategory?.displayName || '',
+            is_active: true,
+            last_synced_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,location_id'
+          });
+      }
+    } catch (error) {
+      console.error('Error saving locations to database:', error);
+    }
+  };
+
   const plans = [
     {
       id: 'starter',
@@ -167,19 +234,21 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     }
 
     try {
+      // Save selected locations to database
+      await saveLocationsToDatabase();
+
       // Find the corresponding Stripe product and price
       const stripeProduct = products.find(p => p.id === `starlinko_${planId}`);
       if (!stripeProduct) {
-        // If products not loaded yet, proceed with onboarding
         console.warn('Stripe products not loaded, proceeding with onboarding');
         onComplete(selectedStores, selectedPlan);
         return;
       }
 
-      const price = stripeProduct.prices.find(p => 
+      const price = stripeProduct.prices.find(p =>
         p.metadata.billing_cycle === billingCycle
       );
-      
+
       if (!price) {
         console.warn('Price not found, proceeding with onboarding');
         onComplete(selectedStores, selectedPlan);
@@ -196,7 +265,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       );
     } catch (error) {
       console.error('Error subscribing:', error);
-      // Fallback to completing onboarding
       onComplete(selectedStores, selectedPlan);
     }
   };

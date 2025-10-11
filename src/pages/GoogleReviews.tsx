@@ -93,7 +93,6 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         throw new Error(data.error.message || 'Erreur API comptes');
       }
     } catch (err: any) {
-      console.error('Erreur fetchAccounts:', err);
       alert('Erreur lors de la connexion à Google My Business.');
     }
   };
@@ -129,7 +128,6 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         throw new Error(data.error.message || 'Erreur API locations');
       }
     } catch (err: any) {
-      console.error('Erreur fetchLocations:', err);
       if (err.message.includes('401') && onTokenExpired) onTokenExpired();
     }
   };
@@ -140,11 +138,18 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
     setLoading(true);
     try {
+      const { supabase } = await import('../lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error('No active session');
+      }
+
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           accessToken,

@@ -31,6 +31,19 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Get user ID from Authorization header
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('Authorization header is required')
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !user) {
+      throw new Error('Unauthorized: Invalid token')
+    }
+
     const { accessToken, locationId } = await req.json()
 
     if (!accessToken || !locationId) {
@@ -81,6 +94,7 @@ serve(async (req: Request) => {
         const reviewData = {
           review_id: reviewId,
           location_id: locationId,
+          user_id: user.id,
           author: review.reviewer?.displayName || 'Anonyme',
           rating: ratingMap[review.starRating] || 5,
           comment: review.comment || '',
