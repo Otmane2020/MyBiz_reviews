@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap, Gift, Shield } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap, Gift, Shield, Search, Loader2 } from 'lucide-react';
 import { useStripe } from '../hooks/useStripe';
 import { supabase } from '../lib/supabase';
+import { searchBusinessLocations, saveLocationToDatabase, BusinessLocation } from '../lib/dataforseo';
 
 interface GoogleAccount {
   name: string;
@@ -43,14 +44,28 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [loading, setLoading] = useState(false);
   const [gmbConnected, setGmbConnected] = useState(!!initialAccessToken);
   const [autoLoadingGMB, setAutoLoadingGMB] = useState(false);
+  const [businessName, setBusinessName] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [searchedLocations, setSearchedLocations] = useState<BusinessLocation[]>([]);
+  const [searchingDataForSEO, setSearchingDataForSEO] = useState(false);
+  const [selectedDataForSEOLocation, setSelectedDataForSEOLocation] = useState<BusinessLocation | null>(null);
   
   const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
 
   // Save selected locations to database
   const saveLocationsToDatabase = async () => {
-    if (!user?.id || selectedStores.length === 0) return;
+    if (!user?.id) return;
 
     try {
+      // Save DataForSEO location if selected
+      if (selectedDataForSEOLocation) {
+        await saveLocationToDatabase(user.id, selectedDataForSEOLocation);
+        return;
+      }
+
+      // Save Google OAuth locations if selected
+      if (selectedStores.length === 0) return;
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
@@ -203,13 +218,20 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       type: 'welcome'
     },
     {
-      icon: <Building2 className="w-16 h-16 text-[#4285F4]" />,
-      title: "Connectez Google My Business",
-      description: gmbConnected 
-        ? "Votre compte Google My Business est connecté ! Sélectionnez les établissements à gérer."
-        : "Connectez votre compte Google My Business pour commencer à gérer vos avis automatiquement.",
+      icon: <Search className="w-16 h-16 text-[#4285F4]" />,
+      title: "Trouvez votre établissement",
+      description: "Indiquez le nom de votre établissement et nous le trouverons automatiquement sur Google Business.",
       color: "from-[#34A853] to-[#FBBC05]",
-      type: 'gmb-connection'
+      type: 'business-search'
+    },
+    {
+      icon: <Building2 className="w-16 h-16 text-[#4285F4]" />,
+      title: "Sélectionnez votre établissement",
+      description: selectedDataForSEOLocation
+        ? "Établissement sélectionné ! Nous allons surveiller vos avis automatiquement."
+        : "Choisissez votre établissement dans la liste ci-dessous.",
+      color: "from-[#34A853] to-[#FBBC05]",
+      type: 'location-selection'
     },
     {
       icon: <CreditCard className="w-16 h-16 text-[#34A853]" />,
@@ -423,22 +445,182 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     setCurrentStep(step);
   };
 
+  const searchBusinessWithDataForSEO = async () => {
+    if (!businessName.trim()) {
+      alert('Veuillez saisir le nom de votre établissement');
+      return;
+    }
+
+    setSearchingDataForSEO(true);
+    try {
+      const results = await searchBusinessLocations(businessName, businessAddress);
+      setSearchedLocations(results);
+
+      if (results.length === 0) {
+        alert('Aucun établissement trouvé. Vérifiez le nom et l\'adresse.');
+      }
+    } catch (error) {
+      console.error('Error searching business:', error);
+      alert('Erreur lors de la recherche. Veuillez réessayer.');
+    } finally {
+      setSearchingDataForSEO(false);
+    }
+  };
+
+  const selectDataForSEOLocation = (location: BusinessLocation) => {
+    setSelectedDataForSEOLocation(location);
+  };
+
   const canProceed = () => {
     const currentStepData = steps[currentStep];
-    
-    if (currentStepData.type === 'gmb-connection') {
-      return gmbConnected && selectedStores.length > 0;
+
+    if (currentStepData.type === 'business-search') {
+      return businessName.trim().length > 0;
     }
-    
+
+    if (currentStepData.type === 'location-selection') {
+      return selectedDataForSEOLocation !== null;
+    }
+
     if (currentStepData.type === 'plan-selection') {
       return selectedPlan !== '';
     }
-    
+
     return true;
   };
 
   const renderStepContent = () => {
     const currentStepData = steps[currentStep];
+
+    if (currentStepData.type === 'business-search') {
+      return (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nom de votre établissement *
+              </label>
+              <input
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="Ex: Decora Home Lognes"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ville ou adresse (optionnel)
+              </label>
+              <input
+                type="text"
+                value={businessAddress}
+                onChange={(e) => setBusinessAddress(e.target.value)}
+                placeholder="Ex: Lognes, France"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
+              />
+            </div>
+
+            <button
+              onClick={searchBusinessWithDataForSEO}
+              disabled={searchingDataForSEO || !businessName.trim()}
+              className="w-full flex items-center justify-center px-6 py-4 bg-[#4285F4] text-white rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] disabled:opacity-50 transition-colors duration-200 font-medium"
+            >
+              {searchingDataForSEO ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                  Recherche en cours...
+                </>
+              ) : (
+                <>
+                  <Search className="w-5 h-5 mr-3" />
+                  Rechercher mon établissement
+                </>
+              )}
+            </button>
+          </div>
+
+          {searchedLocations.length > 0 && (
+            <div className="bg-[#34A853]/10 rounded-lg p-4 text-center">
+              <Check className="w-8 h-8 text-[#34A853] mx-auto mb-2" />
+              <p className="text-[#34A853] font-medium">
+                {searchedLocations.length} établissement{searchedLocations.length > 1 ? 's' : ''} trouvé{searchedLocations.length > 1 ? 's' : ''} !
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                Passez à l'étape suivante pour sélectionner votre établissement
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (currentStepData.type === 'location-selection') {
+      return (
+        <div className="space-y-4">
+          {searchedLocations.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-xl">
+              <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">Aucun établissement trouvé</p>
+              <p className="text-sm text-gray-500">
+                Retournez à l'étape précédente pour rechercher votre établissement
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {searchedLocations.map((location) => (
+                <div
+                  key={location.id}
+                  className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                    selectedDataForSEOLocation?.id === location.id
+                      ? 'border-[#4285F4] bg-[#4285F4]/5 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                  }`}
+                  onClick={() => selectDataForSEOLocation(location)}
+                >
+                  <div className="flex items-start">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${
+                      selectedDataForSEOLocation?.id === location.id
+                        ? 'bg-[#4285F4] text-white'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 mb-1">
+                        {location.name}
+                      </div>
+                      <div className="text-sm text-gray-500 mb-1">
+                        {location.category}
+                      </div>
+                      <div className="text-xs text-gray-400 mb-2">
+                        {location.address}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="flex items-center text-yellow-600">
+                          <Star className="w-3 h-3 mr-1 fill-current" />
+                          {location.rating.toFixed(1)} ({location.reviews_count} avis)
+                        </span>
+                        {location.verified && (
+                          <span className="flex items-center text-[#34A853]">
+                            <Check className="w-3 h-3 mr-1" />
+                            Vérifié
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {selectedDataForSEOLocation?.id === location.id && (
+                      <Check className="w-5 h-5 text-[#4285F4] flex-shrink-0" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
 
     if (currentStepData.type === 'gmb-connection') {
       return (
