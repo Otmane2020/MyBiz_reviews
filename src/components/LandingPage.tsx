@@ -149,6 +149,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             >
               Essayer gratuitement
             </button>
+            <a
+              href={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/zapier-webhook`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[#FBBC05] text-gray-900 px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#F9AB00] transition-all transform hover:scale-105 shadow-lg"
+            >
+              Tester avec Zapier
+            </a>
             <div className="text-white/80 text-sm">
               ✨ 14 jours d'essai gratuit • Aucune carte requise
             </div>

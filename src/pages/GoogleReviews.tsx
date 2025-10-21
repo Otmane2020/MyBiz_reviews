@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MessageSquare, User, Calendar } from 'lucide-react';
+import { Star, MessageSquare, User, Calendar, Copy, ExternalLink, Check } from 'lucide-react';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 interface GoogleReview {
@@ -58,6 +58,8 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
   const [reviews, setReviews] = useState<GoogleReview[]>([]);
   const [loading, setLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string>('');
+  const [generatedReplies, setGeneratedReplies] = useState<Record<string, string>>({});
+  const [copiedReview, setCopiedReview] = useState<string>('');
 
   const selectedLocationId = propSelectedLocationId;
   const setSelectedLocationId = propSetSelectedLocationId;
@@ -210,7 +212,60 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     }
   };
 
-  // === REPLY TO REVIEW ===
+  // === GENERATE AI REPLY ===
+  const generateAIReply = async (reviewId: string, review: GoogleReview) => {
+    setReplyingTo(reviewId);
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/zapier-webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          review_text: review.comment,
+          rating: getStarRating(review.starRating),
+          author: review.reviewer.displayName,
+          business_name: locations.find((l) => l.name === selectedLocationId)?.locationName || 'votre établissement',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.reply) {
+          setGeneratedReplies((prev) => ({ ...prev, [reviewId]: data.reply }));
+        } else {
+          alert('Erreur lors de la génération de la réponse');
+        }
+      } else {
+        console.error('Erreur lors de la génération:', await response.text());
+        alert('Erreur lors de la génération de la réponse');
+      }
+    } catch (err) {
+      console.error('Erreur generateAIReply:', err);
+      alert('Erreur lors de la génération de la réponse');
+    } finally {
+      setReplyingTo('');
+    }
+  };
+
+  // === COPY REPLY AND OPEN GMB ===
+  const copyAndOpenGMB = (reviewId: string, reply: string) => {
+    navigator.clipboard.writeText(reply);
+    setCopiedReview(reviewId);
+    setTimeout(() => setCopiedReview(''), 2000);
+
+    const location = locations.find((l) => l.name === selectedLocationId);
+    if (location) {
+      window.open('https://business.google.com/reviews', '_blank');
+    }
+  };
+
+  // === REPLY TO REVIEW (Legacy - kept for compatibility) ===
   const replyToReview = async (reviewId: string) => {
     if (!selectedLocationId || !accessToken) return;
 
@@ -336,14 +391,72 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
                   <p className="text-gray-700">{r.reviewReply.comment}</p>
                 </div>
               ) : (
-                <button
-                  onClick={() => replyToReview(r.reviewId)}
-                  disabled={replyingTo === r.reviewId}
-                  className="inline-flex items-center px-4 py-2 bg-[#4285F4] text-white rounded-lg text-sm font-medium hover:bg-[#3367D6] transition disabled:opacity-50"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  {replyingTo === r.reviewId ? 'Envoi...' : 'Répondre avec IA'}
-                </button>
+                <div className="space-y-3">
+                  {!generatedReplies[r.reviewId] ? (
+                    <button
+                      onClick={() => generateAIReply(r.reviewId, r)}
+                      disabled={replyingTo === r.reviewId}
+                      className="inline-flex items-center px-4 py-2 bg-[#4285F4] text-white rounded-lg text-sm font-medium hover:bg-[#3367D6] transition disabled:opacity-50"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      {replyingTo === r.reviewId ? 'Génération...' : 'Générer réponse IA'}
+                    </button>
+                  ) : (
+                    <div className="bg-[#4285F4]/5 border-2 border-[#4285F4] rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="text-sm font-medium text-[#4285F4] mb-1">Réponse générée par IA :</div>
+                        <button
+                          onClick={() => generateAIReply(r.reviewId, r)}
+                          className="text-xs text-[#4285F4] hover:underline"
+                        >
+                          Régénérer
+                        </button>
+                      </div>
+                      <p className="text-gray-700">{generatedReplies[r.reviewId]}</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => copyAndOpenGMB(r.reviewId, generatedReplies[r.reviewId])}
+                          className="inline-flex items-center px-4 py-2 bg-[#34A853] text-white rounded-lg text-sm font-medium hover:bg-[#2D9348] transition"
+                        >
+                          {copiedReview === r.reviewId ? (
+                            <>
+                              <Check className="w-4 h-4 mr-2" />
+                              Copié !
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4 mr-2" />
+                              Copier & Ouvrir GMB
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedReplies[r.reviewId]);
+                            setCopiedReview(r.reviewId);
+                            setTimeout(() => setCopiedReview(''), 2000);
+                          }}
+                          className="inline-flex items-center px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+                        >
+                          {copiedReview === r.reviewId ? (
+                            <>
+                              <Check className="w-4 h-4 mr-2" />
+                              Copié
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4 mr-2" />
+                              Copier seulement
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 italic">
+                        Collez la réponse directement sur Google My Business (Ctrl+V)
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           ))}
