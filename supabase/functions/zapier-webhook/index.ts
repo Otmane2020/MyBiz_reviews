@@ -6,113 +6,93 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+// ✅ NO AUTH REQUIRED
 Deno.serve(async (req) => {
-  // ✅ CORS preflight
+  // Préflight CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    // ✅ GET = test rapide depuis navigateur
+    // --- test GET ---
     if (req.method === "GET") {
       return new Response(
         JSON.stringify({
           status: "ok",
-          message: "Zapier webhook endpoint is ready",
-          timestamp: new Date().toISOString(),
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // ✅ POST = génération de réponse IA
-    if (req.method === "POST") {
-      const body = await req.json();
-      const { review_text, rating, author, business_name } = body;
-
-      if (!review_text) {
-        return new Response(
-          JSON.stringify({ success: false, error: "review_text is required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
-      if (!DEEPSEEK_API_KEY) {
-        return new Response(
-          JSON.stringify({ success: false, error: "DeepSeek API key not configured" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // 🧠 Prompt IA
-      const prompt = `Tu es un assistant qui répond aux avis Google My Business pour ${
-        business_name || "un établissement"
-      }.
-
-Avis reçu :
-- Auteur : ${author || "Client"}
-- Note : ${rating || "N/A"}/5
-- Commentaire : "${review_text}"
-
-Génère une réponse professionnelle, chaleureuse et personnalisée en français. La réponse doit :
-- Remercier le client
-- Être adaptée à la note (positive, neutre ou négative)
-- Être concise (2 à 4 phrases)
-- Être naturelle et authentique
-
-Réponds uniquement avec le texte de la réponse, sans guillemets ni formatage.`;
-
-      // 🔗 Appel à DeepSeek
-      const deepseekResponse = await fetch("https://api.deepseek.com/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: [
-            { role: "system", content: "Tu es un assistant professionnel qui génère des réponses aux avis clients." },
-            { role: "user", content: prompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 200,
-        }),
-      });
-
-      if (!deepseekResponse.ok) {
-        const errorText = await deepseekResponse.text();
-        console.error("DeepSeek API error:", errorText);
-        throw new Error(`DeepSeek API error: ${deepseekResponse.statusText}`);
-      }
-
-      const aiData = await deepseekResponse.json();
-      const aiReply = aiData.choices?.[0]?.message?.content?.trim() || "";
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          reply: aiReply,
-          usage: aiData.usage,
+          message: "Zapier webhook endpoint is ready (public)",
           timestamp: new Date().toISOString(),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // ❌ Autres méthodes
+    // --- POST logic (ton code DeepSeek) ---
+    const body = await req.json();
+    const { review_text, rating, author, business_name } = body;
+
+    if (!review_text) {
+      return new Response(
+        JSON.stringify({ success: false, error: "review_text is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
+    if (!DEEPSEEK_API_KEY) {
+      return new Response(
+        JSON.stringify({ success: false, error: "DeepSeek API key not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const prompt = `Tu es un assistant qui répond aux avis Google My Business pour ${
+      business_name || "un établissement"
+    }.
+
+Avis reçu:
+- Auteur: ${author || "Client"}
+- Note: ${rating || "N/A"}/5
+- Commentaire: "${review_text}"
+
+Génère une réponse professionnelle, chaleureuse et personnalisée en français. La réponse doit:
+- Remercier le client
+- Être adaptée à la note (positive, neutre ou négative)
+- Être concise (2-4 phrases)
+- Être naturelle et authentique
+
+Réponds UNIQUEMENT avec le texte de la réponse, sans guillemets ni formatage.`;
+
+    const deepseekResponse = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: "Tu es un assistant professionnel qui génère des réponses aux avis clients." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      }),
+    });
+
+    const aiData = await deepseekResponse.json();
+    const aiReply = aiData.choices?.[0]?.message?.content?.trim() || "";
+
     return new Response(
-      JSON.stringify({ success: false, error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        success: true,
+        reply: aiReply,
+        timestamp: new Date().toISOString(),
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Zapier webhook error:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message || "Internal server error" }),
+      JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
