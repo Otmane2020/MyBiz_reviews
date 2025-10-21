@@ -28,7 +28,17 @@ Deno.serve(async (req) => {
     // ✅ Traitement du POST
     if (req.method === "POST") {
       const body = await req.json();
-      const { review_text, rating, author, business_name, debug } = body;
+      const {
+        review_text,
+        rating,
+        author,
+        business_name,
+        tone,
+        style,
+        signature,
+        response_length,
+        debug
+      } = body;
 
       if (!review_text) {
         return new Response(
@@ -45,7 +55,22 @@ Deno.serve(async (req) => {
         );
       }
 
-      // 🧠 Prompt amélioré avec signature Starlinko
+      // 🧠 Paramètres personnalisables avec valeurs par défaut
+      const toneValue = tone || "amical et professionnel";
+      const styleValue = style || "réponse naturelle, fluide, humaine";
+      const signatureValue = signature || "— L'équipe Starlinko";
+
+      // Définir la longueur de réponse
+      let lengthInstruction = "2 à 4 phrases maximum";
+      if (response_length === "S") {
+        lengthInstruction = "1 à 2 phrases courtes (20-40 mots)";
+      } else if (response_length === "M") {
+        lengthInstruction = "2 à 4 phrases (40-80 mots)";
+      } else if (response_length === "L") {
+        lengthInstruction = "4 à 6 phrases (80-150 mots)";
+      }
+
+      // 🧠 Prompt dynamique et personnalisable
       const prompt = `Tu es un assistant professionnel qui répond aux avis Google My Business pour ${
         business_name || "un établissement"
       }.
@@ -58,9 +83,10 @@ Avis reçu :
 Ta mission :
 1. Remercier le client.
 2. Adapter le ton selon la note.
-3. Répondre en 2 à 4 phrases maximum.
-4. Être naturel, positif et professionnel.
-5. Terminer par : "— L’équipe Starlinko".
+3. Répondre en ${lengthInstruction}.
+4. Utiliser un ton : ${toneValue}.
+5. Style de réponse : ${styleValue}.
+6. Terminer par : "${signatureValue}".
 
 Réponds uniquement avec le texte de la réponse, sans guillemets, ni balises.`;
 

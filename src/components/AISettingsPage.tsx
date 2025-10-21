@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bot, MessageSquare, Settings, Save, RefreshCw, Zap, Volume2, Smile, Heart, Coffee, User, FileText, Ligature as Signature, TestTube, Send, TrendingUp } from 'lucide-react';
 import { useChatGPT } from '../hooks/useChatGPT';
+import { supabase } from '../lib/supabase';
 
 interface AISettingsPageProps {
   user: any;
@@ -94,13 +95,39 @@ const AISettingsPage: React.FC<AISettingsPageProps> = ({ user }) => {
     }
   ];
 
-  // Charger les paramètres sauvegardés
+  // Charger les paramètres depuis Supabase
   useEffect(() => {
-    const savedSettings = localStorage.getItem('aiSettings');
-    if (savedSettings) {
-      setSettings(JSON.parse(savedSettings));
-    }
-  }, []);
+    const loadSettings = async () => {
+      if (!user?.id) return;
+
+      const { data, error } = await supabase
+        .from('ai_settings')
+        .select('*')
+        .eq('seller_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erreur lors du chargement des paramètres:', error);
+        return;
+      }
+
+      if (data) {
+        setSettings({
+          enabled: data.enabled,
+          tone: data.tone,
+          responseLength: data.response_length,
+          includeSignature: data.include_signature,
+          signature: data.signature,
+          customTemplate: data.custom_template,
+          autoReplyDelay: data.auto_reply_delay,
+          onlyPositiveReviews: data.only_positive_reviews,
+          minimumRating: data.minimum_rating
+        });
+      }
+    };
+
+    loadSettings();
+  }, [user?.id]);
 
   const handleSettingChange = (key: keyof AISettings, value: any) => {
     setSettings(prev => ({
@@ -112,20 +139,40 @@ const AISettingsPage: React.FC<AISettingsPageProps> = ({ user }) => {
   const saveSettings = async () => {
     setIsSaving(true);
     try {
-      // Sauvegarder localement
-      localStorage.setItem('aiSettings', JSON.stringify(settings));
-      
-      // TODO: Sauvegarder en base de données via Supabase
-      // await supabase.from('ai_settings').upsert({
-      //   user_id: user.id,
-      //   settings: settings
-      // });
-      
-      setTimeout(() => {
+      if (!user?.id) {
+        console.error('Utilisateur non connecté');
         setIsSaving(false);
-      }, 1000);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('ai_settings')
+        .upsert({
+          seller_id: user.id,
+          enabled: settings.enabled,
+          tone: settings.tone,
+          response_length: settings.responseLength,
+          include_signature: settings.includeSignature,
+          signature: settings.signature,
+          custom_template: settings.customTemplate,
+          auto_reply_delay: settings.autoReplyDelay,
+          only_positive_reviews: settings.onlyPositiveReviews,
+          minimum_rating: settings.minimumRating
+        }, {
+          onConflict: 'seller_id'
+        });
+
+      if (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        alert('Erreur lors de la sauvegarde des paramètres');
+      } else {
+        alert('Paramètres sauvegardés avec succès !');
+      }
+
+      setIsSaving(false);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde des paramètres');
       setIsSaving(false);
     }
   };
