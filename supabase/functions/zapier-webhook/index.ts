@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +14,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ✅ Test simple GET
     if (req.method === "GET") {
       return new Response(
         JSON.stringify({
@@ -25,7 +25,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ✅ Traitement du POST
     if (req.method === "POST") {
       const body = await req.json();
       const {
@@ -33,6 +32,8 @@ Deno.serve(async (req) => {
         rating,
         author,
         business_name,
+        user_id,
+        seller_id,
         tone,
         style,
         signature,
@@ -55,22 +56,47 @@ Deno.serve(async (req) => {
         );
       }
 
-      // 🧠 Paramètres personnalisables avec valeurs par défaut
-      const toneValue = tone || "amical et professionnel";
-      const styleValue = style || "réponse naturelle, fluide, humaine";
-      const signatureValue = signature || "— L'équipe Starlinko";
+      let toneValue = tone || "amical et professionnel";
+      let styleValue = style || "chaleureux et naturel";
+      let signatureValue = signature || "— L'équipe Starlinko";
+      let lengthValue = response_length || "M";
 
-      // Définir la longueur de réponse
+      const userId = user_id || seller_id;
+      if (userId) {
+        try {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL");
+          const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+          if (supabaseUrl && supabaseServiceKey) {
+            const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+            const { data: settings } = await supabase
+              .from("ai_settings")
+              .select("*")
+              .eq("user_id", userId)
+              .maybeSingle();
+
+            if (settings) {
+              toneValue = settings.tone || toneValue;
+              styleValue = settings.style || styleValue;
+              signatureValue = settings.signature || signatureValue;
+              lengthValue = settings.response_length || lengthValue;
+            }
+          }
+        } catch (error) {
+          console.error("Error loading AI settings:", error);
+        }
+      }
+
       let lengthInstruction = "2 à 4 phrases maximum";
-      if (response_length === "S") {
+      if (lengthValue === "S") {
         lengthInstruction = "1 à 2 phrases courtes (20-40 mots)";
-      } else if (response_length === "M") {
+      } else if (lengthValue === "M") {
         lengthInstruction = "2 à 4 phrases (40-80 mots)";
-      } else if (response_length === "L") {
+      } else if (lengthValue === "L") {
         lengthInstruction = "4 à 6 phrases (80-150 mots)";
       }
 
-      // 🧠 Prompt dynamique et personnalisable
       const prompt = `Tu es un assistant professionnel qui répond aux avis Google My Business pour ${
         business_name || "un établissement"
       }.
@@ -116,22 +142,25 @@ Réponds uniquement avec le texte de la réponse, sans guillemets, ni balises.`;
 
       const data = await deepseekResponse.json();
 
-      // 👀 Debug complet
       console.log("🧩 DeepSeek response:", data);
 
-      // Récupération propre de la réponse IA
       let aiReply = data?.choices?.[0]?.message?.content?.trim() || "";
 
-      // Si vide → message d’erreur explicite
       if (!aiReply) {
         aiReply =
-          "⚠️ Erreur : aucune réponse générée par l’IA. Vérifie ta clé DeepSeek ou réessaie plus tard.";
+          "⚠️ Erreur : aucune réponse générée par l'IA. Vérifie ta clé DeepSeek ou réessaie plus tard.";
       }
 
       const responseJson = {
         success: true,
         reply: aiReply,
-        debug: debug ? data : undefined, // renvoie les logs si debug:true
+        settings_used: {
+          tone: toneValue,
+          style: styleValue,
+          signature: signatureValue,
+          response_length: lengthValue
+        },
+        debug: debug ? data : undefined,
         timestamp: new Date().toISOString(),
       };
 
@@ -141,7 +170,6 @@ Réponds uniquement avec le texte de la réponse, sans guillemets, ni balises.`;
       });
     }
 
-    // ❌ Méthode non autorisée
     return new Response(
       JSON.stringify({ success: false, error: "Method not allowed" }),
       { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } },
