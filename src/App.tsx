@@ -19,6 +19,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import CookiesPage from './pages/CookiesPage';
 import GDPRPage from './pages/GDPRPage';
+import AITestPage from './pages/AITestPage';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
@@ -49,6 +50,7 @@ function App() {
   const isTermsRoute = window.location.pathname === '/terms';
   const isCookiesRoute = window.location.pathname === '/cookies';
   const isGDPRRoute = window.location.pathname === '/gdpr';
+  const isAITestRoute = window.location.pathname === '/aitest';
 
   // Consolidated session handling function
   const handleSession = (session: any) => {
@@ -248,6 +250,10 @@ function App() {
   
   if (isGDPRRoute) {
     return <GDPRPage />;
+  }
+
+  if (isAITestRoute) {
+    return <AITestPage />;
   }
 
   const handleNavigate = (page: string) => {
