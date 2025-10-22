@@ -1,394 +1,507 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import React, { useState, useCallback, useEffect } from 'react';
+import { 
+  Search, 
+  MapPin, 
+  Building2, 
+  Loader2, 
+  ExternalLink, 
+  CheckCircle, 
+  AlertCircle,
+  Filter,
+  Star
+} from 'lucide-react';
+import { importGoogleReviewsViaEdgeFunction } from '../lib/googleReviews';
+import { supabase } from '../lib/supabase';
 
-// Enhanced CORS configuration
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID",
-  "Access-Control-Max-Age": "86400",
+interface Business {
+  place_id: string;
+  name: string;
+  formatted_address: string;
+  rating?: number;
+  user_ratings_total?: number;
+  types?: string[];
+  geometry?: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  business_status?: string;
+  opening_hours?: {
+    open_now?: boolean;
+  };
+  photos?: Array<{
+    photo_reference: string;
+    height: number;
+    width: number;
+  }>;
 }
 
-// Environment variables
-const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')
-const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
-const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-
-// Rate limiting
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
-const RATE_LIMIT_WINDOW = 60000 // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 50 // Lower limit for GMB API
-
-// Input validation schema
-const requestSchema = {
-  required: ['accessToken', 'locationId'],
-  properties: {
-    accessToken: { type: 'string', minLength: 1 },
-    locationId: { type: 'string', minLength: 1 },
-    forceRefresh: { type: 'boolean' }
-  }
+interface BusinessSearchProps {
+  onBusinessSelect?: (business: Business) => void;
+  userId?: string;
+  autoImportReviews?: boolean;
+  className?: string;
+  placeholder?: string;
 }
 
-// Validation function
-function validateInput(data: any, schema: any): { isValid: boolean; errors: string[] } {
-  const errors: string[] = []
+const BusinessSearch: React.FC<BusinessSearchProps> = ({ 
+  onBusinessSelect, 
+  userId, 
+  autoImportReviews = true,
+  className = '',
+  placeholder = "Ex: Restaurant Le Gourmet"
+}) => {
+  const [query, setQuery] = useState('');
+  const [location, setLocation] = useState('');
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [importingReviews, setImportingReviews] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [searchHistory, setSearchHistory] = useState<Business[]>([]);
 
-  for (const field of schema.required) {
-    if (!data[field]) {
-      errors.push(`Field '${field}' is required`)
+  // Load recent searches from localStorage on component mount
+  useEffect(() => {
+    const savedSearches = localStorage.getItem('business-recent-searches');
+    if (savedSearches) {
+      setRecentSearches(JSON.parse(savedSearches));
     }
-  }
 
-  for (const [field, rules] of Object.entries(schema.properties)) {
-    if (data[field] !== undefined && data[field] !== null) {
-      const value = data[field]
-      const rule = rules as any
-
-      if (rule.type === 'string' && typeof value !== 'string') {
-        errors.push(`Field '${field}' must be a string`)
-      } else if (rule.type === 'boolean' && typeof value !== 'boolean') {
-        errors.push(`Field '${field}' must be a boolean`)
-      }
-
-      if (rule.minLength && value.length < rule.minLength) {
-        errors.push(`Field '${field}' must be at least ${rule.minLength} characters`)
-      }
+    const savedHistory = localStorage.getItem('business-search-history');
+    if (savedHistory) {
+      setSearchHistory(JSON.parse(savedHistory));
     }
-  }
+  }, []);
 
-  return { isValid: errors.length === 0, errors }
-}
-
-// Rate limiting function
-function checkRateLimit(identifier: string): { allowed: boolean; remaining: number; resetTime: number } {
-  const now = Date.now()
-  const windowKey = Math.floor(now / RATE_LIMIT_WINDOW)
-  const key = `${identifier}:${windowKey}`
-
-  const current = rateLimitStore.get(key) || { count: 0, resetTime: (windowKey + 1) * RATE_LIMIT_WINDOW }
-
-  if (now > current.resetTime) {
-    rateLimitStore.delete(key)
-    return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW, resetTime: (windowKey + 1) * RATE_LIMIT_WINDOW }
-  }
-
-  if (current.count >= MAX_REQUESTS_PER_WINDOW) {
-    return { allowed: false, remaining: 0, resetTime: current.resetTime }
-  }
-
-  current.count++
-  rateLimitStore.set(key, current)
-
-  return { 
-    allowed: true, 
-    remaining: MAX_REQUESTS_PER_WINDOW - current.count, 
-    resetTime: current.resetTime 
-  }
-}
-
-// Clean up old rate limit entries
-function cleanupRateLimit() {
-  const now = Date.now()
-  for (const [key, value] of rateLimitStore.entries()) {
-    if (now > value.resetTime + RATE_LIMIT_WINDOW) {
-      rateLimitStore.delete(key)
-    }
-  }
-}
-
-// Response helpers
-function createResponse(data: any, status: number = 200, headers: Record<string, string> = {}) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-      ...headers,
-    },
-  })
-}
-
-function createErrorResponse(message: string, status: number = 500, details: any = null) {
-  return createResponse({
-    error: message,
-    success: false,
-    ...(details && { details })
-  }, status)
-}
-
-// Google My Business Service
-class GoogleMyBusinessService {
-  constructor(private apiKey: string) {}
-
-  async fetchReviews(locationId: string, accessToken: string) {
-    const url = `https://mybusiness.googleapis.com/v4/${locationId}/reviews?key=${this.apiKey}`
+  // Save to recent searches
+  const saveToRecentSearches = useCallback((searchTerm: string) => {
+    const updatedSearches = [
+      searchTerm,
+      ...recentSearches.filter(s => s !== searchTerm)
+    ].slice(0, 5); // Keep only last 5 searches
     
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    setRecentSearches(updatedSearches);
+    localStorage.setItem('business-recent-searches', JSON.stringify(updatedSearches));
+  }, [recentSearches]);
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Google My Business API error: ${response.status} - ${errorText}`)
-    }
-
-    const data = await response.json()
-    return data.reviews || []
-  }
-}
-
-// Review processing service
-class ReviewProcessor {
-  constructor(private supabase: any) {}
-
-  private ratingMap: { [key: string]: number } = {
-    'ONE': 1,
-    'TWO': 2,
-    'THREE': 3,
-    'FOUR': 4,
-    'FIVE': 5,
-  }
-
-  async processReviews(reviews: any[], locationId: string, userId: string, forceRefresh: boolean = false) {
-    let newReviewsCount = 0
-    const newReviews = []
-    const skippedReviews = []
-
-    for (const review of reviews) {
-      const reviewId = review.reviewId
-      
-      // Check if review already exists (unless force refresh)
-      if (!forceRefresh) {
-        const { data: existingReview } = await this.supabase
-          .from('reviews')
-          .select('id, updated_at')
-          .eq('review_id', reviewId)
-          .single()
-
-        if (existingReview) {
-          skippedReviews.push(reviewId)
-          continue
-        }
-      }
-
-      try {
-        const reviewData = this.transformReviewData(review, locationId, userId)
-        const { error } = await this.supabase
-          .from('reviews')
-          .upsert([reviewData], { onConflict: 'review_id' })
-
-        if (error) {
-          console.error('Error upserting review:', error)
-          throw error
-        }
-
-        newReviewsCount++
-        newReviews.push(reviewData)
-      } catch (error) {
-        console.error(`Failed to process review ${reviewId}:`, error)
-        // Continue with next review instead of failing entire batch
-      }
-    }
-
-    return { newReviewsCount, newReviews, skippedReviews: skippedReviews.length }
-  }
-
-  private transformReviewData(review: any, locationId: string, userId: string) {
-    return {
-      review_id: review.reviewId,
-      location_id: locationId,
-      user_id: userId,
-      author: review.reviewer?.displayName || 'Anonymous',
-      rating: this.ratingMap[review.starRating] || 0,
-      comment: review.comment || '',
-      review_date: review.createTime,
-      replied: !!review.reviewReply,
-      reply_text: review.reviewReply?.comment || null,
-      review_url: review.reviewReply?.updateTime ? review.reviewReply.updateTime : null,
-      source: 'google_my_business',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  }
-}
-
-// Main handler
-serve(async (req: Request) => {
-  // Handle OPTIONS request
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    })
-  }
-
-  // Generate request ID for tracking
-  const requestId = crypto.randomUUID()
-  const clientIP = req.headers.get('x-forwarded-for') || 'unknown'
-
-  // Rate limiting
-  cleanupRateLimit()
-  const rateLimit = checkRateLimit(clientIP)
-  
-  if (!rateLimit.allowed) {
-    return createErrorResponse(
-      'Rate limit exceeded', 
-      429,
-      {
-        requestId,
-        retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000)
-      }
-    )
-  }
-
-  const rateLimitHeaders = {
-    'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
-    'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-    'X-RateLimit-Reset': Math.ceil(rateLimit.resetTime / 1000).toString(),
-    'X-Request-ID': requestId
-  }
-
-  try {
-    // Validate environment variables
-    if (!GOOGLE_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      console.error(`[${requestId}] Missing required environment variables`)
-      return createErrorResponse('Service configuration error', 500, { requestId })
-    }
-
-    // Validate HTTP method
-    if (req.method !== 'POST') {
-      return createErrorResponse('Method not allowed', 405, { requestId })
-    }
-
-    // Validate content type
-    const contentType = req.headers.get('content-type')
-    if (!contentType?.includes('application/json')) {
-      return createErrorResponse('Content-Type must be application/json', 400, { requestId })
-    }
-
-    // Parse request body
-    let body
-    try {
-      body = await req.json()
-    } catch (parseError) {
-      return createErrorResponse('Invalid JSON in request body', 400, { requestId })
-    }
-
-    // Validate input
-    const validation = validateInput(body, requestSchema)
-    if (!validation.isValid) {
-      return createErrorResponse('Validation failed', 400, {
-        requestId,
-        errors: validation.errors
-      })
-    }
-
-    const { accessToken, locationId, forceRefresh = false } = body
-
-    // Initialize Supabase client
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
-    // Authenticate user
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return createErrorResponse('Authorization header is required', 401, { requestId })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      return createErrorResponse('Unauthorized: Invalid token', 401, { requestId })
-    }
-
-    // Fetch and process reviews
-    const gmbService = new GoogleMyBusinessService(GOOGLE_API_KEY)
-    const reviewProcessor = new ReviewProcessor(supabase)
-
-    const reviews = await gmbService.fetchReviews(locationId, accessToken)
-    const { newReviewsCount, newReviews, skippedReviews } = await reviewProcessor.processReviews(
-      reviews, 
-      locationId, 
-      user.id, 
-      forceRefresh
-    )
-
-    // Log sync activity
-    await supabase
-      .from('sync_logs')
-      .insert([{
-        user_id: user.id,
-        location_id: locationId,
-        source: 'google_my_business',
-        reviews_fetched: reviews.length,
-        reviews_added: newReviewsCount,
-        sync_date: new Date().toISOString(),
-        success: true,
-      }])
-
-    return createResponse({
-      success: true,
-      totalReviews: reviews.length,
-      newReviews: newReviewsCount,
-      skippedReviews,
-      reviews: newReviews,
-      requestId
-    }, 200, rateLimitHeaders)
-
-  } catch (error) {
-    console.error(`[${requestId}] Error processing request:`, error)
+  // Save to search history
+  const saveToSearchHistory = useCallback((business: Business) => {
+    const updatedHistory = [
+      business,
+      ...searchHistory.filter(b => b.place_id !== business.place_id)
+    ].slice(0, 10); // Keep only last 10 businesses
     
-    // Log failed sync
+    setSearchHistory(updatedHistory);
+    localStorage.setItem('business-search-history', JSON.stringify(updatedHistory));
+  }, [searchHistory]);
+
+  const searchBusinesses = async () => {
+    if (!query.trim()) {
+      setError('Veuillez entrer un nom d\'entreprise');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setBusinesses([]);
+    setSuccessMessage(null);
+
     try {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-      const authHeader = req.headers.get('Authorization')
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '')
-        const { data: { user } } = await supabase.auth.getUser(token)
-        
-        if (user) {
-          await supabase
-            .from('sync_logs')
-            .insert([{
-              user_id: user.id,
-              source: 'google_my_business',
-              sync_date: new Date().toISOString(),
-              success: false,
-              error_message: error.message,
-            }])
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/google-places-search`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            query: query.trim(),
+            location: location.trim() || undefined
+          })
         }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
       }
-    } catch (logError) {
-      console.error(`[${requestId}] Failed to log error:`, logError)
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erreur lors de la recherche');
+      }
+
+      if (data.status === 'REQUEST_DENIED') {
+        throw new Error('API Google Maps non configurée ou restrictions activées');
+      }
+
+      if (data.status === 'OVER_QUERY_LIMIT') {
+        throw new Error('Quota Google Maps dépassé. Veuillez réessayer plus tard.');
+      }
+
+      if (data.status === 'ZERO_RESULTS') {
+        setError('Aucune entreprise trouvée pour cette recherche');
+        setBusinesses([]);
+      } else if (data.status !== 'OK') {
+        throw new Error(`Erreur API Google: ${data.status}`);
+      }
+
+      const results = data.results || [];
+      setBusinesses(results);
+
+      // Save successful search to recent searches
+      if (results.length > 0) {
+        saveToRecentSearches(query.trim());
+      }
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue lors de la recherche';
+      setError(errorMessage);
+      console.error('Search error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !loading) {
+      searchBusinesses();
+    }
+  };
+
+  const handleBusinessClick = async (business: Business) => {
+    // Save to search history
+    saveToSearchHistory(business);
+
+    // Call parent callback if provided
+    if (onBusinessSelect) {
+      onBusinessSelect(business);
     }
 
-    // Handle specific Google API errors
-    if (error instanceof Error) {
-      if (error.message.includes('401') || error.message.includes('403')) {
-        return createErrorResponse('Invalid Google My Business access token', 401, { requestId })
-      }
-      
-      if (error.message.includes('429')) {
-        return createErrorResponse('Google My Business API rate limit exceeded', 429, { requestId })
-      }
-      
-      if (error.message.includes('404')) {
-        return createErrorResponse('Location not found', 404, { requestId })
-      }
+    // Auto-import reviews if enabled and user is logged in
+    if (!autoImportReviews || !userId) {
+      return;
     }
 
-    return createErrorResponse(
-      'Failed to fetch reviews from Google My Business', 
-      500, 
-      { 
-        requestId,
-        ...(Deno.env.get("DENO_ENV") === "development" && { detail: error.message })
+    setImportingReviews(business.place_id);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const result = await importGoogleReviewsViaEdgeFunction(business, userId);
+
+      if (result.success) {
+        setSuccessMessage(
+          result.reviewsCount > 0 
+            ? `✅ ${result.reviewsCount} avis importés avec succès !`
+            : '✅ Aucun nouvel avis à importer.'
+        );
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } else {
+        setError(result.error || 'Erreur lors de l\'importation des avis');
       }
-    )
-  }
-})
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue lors de l\'importation';
+      setError(errorMessage);
+    } finally {
+      setImportingReviews(null);
+    }
+  };
+
+  const clearError = () => setError(null);
+  const clearSuccess = () => setSuccessMessage(null);
+
+  const BusinessRating: React.FC<{ rating: number; totalReviews?: number }> = ({ rating, totalReviews }) => (
+    <div className="flex items-center mt-2 space-x-2">
+      <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
+        <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 mr-1" />
+        <span className="text-yellow-700 font-semibold text-sm">{rating}</span>
+      </div>
+      {totalReviews && (
+        <span className="text-gray-500 text-xs">
+          ({totalReviews.toLocaleString()} avis)
+        </span>
+      )}
+    </div>
+  );
+
+  const BusinessStatus: React.FC<{ business: Business }> = ({ business }) => {
+    if (business.business_status === 'CLOSED_PERMANENTLY') {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          Fermé définitivement
+        </span>
+      );
+    }
+    
+    if (business.opening_hours?.open_now !== undefined) {
+      return (
+        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+          business.opening_hours.open_now 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {business.opening_hours.open_now ? 'Ouvert' : 'Fermé'}
+        </span>
+      );
+    }
+    
+    return null;
+  };
+
+  return (
+    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+          <Search className="w-6 h-6 mr-2 text-blue-600" />
+          Rechercher une entreprise
+        </h2>
+        {(recentSearches.length > 0 || searchHistory.length > 0) && (
+          <div className="flex items-center text-sm text-gray-500">
+            <Filter className="w-4 h-4 mr-1" />
+            Historique disponible
+          </div>
+        )}
+      </div>
+
+      {/* Search Form */}
+      <div className="space-y-4 mb-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Nom de l'entreprise *
+          </label>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              clearError();
+            }}
+            onKeyPress={handleKeyPress}
+            placeholder={placeholder}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            disabled={loading}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Localisation (optionnel)
+          </label>
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ex: Paris, France"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            disabled={loading}
+          />
+        </div>
+
+        <button
+          onClick={searchBusinesses}
+          disabled={loading || !query.trim()}
+          className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center transition-colors font-medium"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Recherche en cours...
+            </>
+          ) : (
+            <>
+              <Search className="w-5 h-5 mr-2" />
+              Rechercher sur Google Maps
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Recent Searches Quick Access */}
+      {recentSearches.length > 0 && businesses.length === 0 && !loading && (
+        <div className="mb-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Recherches récentes :</h3>
+          <div className="flex flex-wrap gap-2">
+            {recentSearches.map((searchTerm, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  setQuery(searchTerm);
+                  setTimeout(() => searchBusinesses(), 100);
+                }}
+                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+              >
+                {searchTerm}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Status Messages */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 flex items-start">
+          <AlertCircle className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-red-800 text-sm">{error}</p>
+            <button
+              onClick={clearError}
+              className="text-red-600 hover:text-red-800 text-xs mt-1 font-medium"
+            >
+              × Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 flex items-start">
+          <CheckCircle className="w-5 h-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-green-800 text-sm font-medium">{successMessage}</p>
+            <button
+              onClick={clearSuccess}
+              className="text-green-600 hover:text-green-800 text-xs mt-1 font-medium"
+            >
+              × Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Search Results */}
+      {businesses.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-800">
+              Résultats ({businesses.length})
+            </h3>
+            <span className="text-sm text-gray-500">
+              Cliquez pour {autoImportReviews && userId ? 'importer les avis' : 'sélectionner'}
+            </span>
+          </div>
+          
+          <div className="max-h-96 overflow-y-auto space-y-3">
+            {businesses.map((business) => (
+              <div
+                key={business.place_id}
+                className={`border border-gray-200 rounded-lg p-4 hover:bg-blue-50 hover:border-blue-300 transition-all cursor-pointer relative group ${
+                  importingReviews === business.place_id ? 'bg-blue-50 border-blue-300' : ''
+                }`}
+                onClick={() => handleBusinessClick(business)}
+              >
+                {importingReviews === business.place_id && (
+                  <div className="absolute inset-0 bg-blue-50/90 rounded-lg flex items-center justify-center z-10">
+                    <div className="flex items-center bg-white px-4 py-2 rounded-full shadow-sm">
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin text-blue-600" />
+                      <span className="text-blue-600 font-medium text-sm">
+                        Importation des avis...
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-semibold text-gray-900 flex items-center text-lg">
+                        <Building2 className="w-5 h-5 mr-2 text-blue-600 flex-shrink-0" />
+                        <span className="truncate">{business.name}</span>
+                      </h4>
+                      <BusinessStatus business={business} />
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 flex items-start mt-1">
+                      <MapPin className="w-4 h-4 mr-2 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <span className="line-clamp-2">{business.formatted_address}</span>
+                    </p>
+                    
+                    {business.rating && (
+                      <BusinessRating 
+                        rating={business.rating} 
+                        totalReviews={business.user_ratings_total} 
+                      />
+                    )}
+                    
+                    {business.types && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {business.types.slice(0, 3).map((type, index) => (
+                          <span 
+                            key={index}
+                            className="inline-block bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs capitalize"
+                          >
+                            {type.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name)}&query_place_id=${business.place_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-4 text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Voir sur Google Maps"
+                  >
+                    <ExternalLink className="w-5 h-5" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State with Search History */}
+      {!loading && businesses.length === 0 && searchHistory.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">
+            Entreprises récemment consultées :
+          </h3>
+          <div className="space-y-2">
+            {searchHistory.slice(0, 3).map((business) => (
+              <div
+                key={business.place_id}
+                className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer"
+                onClick={() => handleBusinessClick(business)}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900 text-sm">
+                      {business.name}
+                    </h4>
+                    <p className="text-xs text-gray-500 truncate">
+                      {business.formatted_address}
+                    </p>
+                  </div>
+                  {business.rating && (
+                    <div className="flex items-center text-xs text-gray-500">
+                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 mr-1" />
+                      {business.rating}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default BusinessSearch;
