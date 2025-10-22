@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MessageSquare, User, Calendar, Copy, ExternalLink, Check } from 'lucide-react';
+import { Star, MessageSquare, User, Calendar, Copy, ExternalLink, Check, Loader2 } from 'lucide-react';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 interface GoogleReview {
@@ -265,31 +265,53 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     }
   };
 
-  // === REPLY TO REVIEW (Legacy - kept for compatibility) ===
-  const replyToReview = async (reviewId: string) => {
-    if (!selectedLocationId || !accessToken) return;
+  // === POST REPLY TO REVIEW ===
+  const postReplyToReview = async (reviewId: string, comment: string) => {
+    if (!selectedLocationId || !accessToken) {
+      alert('Connexion Google manquante');
+      return;
+    }
 
     setReplyingTo(reviewId);
     try {
-      const response = await fetch('/api/google-oauth?action=reply-review', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/google-oauth`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseKey}`,
+        },
         body: JSON.stringify({
           action: 'reply-review',
           accessToken,
           locationId: selectedLocationId,
           reviewId,
-          comment: 'Merci beaucoup pour votre retour 🙏',
+          comment,
         }),
       });
 
-      if (response.ok) {
-        await fetchReviews();
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert('Réponse publiée avec succès !');
+
+        // Update the review in database
+        const { supabase } = await import('../lib/supabase');
+        await supabase
+          .from('reviews')
+          .update({ replied: true, ai_reply: comment, updated_at: new Date().toISOString() })
+          .eq('review_id', reviewId);
+
+        // Refresh reviews
+        await fetchStoredReviews();
       } else {
-        console.error('Erreur lors de la réponse:', await response.text());
+        throw new Error(data.error || 'Erreur lors de la publication de la réponse');
       }
-    } catch (err) {
-      console.error('Erreur replyToReview:', err);
+    } catch (err: any) {
+      console.error('Erreur postReplyToReview:', err);
+      alert(err.message || 'Erreur lors de la publication de la réponse');
     } finally {
       setReplyingTo('');
     }
@@ -413,23 +435,43 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
                         </button>
                       </div>
                       <p className="text-gray-700">{generatedReplies[r.reviewId]}</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => copyAndOpenGMB(r.reviewId, generatedReplies[r.reviewId])}
-                          className="inline-flex items-center px-4 py-2 bg-[#34A853] text-white rounded-lg text-sm font-medium hover:bg-[#2D9348] transition"
-                        >
-                          {copiedReview === r.reviewId ? (
-                            <>
-                              <Check className="w-4 h-4 mr-2" />
-                              Copié !
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-4 h-4 mr-2" />
-                              Copier & Ouvrir GMB
-                            </>
-                          )}
-                        </button>
+                      <div className="flex gap-2 flex-wrap">
+                        {accessToken ? (
+                          <button
+                            onClick={() => postReplyToReview(r.reviewId, generatedReplies[r.reviewId])}
+                            disabled={replyingTo === r.reviewId}
+                            className="inline-flex items-center px-4 py-2 bg-[#34A853] text-white rounded-lg text-sm font-medium hover:bg-[#2D9348] transition disabled:opacity-50"
+                          >
+                            {replyingTo === r.reviewId ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Publication...
+                              </>
+                            ) : (
+                              <>
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Publier automatiquement
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => copyAndOpenGMB(r.reviewId, generatedReplies[r.reviewId])}
+                            className="inline-flex items-center px-4 py-2 bg-[#34A853] text-white rounded-lg text-sm font-medium hover:bg-[#2D9348] transition"
+                          >
+                            {copiedReview === r.reviewId ? (
+                              <>
+                                <Check className="w-4 h-4 mr-2" />
+                                Copié !
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-4 h-4 mr-2" />
+                                Copier & Ouvrir GMB
+                              </>
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(generatedReplies[r.reviewId]);

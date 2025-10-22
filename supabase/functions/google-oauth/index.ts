@@ -226,7 +226,7 @@ serve(async (req) => {
 
     if (action === "get-locations") {
       const { accessToken, accountId } = requestData;
-      
+
       if (!accessToken || !accountId) {
         return new Response(JSON.stringify({
           error: "Access token et accountId requis",
@@ -241,7 +241,7 @@ serve(async (req) => {
       }
 
       console.log("🏪 Getting locations for account:", accountId);
-      
+
       const locationsResponse = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountId}/locations?readMask=name,title,storeCode,metadata,profile,locationKey,labels,regularHours,specialHours,serviceArea,adWordsLocationExtensions,latlng,openInfo,phoneNumbers,relationshipData,moreHours,serviceItems,profile,metadata`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -250,7 +250,7 @@ serve(async (req) => {
       });
 
       const locationsData = await locationsResponse.json();
-      
+
       if (!locationsResponse.ok) {
         console.error("❌ Locations API error:", locationsData);
         return new Response(JSON.stringify({
@@ -266,9 +266,70 @@ serve(async (req) => {
       }
 
       console.log("✅ Locations retrieved successfully");
-      
+
       return new Response(JSON.stringify({
         locations: locationsData.locations || [],
+        success: true
+      }), {
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders
+        }
+      });
+    }
+
+    if (action === "reply-review") {
+      const { accessToken, locationId, reviewId, comment } = requestData;
+
+      if (!accessToken || !locationId || !reviewId || !comment) {
+        return new Response(JSON.stringify({
+          error: "Access token, locationId, reviewId et comment requis",
+          success: false
+        }), {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          }
+        });
+      }
+
+      console.log("💬 Posting review reply:", { locationId, reviewId });
+
+      const replyResponse = await fetch(
+        `https://mybusiness.googleapis.com/v4/${locationId}/${reviewId}/reply`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            comment: comment
+          })
+        }
+      );
+
+      const replyData = await replyResponse.json();
+
+      if (!replyResponse.ok) {
+        console.error("❌ Reply API error:", replyData);
+        return new Response(JSON.stringify({
+          error: replyData.error?.message || "Erreur lors de la publication de la réponse",
+          success: false
+        }), {
+          status: replyResponse.status,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          }
+        });
+      }
+
+      console.log("✅ Reply posted successfully");
+
+      return new Response(JSON.stringify({
+        reply: replyData,
         success: true
       }), {
         headers: {
