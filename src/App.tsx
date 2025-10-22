@@ -21,6 +21,7 @@ import CookiesPage from './pages/CookiesPage';
 import GDPRPage from './pages/GDPRPage';
 import AITestPage from './pages/AITestPage';
 import AIReplyHistory from './pages/AIReplyHistory';
+import EtablissementsPage from './pages/EtablissementsPage';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
@@ -424,6 +425,9 @@ function App() {
       )}
       {currentPage === 'avis-ia' && (
         <AISettingsPage user={user} />
+      )}
+      {currentPage === 'etablissements' && (
+        <EtablissementsPage user={user} onNavigate={handleNavigate} />
       )}
       {currentPage === 'settings' && (
         <SettingsPage user={user} onLogout={handleLogout} />

@@ -7,6 +7,7 @@ import GoogleMyBusinessPage from '../pages/GoogleMyBusinessPage';
 import AISettingsPage from './AISettingsPage';
 import SettingsPage from './SettingsPage';
 import NotificationCenter from './NotificationCenter';
+import EtablissementsPage from '../pages/EtablissementsPage';
 
 interface DesktopDashboardProps {
   user: any;
@@ -45,7 +46,7 @@ const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: Home },
     { id: 'reviews', label: 'Avis', icon: Star },
-    { id: 'google-my-business', label: 'Analytics GMB', icon: Building2 },
+    { id: 'etablissements', label: 'Mes établissements', icon: Building2 },
     { id: 'avis-ia', label: 'Avis IA', icon: Bot },
     { id: 'responses', label: 'Réponses', icon: MessageSquare },
     { id: 'settings', label: 'Paramètres', icon: Settings },
@@ -84,6 +85,8 @@ const DesktopDashboard: React.FC<DesktopDashboardProps> = ({
         );
       case 'avis-ia':
         return <AISettingsPage user={user} />;
+      case 'etablissements':
+        return <EtablissementsPage user={user} onNavigate={handleNavigate} />;
       case 'responses':
         return (
           <div className="p-8">

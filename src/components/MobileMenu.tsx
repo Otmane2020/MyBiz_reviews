@@ -31,7 +31,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: Home },
     { id: 'reviews', label: 'Avis', icon: Star },
-    { id: 'google-my-business', label: 'Analytics GMB', icon: Building2 },
+    { id: 'etablissements', label: 'Mes établissements', icon: Building2 },
     { id: 'avis-ia', label: 'Avis IA', icon: Bot },
     { id: 'responses', label: 'Réponses', icon: MessageSquare },
     { id: 'settings', label: 'Paramètres', icon: Settings },

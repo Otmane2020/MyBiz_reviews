@@ -47,9 +47,9 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [autoLoadingGMB, setAutoLoadingGMB] = useState(false);
   const [businessName, setBusinessName] = useState('');
   const [businessAddress, setBusinessAddress] = useState('');
-  const [searchedLocations, setSearchedLocations] = useState<BusinessLocation[]>([]);
+  const [searchedLocations, setSearchedLocations] = useState<any[]>([]);
   const [searchingDataForSEO, setSearchingDataForSEO] = useState(false);
-  const [selectedDataForSEOLocation, setSelectedDataForSEOLocation] = useState<BusinessLocation | null>(null);
+  const [selectedDataForSEOLocation, setSelectedDataForSEOLocation] = useState<any>(null);
   
   const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
 
@@ -58,9 +58,24 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     if (!user?.id) return;
 
     try {
-      // Save DataForSEO location if selected
+      // Save Google Places location if selected
       if (selectedDataForSEOLocation) {
-        await saveLocationToDatabase(user.id, selectedDataForSEOLocation);
+        const { data: locationData, error: locationError } = await supabase
+          .from('locations')
+          .upsert({
+            user_id: user.id,
+            location_id: selectedDataForSEOLocation.place_id,
+            location_name: selectedDataForSEOLocation.name,
+            address: selectedDataForSEOLocation.formatted_address,
+            is_active: true,
+            last_synced_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,location_id'
+          });
+
+        if (locationError) {
+          console.error('Error saving location:', locationError);
+        }
         return;
       }
 
@@ -454,10 +469,41 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
     setSearchingDataForSEO(true);
     try {
-      const results = await searchBusinessLocations(businessName, businessAddress);
-      setSearchedLocations(results);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      if (results.length === 0) {
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Configuration Supabase manquante');
+      }
+
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/google-places-search`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            query: businessName.trim(),
+            location: businessAddress.trim() || undefined
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erreur lors de la recherche');
+      }
+
+      setSearchedLocations(data.results || []);
+
+      if (data.results?.length === 0) {
         alert('Aucun établissement trouvé. Vérifiez le nom et l\'adresse.');
       }
     } catch (error) {
@@ -468,7 +514,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     }
   };
 
-  const selectDataForSEOLocation = (location: BusinessLocation) => {
+  const selectDataForSEOLocation = (location: any) => {
     setSelectedDataForSEOLocation(location);
   };
 
@@ -572,9 +618,9 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {searchedLocations.map((location) => (
                 <div
-                  key={location.id}
+                  key={location.place_id}
                   className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    selectedDataForSEOLocation?.id === location.id
+                    selectedDataForSEOLocation?.place_id === location.place_id
                       ? 'border-[#4285F4] bg-[#4285F4]/5 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                   }`}
@@ -582,7 +628,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                 >
                   <div className="flex items-start">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${
-                      selectedDataForSEOLocation?.id === location.id
+                      selectedDataForSEOLocation?.place_id === location.place_id
                         ? 'bg-[#4285F4] text-white'
                         : 'bg-gray-100 text-gray-600'
                     }`}>
@@ -592,26 +638,19 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                       <div className="font-medium text-gray-900 mb-1">
                         {location.name}
                       </div>
-                      <div className="text-sm text-gray-500 mb-1">
-                        {location.category}
-                      </div>
                       <div className="text-xs text-gray-400 mb-2">
-                        {location.address}
+                        {location.formatted_address}
                       </div>
-                      <div className="flex items-center gap-3 text-xs">
-                        <span className="flex items-center text-yellow-600">
-                          <Star className="w-3 h-3 mr-1 fill-current" />
-                          {location.rating.toFixed(1)} ({location.reviews_count} avis)
-                        </span>
-                        {location.verified && (
-                          <span className="flex items-center text-[#34A853]">
-                            <Check className="w-3 h-3 mr-1" />
-                            Vérifié
+                      {location.rating && (
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="flex items-center text-yellow-600">
+                            <Star className="w-3 h-3 mr-1 fill-current" />
+                            {location.rating.toFixed(1)} {location.user_ratings_total && `(${location.user_ratings_total} avis)`}
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
-                    {selectedDataForSEOLocation?.id === location.id && (
+                    {selectedDataForSEOLocation?.place_id === location.place_id && (
                       <Check className="w-5 h-5 text-[#4285F4] flex-shrink-0" />
                     )}
                   </div>
