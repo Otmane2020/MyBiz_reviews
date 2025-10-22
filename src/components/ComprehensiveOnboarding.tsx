@@ -3,6 +3,7 @@ import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Buil
 import { useStripe } from '../hooks/useStripe';
 import { supabase } from '../lib/supabase';
 import { searchBusinessLocations, saveLocationToDatabase, BusinessLocation } from '../lib/dataforseo';
+import BusinessSearch from './BusinessSearch';
 
 interface GoogleAccount {
   name: string;

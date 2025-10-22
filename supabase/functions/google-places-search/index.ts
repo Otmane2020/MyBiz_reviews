@@ -15,20 +15,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { query, location } = await req.json();
-
-    if (!query) {
-      return new Response(JSON.stringify({
-        error: "Query is required",
-        success: false
-      }), {
-        status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
-    }
+    const { query, location, action, placeId } = await req.json();
 
     const apiKey = Deno.env.get("GOOGLE_MAPS_API_KEY") || Deno.env.get("GOOGLE_API_KEY");
 
@@ -38,6 +25,48 @@ Deno.serve(async (req: Request) => {
         success: false
       }), {
         status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
+    }
+
+    if (action === 'get-reviews' && placeId) {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=reviews,rating,user_ratings_total&key=${apiKey}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Google API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status !== 'OK') {
+        throw new Error(`Google API error: ${data.status}`);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        reviews: data.result?.reviews || [],
+        rating: data.result?.rating,
+        totalReviews: data.result?.user_ratings_total,
+        status: data.status
+      }), {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
+    }
+
+    if (!query) {
+      return new Response(JSON.stringify({
+        error: "Query is required",
+        success: false
+      }), {
+        status: 400,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",

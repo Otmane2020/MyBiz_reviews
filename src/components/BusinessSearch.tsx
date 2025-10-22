@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Building2, Loader2, ExternalLink } from 'lucide-react';
+import { Search, MapPin, Building2, Loader2, ExternalLink, CheckCircle } from 'lucide-react';
+import { importGoogleReviewsViaEdgeFunction } from '../lib/googleReviews';
+import { supabase } from '../lib/supabase';
 
 interface Business {
   place_id: string;
@@ -18,14 +20,18 @@ interface Business {
 
 interface BusinessSearchProps {
   onBusinessSelect?: (business: Business) => void;
+  userId?: string;
+  autoImportReviews?: boolean;
 }
 
-const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect }) => {
+const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userId, autoImportReviews = true }) => {
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('');
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importingReviews, setImportingReviews] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const searchBusinesses = async () => {
     if (!query.trim()) {
@@ -98,6 +104,36 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect }) => 
     }
   };
 
+  const handleBusinessClick = async (business: Business) => {
+    if (onBusinessSelect) {
+      onBusinessSelect(business);
+    }
+
+    if (!autoImportReviews || !userId) {
+      return;
+    }
+
+    setImportingReviews(business.place_id);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const result = await importGoogleReviewsViaEdgeFunction(business, userId);
+
+      if (result.success) {
+        setSuccessMessage(`✅ ${result.reviewsCount} avis importés avec succès !`);
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } else {
+        setError(result.error || 'Erreur lors de l\'importation des avis');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(errorMessage);
+    } finally {
+      setImportingReviews(null);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
@@ -159,6 +195,13 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect }) => 
         </div>
       )}
 
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 flex items-center">
+          <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+          <p className="text-green-800 text-sm font-medium">{successMessage}</p>
+        </div>
+      )}
+
       {businesses.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-gray-800 mb-3">
@@ -168,9 +211,17 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect }) => 
             {businesses.map((business) => (
               <div
                 key={business.place_id}
-                className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer"
-                onClick={() => onBusinessSelect?.(business)}
+                className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer relative"
+                onClick={() => handleBusinessClick(business)}
               >
+                {importingReviews === business.place_id && (
+                  <div className="absolute inset-0 bg-blue-50/80 rounded-lg flex items-center justify-center">
+                    <div className="flex items-center">
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin text-blue-600" />
+                      <span className="text-blue-600 font-medium">Importation des avis...</span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-900 flex items-center">
