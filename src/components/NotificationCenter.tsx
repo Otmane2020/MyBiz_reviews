@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Star, MessageSquare, Check, Trash2 } from 'lucide-react';
 
 interface Notification {
@@ -31,6 +31,26 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   onClearAll,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [shouldShake, setShouldShake] = useState(false);
+  const prevUnreadCountRef = useRef(unreadCount);
+
+  // Animate bell when new notification arrives
+  useEffect(() => {
+    if (unreadCount > prevUnreadCountRef.current && unreadCount > 0) {
+      setShouldShake(true);
+      setTimeout(() => setShouldShake(false), 1000);
+
+      // Play notification sound (optional)
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZOR0FPJXb8cf');
+        audio.volume = 0.3;
+        audio.play().catch(() => {}); // Ignore errors if audio fails
+      } catch (e) {
+        // Silent fail for audio
+      }
+    }
+    prevUnreadCountRef.current = unreadCount;
+  }, [unreadCount]);
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -65,11 +85,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       {/* Notification Bell */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+        className={`relative p-2 rounded-full hover:bg-gray-100 transition-colors ${
+          shouldShake ? 'animate-bounce' : ''
+        }`}
       >
-        <Bell className="w-6 h-6 text-gray-600" />
+        <Bell className={`w-6 h-6 text-gray-600 ${shouldShake ? 'animate-pulse' : ''}`} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-[#EA4335] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+          <span className="absolute -top-1 -right-1 bg-[#EA4335] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

@@ -15,6 +15,7 @@ import SuccessPage from './pages/SuccessPage';
 import AISettingsPage from './components/AISettingsPage';
 import DesktopDashboard from './components/DesktopDashboard';
 import { useReviewsNotifications } from './hooks/useReviewsNotifications';
+import NotificationToast from './components/NotificationToast';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import CookiesPage from './pages/CookiesPage';
@@ -31,15 +32,24 @@ function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
+  const [activeToast, setActiveToast] = useState<any>(null);
 
-  // Notifications hook - must be at top level
+  // Notifications hook - must be at top level (using userId instead of locationId)
   const {
     notifications,
     unreadCount,
     markAsRead,
     markAllAsRead,
     clearNotifications,
-  } = useReviewsNotifications(selectedLocationId);
+  } = useReviewsNotifications(user?.id);
+
+  // Show toast for new notifications
+  useEffect(() => {
+    if (notifications.length > 0 && !notifications[0].read) {
+      const latestNotification = notifications[0];
+      setActiveToast(latestNotification);
+    }
+  }, [notifications]);
 
   // Check if current path is /superadmin
   const isSuperAdminRoute = window.location.pathname === '/superadmin';
@@ -431,6 +441,16 @@ function App() {
       )}
       {currentPage === 'settings' && (
         <SettingsPage user={user} onLogout={handleLogout} />
+      )}
+
+      {/* Notification Toast */}
+      {activeToast && (
+        <NotificationToast
+          notification={activeToast}
+          onClose={() => setActiveToast(null)}
+          autoClose={true}
+          duration={5000}
+        />
       )}
     </div>
   );
