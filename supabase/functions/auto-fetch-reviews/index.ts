@@ -60,6 +60,10 @@ Deno.serve(async (req: Request) => {
     console.log(`📊 Found ${reviews.length} reviews from Google Places`);
 
     let reviewsAdded = 0;
+    const newReviews: any[] = [];
+
+    // Get location name for notifications
+    const locationName = data.result?.name || 'Votre établissement';
 
     // Insert reviews into database
     for (const review of reviews) {
@@ -71,6 +75,15 @@ Deno.serve(async (req: Request) => {
 
       // Use text directly since we're requesting in French
       const reviewText = review.text || '';
+
+      // Check if review already exists
+      const { data: existingReview } = await supabase
+        .from('reviews')
+        .select('review_id')
+        .eq('review_id', reviewId)
+        .maybeSingle();
+
+      const isNewReview = !existingReview;
 
       const { error } = await supabase
         .from('reviews')
@@ -92,6 +105,16 @@ Deno.serve(async (req: Request) => {
 
       if (!error) {
         reviewsAdded++;
+
+        // Track new reviews for notifications
+        if (isNewReview) {
+          newReviews.push({
+            reviewId,
+            author: review.author_name || 'Anonyme',
+            rating: review.rating,
+            comment: reviewText,
+          });
+        }
       } else {
         console.error('Error inserting review:', error);
       }
@@ -105,11 +128,58 @@ Deno.serve(async (req: Request) => {
 
     console.log(`✅ Successfully added ${reviewsAdded} reviews for location ${locationId}`);
 
+    // Send notifications for new reviews
+    if (newReviews.length > 0) {
+      console.log(`📧 Sending notifications for ${newReviews.length} new reviews`);
+
+      // Check user notification preferences
+      const { data: prefs } = await supabase
+        .from('notification_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const shouldNotify = prefs?.email_enabled !== false && prefs?.notify_new_review !== false;
+
+      if (shouldNotify) {
+        // Send notification for each new review
+        for (const newReview of newReviews) {
+          // Check if review meets notification criteria
+          const shouldNotifyLowRating = prefs?.notify_low_rating !== false &&
+                                       newReview.rating <= (prefs?.low_rating_threshold || 3);
+          const shouldNotifyAllReviews = prefs?.notify_new_review !== false;
+
+          if (shouldNotifyAllReviews || shouldNotifyLowRating) {
+            try {
+              await fetch(`${supabaseUrl}/functions/v1/send-review-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseKey}`,
+                },
+                body: JSON.stringify({
+                  reviewId: newReview.reviewId,
+                  userId,
+                  locationName,
+                  author: newReview.author,
+                  rating: newReview.rating,
+                  comment: newReview.comment,
+                }),
+              });
+            } catch (notifError) {
+              console.error('Error sending notification:', notifError);
+            }
+          }
+        }
+      }
+    }
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         reviewsAdded,
-        totalReviews: reviews.length 
+        totalReviews: reviews.length,
+        newReviews: newReviews.length
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

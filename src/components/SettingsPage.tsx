@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, CreditCard, Building2, Bell, Shield, LogOut, Check, Crown, Star, Zap, Gift, Users, Settings, TrendingUp, X, ChevronRight } from 'lucide-react';
 import { useStripe } from '../hooks/useStripe';
+import { supabase } from '../lib/supabase';
 
 interface SettingsPageProps {
   user: any;
@@ -23,7 +24,77 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
     vatNumber: ''
   });
 
+  // Notification preferences
+  const [notifPrefs, setNotifPrefs] = useState({
+    email_enabled: true,
+    push_enabled: true,
+    notify_new_review: true,
+    notify_low_rating: true,
+    low_rating_threshold: 3
+  });
+  const [savingNotifs, setSavingNotifs] = useState(false);
+
   const { products, loading: stripeLoading, error: stripeError, fetchProducts, redirectToCheckout } = useStripe();
+
+  // Load notification preferences
+  useEffect(() => {
+    const loadNotifPrefs = async () => {
+      if (!user?.id) return;
+
+      const { data, error } = await supabase
+        .from('notification_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading notification preferences:', error);
+        return;
+      }
+
+      if (data) {
+        setNotifPrefs({
+          email_enabled: data.email_enabled ?? true,
+          push_enabled: data.push_enabled ?? true,
+          notify_new_review: data.notify_new_review ?? true,
+          notify_low_rating: data.notify_low_rating ?? true,
+          low_rating_threshold: data.low_rating_threshold || 3
+        });
+      }
+    };
+
+    loadNotifPrefs();
+  }, [user?.id]);
+
+  // Save notification preferences
+  const saveNotifPrefs = async () => {
+    if (!user?.id) return;
+
+    setSavingNotifs(true);
+    try {
+      const { error } = await supabase
+        .from('notification_preferences')
+        .upsert({
+          user_id: user.id,
+          ...notifPrefs,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('Error saving notification preferences:', error);
+        alert('Erreur lors de la sauvegarde des préférences');
+      } else {
+        alert('Préférences de notification sauvegardées ✅');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Erreur lors de la sauvegarde');
+    } finally {
+      setSavingNotifs(false);
+    }
+  };
 
   const plans = [
     {
@@ -573,48 +644,98 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout }) => {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Préférences de notification</h3>
               <div className="space-y-4">
+                {/* Email notifications */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-gray-900">Notifications par email</div>
+                    <div className="text-sm text-gray-500">Activer ou désactiver toutes les notifications email</div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={notifPrefs.email_enabled}
+                      onChange={(e) => setNotifPrefs({...notifPrefs, email_enabled: e.target.checked})}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#4285F4]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4285F4]"></div>
+                  </label>
+                </div>
+
+                {/* New review notifications */}
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium text-gray-900">Nouveaux avis</div>
                     <div className="text-sm text-gray-500">Recevoir une notification pour chaque nouvel avis</div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#4285F4]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4285F4]"></div>
-                  </label>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">Réponses automatiques</div>
-                    <div className="text-sm text-gray-500">Notification quand l'IA répond automatiquement</div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#4285F4]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4285F4]"></div>
-                  </label>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">Rapports hebdomadaires</div>
-                    <div className="text-sm text-gray-500">Résumé hebdomadaire de vos avis et performances</div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={notifPrefs.notify_new_review}
+                      onChange={(e) => setNotifPrefs({...notifPrefs, notify_new_review: e.target.checked})}
+                    />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#4285F4]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4285F4]"></div>
                   </label>
                 </div>
 
+                {/* Low rating notifications */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-medium text-gray-900">Fin d'essai gratuit</div>
-                    <div className="text-sm text-gray-500">Rappel avant la fin de votre période d'essai</div>
+                    <div className="font-medium text-gray-900">Avis avec note faible</div>
+                    <div className="text-sm text-gray-500">Notifier spécialement les avis avec une note basse</div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={notifPrefs.notify_low_rating}
+                      onChange={(e) => setNotifPrefs({...notifPrefs, notify_low_rating: e.target.checked})}
+                    />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#4285F4]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4285F4]"></div>
                   </label>
+                </div>
+
+                {/* Low rating threshold */}
+                {notifPrefs.notify_low_rating && (
+                  <div className="ml-4 pl-4 border-l-2 border-gray-200">
+                    <label className="block">
+                      <span className="font-medium text-gray-900">Seuil de note faible</span>
+                      <div className="text-sm text-gray-500 mb-2">Notifier pour les notes inférieures ou égales à</div>
+                      <select
+                        value={notifPrefs.low_rating_threshold}
+                        onChange={(e) => setNotifPrefs({...notifPrefs, low_rating_threshold: parseInt(e.target.value)})}
+                        className="mt-1 block w-32 rounded-lg border-gray-300 shadow-sm focus:border-[#4285F4] focus:ring focus:ring-[#4285F4] focus:ring-opacity-50"
+                      >
+                        <option value="1">1 étoile</option>
+                        <option value="2">2 étoiles</option>
+                        <option value="3">3 étoiles</option>
+                        <option value="4">4 étoiles</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Save button */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <button
+                  onClick={saveNotifPrefs}
+                  disabled={savingNotifs}
+                  className="w-full sm:w-auto px-6 py-2 bg-[#4285F4] text-white rounded-lg font-medium hover:bg-[#3367D6] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingNotifs ? 'Sauvegarde...' : 'Sauvegarder les préférences'}
+                </button>
+              </div>
+            </div>
+
+            {/* Info box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <Bell className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium mb-1">À propos des notifications</p>
+                  <p>Les notifications par email vous seront envoyées en temps réel lorsque de nouveaux avis sont détectés. Vous pouvez personnaliser vos préférences à tout moment.</p>
                 </div>
               </div>
             </div>

@@ -562,12 +562,24 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
               <p className="text-gray-700 mb-4">{r.comment}</p>
 
-              {r.reviewReply ? (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-sm font-medium text-gray-800 mb-1">Votre réponse :</div>
-                  <p className="text-gray-700">{r.reviewReply.comment}</p>
+              {/* Réponse existante - Style Google */}
+              {r.reviewReply && (
+                <div className="mt-4 ml-4 pl-4 border-l-4 border-gray-300 bg-gray-50 rounded-r-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold mr-2">
+                      {r.reviewReply.comment.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Réponse du propriétaire</div>
+                      <div className="text-xs text-gray-500">{formatDate(r.reviewReply.updateTime)}</div>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 text-sm">{r.reviewReply.comment}</p>
                 </div>
-              ) : (
+              )}
+
+              {/* Actions pour avis sans réponse */}
+              {!r.reviewReply && (
                 <div className="space-y-3">
                   {!generatedReplies[r.reviewId] ? (
                     <button
