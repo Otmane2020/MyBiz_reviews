@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, User, Calendar, Copy, ExternalLink, Check, Loader2, RefreshCw } from 'lucide-react';
 import StarlinkoLogo from '../components/StarlinkoLogo';
+import { supabase } from '../lib/supabase';
 
 interface GoogleReview {
   reviewId: string;
@@ -140,7 +141,6 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
     setLoading(true);
     try {
-      const { supabase } = await import('../lib/supabase');
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
@@ -298,7 +298,6 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         alert('Réponse publiée avec succès !');
 
         // Update the review in database
-        const { supabase } = await import('../lib/supabase');
         await supabase
           .from('reviews')
           .update({ replied: true, ai_reply: comment, updated_at: new Date().toISOString() })
@@ -341,11 +340,12 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
   // Load reviews from database for all user locations
   const loadStoredReviewsFromDB = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('⚠️ No user ID, cannot load reviews');
+      return;
+    }
 
     try {
-      const { supabase } = await import('../lib/supabase');
-
       console.log('🔍 Loading reviews for user:', user.id);
 
       // Get all user's locations (place_ids)
