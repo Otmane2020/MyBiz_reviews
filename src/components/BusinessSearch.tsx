@@ -81,7 +81,7 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
       }
 
       if (data.status === 'REQUEST_DENIED') {
-        throw new Error('API key invalide ou restrictions activées');
+        throw new Error('API key invalide ou restrictions activées. Veuillez configurer le secret GOOGLE_MAPS_API_KEY dans Supabase (voir GOOGLE_SETUP.md)');
       }
 
       if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
