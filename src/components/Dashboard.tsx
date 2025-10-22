@@ -38,6 +38,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
   useEffect(() => {
     if (user?.id) {
       loadDashboardData();
+
+      // Set up polling to check for new data every 30 seconds
+      const pollInterval = setInterval(() => {
+        loadDashboardData();
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(pollInterval);
     }
   }, [user?.id]);
 

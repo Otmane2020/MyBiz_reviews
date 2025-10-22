@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MessageSquare, User, Calendar, Copy, ExternalLink, Check, Loader2 } from 'lucide-react';
+import { Star, MessageSquare, User, Calendar, Copy, ExternalLink, Check, Loader2, RefreshCw } from 'lucide-react';
 import StarlinkoLogo from '../components/StarlinkoLogo';
 
 interface GoogleReview {
@@ -317,12 +317,79 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     }
   };
 
+  // Load stored reviews from database on mount and when location changes
+  useEffect(() => {
+    if (user?.id) {
+      loadStoredReviewsFromDB();
+
+      // Set up polling to check for new locations and reviews every 30 seconds
+      const pollInterval = setInterval(() => {
+        loadStoredReviewsFromDB();
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(pollInterval);
+    }
+  }, [user?.id]);
+
+  // Load reviews from Google when OAuth is available
   useEffect(() => {
     if (accessToken && user) {
       fetchAccounts(accessToken);
       if (selectedLocationId) fetchStoredReviews();
     }
   }, [accessToken, user, selectedLocationId]);
+
+  // Load reviews from database for all user locations
+  const loadStoredReviewsFromDB = async () => {
+    if (!user?.id) return;
+
+    try {
+      const { supabase } = await import('../lib/supabase');
+
+      // Get all user's locations
+      const { data: locations, error: locError } = await supabase
+        .from('locations')
+        .select('location_id, location_name')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      if (locError) throw locError;
+
+      if (!locations || locations.length === 0) {
+        setReviews([]);
+        return;
+      }
+
+      const locationIds = locations.map(l => l.location_id);
+
+      // Fetch reviews for all locations
+      const { data: reviewsData, error: reviewsError } = await supabase
+        .from('reviews')
+        .select('*')
+        .in('location_id', locationIds)
+        .order('review_date', { ascending: false });
+
+      if (reviewsError) throw reviewsError;
+
+      // Convert to GoogleReview format
+      const converted = (reviewsData || []).map((r: any) => ({
+        reviewId: r.review_id,
+        reviewer: {
+          displayName: r.author,
+        },
+        starRating: ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][r.rating] as any,
+        comment: r.comment,
+        createTime: r.review_date,
+        reviewReply: r.replied
+          ? { comment: r.ai_reply || 'Répondu', updateTime: r.updated_at }
+          : undefined,
+      }));
+
+      setReviews(converted);
+    } catch (err) {
+      console.error('Error loading reviews from database:', err);
+    }
+  };
 
   const getStarRating = (rating: string): number =>
     ({ ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[rating] || 0);
@@ -371,11 +438,24 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
 
         {/* Liste des avis */}
         <div className="space-y-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Tous les avis ({reviews.length})
+            </h2>
+            <button
+              onClick={loadStoredReviewsFromDB}
+              className="flex items-center text-sm text-[#4285F4] hover:text-[#3367D6] transition"
+            >
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Actualiser
+            </button>
+          </div>
+
           {reviews.length === 0 && !loading && (
             <div className="text-center py-12 bg-white rounded-xl shadow-sm">
               <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun avis</h3>
-              <p className="mt-1 text-sm text-gray-500">Cliquez sur "Synchroniser les avis" pour les charger</p>
+              <p className="mt-1 text-sm text-gray-500">Ajoutez un établissement pour voir vos avis</p>
             </div>
           )}
 
