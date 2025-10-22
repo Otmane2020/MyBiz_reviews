@@ -115,38 +115,10 @@ export async function importGoogleReviewsViaEdgeFunction(
       throw new Error('Configuration Supabase manquante');
     }
 
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/google-places-search`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
-          placeId: business.place_id,
-          action: 'get-reviews'
-        })
-      }
-    );
+    console.log('🚀 Importing business:', business.name, business.place_id);
 
-    if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.error || 'Erreur lors de la récupération des avis');
-    }
-
-    const reviews: GoogleReview[] = data.reviews || [];
-
-    if (reviews.length === 0) {
-      return { success: true, reviewsCount: 0 };
-    }
-
-    const { data: locationData, error: locationError } = await supabase
+    // Step 1: Create location in database
+    const { error: locationError } = await supabase
       .from('locations')
       .upsert({
         user_id: userId,
@@ -157,38 +129,49 @@ export async function importGoogleReviewsViaEdgeFunction(
         last_synced_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,location_id'
-      })
-      .select()
-      .single();
+      });
 
     if (locationError) {
+      console.error('Error creating location:', locationError);
       throw new Error(`Erreur lors de la sauvegarde de l'établissement: ${locationError.message}`);
     }
 
-    const reviewsToInsert = reviews.map(review => ({
-      location_id: locationData.id,
-      user_id: userId,
-      reviewer_name: review.author_name,
-      rating: review.rating,
-      review_text: review.text,
-      review_date: new Date(review.time * 1000).toISOString(),
-      source: 'google',
-      external_id: `${business.place_id}_${review.time}`,
-      is_replied: false
-    }));
+    console.log('✅ Location created, now fetching reviews...');
 
-    const { error: reviewsError } = await supabase
-      .from('reviews')
-      .upsert(reviewsToInsert, {
-        onConflict: 'external_id',
-        ignoreDuplicates: true
-      });
+    // Step 2: Call edge function to auto-fetch reviews
+    const reviewsResponse = await fetch(
+      `${supabaseUrl}/functions/v1/auto-fetch-reviews`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          locationId: business.place_id,
+          userId: userId,
+          placeId: business.place_id
+        })
+      }
+    );
 
-    if (reviewsError) {
-      throw new Error(`Erreur lors de l'importation des avis: ${reviewsError.message}`);
+    if (!reviewsResponse.ok) {
+      const errorData = await reviewsResponse.json().catch(() => ({}));
+      throw new Error(errorData.error || `Erreur HTTP: ${reviewsResponse.status}`);
     }
 
-    return { success: true, reviewsCount: reviews.length };
+    const reviewsData = await reviewsResponse.json();
+
+    if (!reviewsData.success) {
+      throw new Error(reviewsData.error || 'Erreur lors de la récupération des avis');
+    }
+
+    console.log(`✅ Successfully imported ${reviewsData.reviewsAdded} reviews`);
+
+    return {
+      success: true,
+      reviewsCount: reviewsData.reviewsAdded || 0
+    };
 
   } catch (error) {
     console.error('Error importing reviews:', error);
