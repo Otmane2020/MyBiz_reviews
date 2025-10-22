@@ -14,6 +14,3 @@
   
   # Cross-Origin-Opener-Policy pour les popups OAuth
   Cross-Origin-Opener-Policy: same-origin-allow-popups
-
-
-  

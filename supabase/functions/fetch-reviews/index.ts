@@ -10,7 +10,6 @@ const corsHeaders = {
 // Récupérer les identifiants depuis les variables d'environnement
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')
-const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY')
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -22,27 +21,14 @@ serve(async (req: Request) => {
 
   try {
     // Vérifier que les variables d'environnement sont configurées
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_API_KEY) {
-      console.error('Google credentials not configured')
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      console.error('Google OAuth credentials not configured')
     }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Get user ID from Authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Authorization header is required')
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      throw new Error('Unauthorized: Invalid token')
-    }
 
     const { accessToken, locationId } = await req.json()
 
@@ -52,7 +38,7 @@ serve(async (req: Request) => {
 
     // Fetch reviews from Google My Business API
     const reviewsResponse = await fetch(
-      `https://mybusiness.googleapis.com/v4/${locationId}/reviews?key=${GOOGLE_API_KEY}`,
+      `https://mybusiness.googleapis.com/v4/${locationId}/reviews`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -94,7 +80,6 @@ serve(async (req: Request) => {
         const reviewData = {
           review_id: reviewId,
           location_id: locationId,
-          user_id: user.id,
           author: review.reviewer?.displayName || 'Anonyme',
           rating: ratingMap[review.starRating] || 5,
           comment: review.comment || '',

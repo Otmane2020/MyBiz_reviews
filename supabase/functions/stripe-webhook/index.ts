@@ -39,54 +39,22 @@ serve(async (req: Request) => {
           },
         }).then(res => res.json())
 
-        // Update client profile
-        const planTypeMap: { [key: string]: string } = {
-          'starter': 'starter',
-          'pro': 'pro',
-          'business': 'business'
-        };
-
-        const maxLocationsMap: { [key: string]: number } = {
-          'starter': 1,
-          'pro': 3,
-          'business': 999
-        };
-
-        const planId = session.metadata?.plan_id || 'starter';
-
-        const { error: clientError } = await supabase
-          .from('clients')
+        // Mettre à jour le profil utilisateur
+        const { error: profileError } = await supabase
+          .from('profiles')
           .update({
-            plan_type: planTypeMap[planId] || 'starter',
-            plan_status: 'trial',
-            trial_ends_at: new Date(subscription.trial_end * 1000).toISOString(),
-            max_locations: maxLocationsMap[planId] || 1,
+            stripe_customer_id: session.customer,
+            stripe_subscription_id: session.subscription,
+            subscription_status: 'trialing', // 14 jours d'essai
+            plan_id: session.metadata?.plan_id || 'starter',
+            billing_cycle: session.metadata?.billing_cycle || 'monthly',
+            trial_end: new Date(subscription.trial_end * 1000).toISOString(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', session.metadata?.user_id);
+          .eq('id', session.metadata?.user_id)
 
-        if (clientError) {
-          console.error('Error updating client:', clientError);
-        }
-
-        // Update usage tracking limit based on plan
-        const aiLimitsMap: { [key: string]: number } = {
-          'starter': 50,
-          'pro': 300,
-          'business': 1000
-        };
-
-        const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
-        const { error: usageError } = await supabase
-          .from('usage_tracking')
-          .update({
-            ai_replies_limit: aiLimitsMap[planId] || 50
-          })
-          .eq('user_id', session.metadata?.user_id)
-          .eq('month', currentMonth);
-
-        if (usageError) {
-          console.error('Error updating usage tracking:', usageError);
+        if (profileError) {
+          console.error('Error updating profile:', profileError)
         }
 
         // Mettre à jour la session dans la DB
@@ -111,28 +79,20 @@ serve(async (req: Request) => {
         const subscription = event.data.object
         console.log('Subscription updated:', subscription.id)
 
-        // Map Stripe status to our plan_status
-        const statusMap: { [key: string]: string } = {
-          'active': 'active',
-          'trialing': 'trial',
-          'past_due': 'active',
-          'canceled': 'cancelled',
-          'unpaid': 'expired'
-        };
-
-        const planStatus = statusMap[subscription.status] || 'active';
-
+        // Mettre à jour le statut de l'abonnement
         const { error } = await supabase
-          .from('clients')
+          .from('profiles')
           .update({
-            plan_status: planStatus,
-            trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+            subscription_status: subscription.status,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
             updated_at: new Date().toISOString()
           })
-          .eq('id', subscription.metadata?.user_id);
+          .eq('stripe_subscription_id', subscription.id)
 
         if (error) {
-          console.error('Error updating subscription:', error);
+          console.error('Error updating subscription:', error)
         }
 
         break
@@ -142,17 +102,18 @@ serve(async (req: Request) => {
         const subscription = event.data.object
         console.log('Subscription cancelled:', subscription.id)
 
-        // Mark subscription as cancelled
+        // Marquer l'abonnement comme annulé
         const { error } = await supabase
-          .from('clients')
+          .from('profiles')
           .update({
-            plan_status: 'cancelled',
+            subscription_status: 'cancelled',
+            stripe_subscription_id: null,
             updated_at: new Date().toISOString()
           })
-          .eq('id', subscription.metadata?.user_id);
+          .eq('stripe_subscription_id', subscription.id)
 
         if (error) {
-          console.error('Error cancelling subscription:', error);
+          console.error('Error cancelling subscription:', error)
         }
 
         break
@@ -162,18 +123,18 @@ serve(async (req: Request) => {
         const invoice = event.data.object
         console.log('Payment succeeded:', invoice.id)
 
-        // If this is the first payment after trial
+        // Si c'est le premier paiement après l'essai
         if (invoice.billing_reason === 'subscription_cycle') {
           const { error } = await supabase
-            .from('clients')
+            .from('profiles')
             .update({
-              plan_status: 'active',
+              subscription_status: 'active',
               updated_at: new Date().toISOString()
             })
-            .eq('id', invoice.metadata?.user_id);
+            .eq('stripe_subscription_id', invoice.subscription)
 
           if (error) {
-            console.error('Error activating subscription:', error);
+            console.error('Error activating subscription:', error)
           }
         }
 
@@ -184,17 +145,17 @@ serve(async (req: Request) => {
         const invoice = event.data.object
         console.log('Payment failed:', invoice.id)
 
-        // Mark as past due
+        // Marquer comme impayé
         const { error } = await supabase
-          .from('clients')
+          .from('profiles')
           .update({
-            plan_status: 'active',
+            subscription_status: 'past_due',
             updated_at: new Date().toISOString()
           })
-          .eq('id', invoice.metadata?.user_id);
+          .eq('stripe_subscription_id', invoice.subscription)
 
         if (error) {
-          console.error('Error updating payment failure:', error);
+          console.error('Error updating payment failure:', error)
         }
 
         break
