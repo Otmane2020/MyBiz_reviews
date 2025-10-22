@@ -346,30 +346,46 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     try {
       const { supabase } = await import('../lib/supabase');
 
-      // Get all user's locations
+      console.log('🔍 Loading reviews for user:', user.id);
+
+      // Get all user's locations (place_ids)
       const { data: locations, error: locError } = await supabase
         .from('locations')
         .select('location_id, location_name')
         .eq('user_id', user.id)
         .eq('is_active', true);
 
-      if (locError) throw locError;
+      if (locError) {
+        console.error('Error loading locations:', locError);
+        throw locError;
+      }
+
+      console.log('📍 Found locations:', locations);
 
       if (!locations || locations.length === 0) {
+        console.log('⚠️ No locations found');
         setReviews([]);
         return;
       }
 
-      const locationIds = locations.map(l => l.location_id);
+      // location_id in the locations table is the place_id
+      const placeIds = locations.map(l => l.location_id);
 
-      // Fetch reviews for all locations
+      console.log('🔎 Searching reviews for place_ids:', placeIds);
+
+      // Fetch reviews for all locations (location_id in reviews table is the place_id)
       const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
         .select('*')
-        .in('location_id', locationIds)
+        .in('location_id', placeIds)
         .order('review_date', { ascending: false });
 
-      if (reviewsError) throw reviewsError;
+      if (reviewsError) {
+        console.error('Error loading reviews:', reviewsError);
+        throw reviewsError;
+      }
+
+      console.log('📊 Found reviews:', reviewsData?.length || 0);
 
       // Convert to GoogleReview format
       const converted = (reviewsData || []).map((r: any) => ({
@@ -381,13 +397,14 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         comment: r.comment,
         createTime: r.review_date,
         reviewReply: r.replied
-          ? { comment: r.ai_reply || 'Répondu', updateTime: r.updated_at }
+          ? { comment: r.reply_content || 'Répondu', updateTime: r.replied_at || r.updated_at }
           : undefined,
       }));
 
+      console.log('✅ Reviews converted and loaded:', converted.length);
       setReviews(converted);
     } catch (err) {
-      console.error('Error loading reviews from database:', err);
+      console.error('❌ Error loading reviews from database:', err);
     }
   };
 
@@ -407,32 +424,19 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#F1F3F4] pt-20">
+    <div className="min-h-screen bg-[#F1F3F4] pt-20 pb-20">
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Avis Google My Business</h1>
-          <p className="text-gray-600">Gérez et répondez à vos avis clients</p>
-        </div>
-
-        {/* Établissement sélectionné */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Établissement sélectionné</h2>
-
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <div className="font-medium text-gray-900">
-              {locations.find((l) => l.name === selectedLocationId)?.locationName || 'Chargement...'}
-            </div>
-            <div className="text-sm text-gray-500">
-              {locations.find((l) => l.name === selectedLocationId)?.primaryCategory?.displayName}
-            </div>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Mes Avis</h1>
+            <p className="text-gray-600">Tous vos avis de vos établissements</p>
           </div>
-
           <button
-            onClick={fetchReviews}
-            disabled={loading}
-            className="bg-[#4285F4] text-white px-6 py-3 rounded-lg hover:bg-[#3367D6] transition disabled:opacity-50 font-medium"
+            onClick={loadStoredReviewsFromDB}
+            className="flex items-center px-4 py-2 text-sm text-white bg-[#4285F4] hover:bg-[#3367D6] rounded-lg transition"
           >
-            {loading ? 'Synchronisation...' : 'Synchroniser les avis'}
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Actualiser
           </button>
         </div>
 
@@ -440,15 +444,8 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         <div className="space-y-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              Tous les avis ({reviews.length})
+              {reviews.length} avis au total
             </h2>
-            <button
-              onClick={loadStoredReviewsFromDB}
-              className="flex items-center text-sm text-[#4285F4] hover:text-[#3367D6] transition"
-            >
-              <RefreshCw className="w-4 h-4 mr-1" />
-              Actualiser
-            </button>
           </div>
 
           {reviews.length === 0 && !loading && (
