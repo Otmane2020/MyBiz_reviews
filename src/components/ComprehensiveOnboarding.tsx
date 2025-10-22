@@ -78,7 +78,14 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [selectedDataForSEOLocation, setSelectedDataForSEOLocation] = useState<any>(null);
   const [savingLocation, setSavingLocation] = useState(false);
   
-  const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
+  const { products, loading: stripeLoading, redirectToCheckout, fetchProducts } = useStripe();
+
+  // Load Stripe products on mount
+  useEffect(() => {
+    fetchProducts().catch(err => {
+      console.error('Error loading Stripe products:', err);
+    });
+  }, []);
 
   // Clear messages after timeout
   useEffect(() => {
@@ -328,6 +335,9 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       return;
     }
 
+    setLoading(true);
+    setError(null);
+
     try {
       // Save selected location to database
       if (selectedDataForSEOLocation) {
@@ -365,6 +375,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     } catch (error) {
       console.error('Error subscribing:', error);
       setError('Erreur lors de l\'abonnement. Veuillez réessayer.');
+      setLoading(false);
     }
   };
 
@@ -946,14 +957,18 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
             <button
               onClick={nextStep}
-              disabled={!canProceed() || stripeLoading}
+              disabled={!canProceed() || stripeLoading || loading}
               className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-xl"
             >
-              {currentStep === steps.length - 1 ? 
-                (stripeLoading ? 
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : 
+              {currentStep === steps.length - 1 ?
+                (stripeLoading || loading ?
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Chargement...
+                  </>
+                  :
                   'Commencer l\'essai'
-                ) : 
+                ) :
                 'Suivant'
               }
               {currentStep < steps.length - 1 && <ChevronRight className="w-5 h-5 ml-1" />}
