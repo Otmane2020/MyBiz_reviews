@@ -89,9 +89,8 @@ function App() {
       const isTrialSignup = localStorage.getItem('isTrialSignup') === 'true';
       const isDirectOnboarding = localStorage.getItem('directOnboarding') === 'true';
       const completedOnboarding = localStorage.getItem('onboardingCompleted');
-      const hasSelectedLocation = !!savedLocationId;
 
-     // Clear the trial signup flag after reading it
+     // Clear the trial signup flags after reading them
      localStorage.removeItem('isTrialSignup');
      localStorage.removeItem('directOnboarding');
 
@@ -99,12 +98,12 @@ function App() {
      if (isTrialSignup || isDirectOnboarding) {
        setCurrentView('onboarding');
      }
-     // Priority 2: If user has completed onboarding AND has selected location, go to dashboard
-     else if (completedOnboarding === 'true' && hasSelectedLocation) {
+     // Priority 2: If user has completed onboarding, go directly to dashboard
+     else if (completedOnboarding === 'true') {
        setHasCompletedOnboarding(true);
        setCurrentView('app');
      }
-     // Priority 3: Default fallback - users without complete setup go to onboarding
+     // Priority 3: New users without onboarding go to onboarding
      else {
        setCurrentView('onboarding');
      }
