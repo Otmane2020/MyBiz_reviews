@@ -3,12 +3,7 @@ import { Star, TrendingUp, MessageSquare } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-interface AuthPageProps {
-  onGoogleAuth: (userData: any, token: string) => void;
-  onEmailAuth: (userData: any) => void;
-}
-
-const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
+const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 

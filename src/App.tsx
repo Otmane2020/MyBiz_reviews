@@ -54,6 +54,38 @@ function App() {
   const isAITestRoute = window.location.pathname === '/aitest';
   const isAIHistoryRoute = window.location.pathname === '/aihistory';
 
+  // Function to save Google OAuth tokens to database
+  const saveGoogleTokensToDatabase = async (userId: string, providerToken: string, providerRefreshToken?: string) => {
+    try {
+      if (!providerToken) return;
+
+      const accountId = `google_${userId}`;
+      const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+
+      const { error } = await supabase
+        .from('google_accounts')
+        .upsert({
+          user_id: userId,
+          account_id: accountId,
+          account_name: 'Google Account',
+          access_token: providerToken,
+          refresh_token: providerRefreshToken || null,
+          token_expires_at: expiresAt,
+          scopes: ['https://www.googleapis.com/auth/business.manage']
+        }, {
+          onConflict: 'user_id,account_id'
+        });
+
+      if (error) {
+        console.error('❌ Error saving Google tokens to database:', error);
+      } else {
+        console.log('✅ Google OAuth tokens saved to database');
+      }
+    } catch (error) {
+      console.error('❌ Exception saving Google tokens:', error);
+    }
+  };
+
   // Consolidated session handling function
   const handleSession = (session: any) => {
     if (session) {
@@ -71,11 +103,23 @@ function App() {
 
       // Set access token from session or localStorage
       let token = '';
+      let refreshToken = '';
+
       if (session.provider_token) {
         token = session.provider_token;
         localStorage.setItem('accessToken', token);
+        console.log('✅ Stored provider_token from session:', token.substring(0, 20) + '...');
+
+        if (session.provider_refresh_token) {
+          refreshToken = session.provider_refresh_token;
+          localStorage.setItem('refreshToken', refreshToken);
+        }
+
+        saveGoogleTokensToDatabase(session.user.id, token, refreshToken);
       } else {
         token = localStorage.getItem('accessToken') || '';
+        refreshToken = localStorage.getItem('refreshToken') || '';
+        console.log('📦 Retrieved token from localStorage:', token ? token.substring(0, 20) + '...' : 'none');
       }
       setAccessToken(token);
 
@@ -127,6 +171,34 @@ function App() {
   };
   // Initialize Supabase auth state listener
   useEffect(() => {
+    // Extract tokens from URL hash if present (OAuth callback)
+    const extractTokensFromHash = async () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1));
+        const providerToken = params.get('provider_token');
+        const providerRefreshToken = params.get('provider_refresh_token');
+
+        if (providerToken) {
+          console.log('🔍 Found provider_token in URL hash');
+          localStorage.setItem('accessToken', providerToken);
+          setAccessToken(providerToken);
+
+          if (providerRefreshToken) {
+            console.log('🔍 Found provider_refresh_token in URL hash');
+            localStorage.setItem('refreshToken', providerRefreshToken);
+          }
+
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.id) {
+            await saveGoogleTokensToDatabase(session.user.id, providerToken, providerRefreshToken || undefined);
+          }
+        }
+      }
+    };
+
+    extractTokensFromHash();
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSession(session);
@@ -145,23 +217,12 @@ function App() {
   }, []);
 
 
-  const handleGoogleAuth = (userData: any, token: string) => {
-    // Cette fonction n'est plus utilisée - l'OAuth est géré directement dans AuthPage
-    // et la logique de redirection est dans handleSession
-  };
-
-  const handleEmailAuth = (userData: any) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentView('google-setup');
-  };
-
   const handleGoogleSetupComplete = (accountId: string, locationId: string) => {
     setSelectedAccountId(accountId);
     setSelectedLocationId(locationId);
     localStorage.setItem('selectedAccountId', accountId);
     localStorage.setItem('selectedLocationId', locationId);
-    
+
     // Check if user has already completed onboarding
     const completedOnboarding = localStorage.getItem('onboardingCompleted');
     if (completedOnboarding) {
@@ -170,12 +231,6 @@ function App() {
     } else {
       setCurrentView('onboarding');
     }
-  };
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('onboardingCompleted', 'true');
-    setHasCompletedOnboarding(true);
-    setCurrentView('app');
   };
 
   const handleOnboardingCompleteWithData = (selectedStores: string[], selectedPlan: string) => {
@@ -272,12 +327,7 @@ function App() {
   }
 
   if (currentView === 'auth') {
-    return (
-      <AuthPage 
-        onGoogleAuth={handleGoogleAuth}
-        onEmailAuth={handleEmailAuth}
-      />
-    );
+    return <AuthPage />;
   }
 
   if (currentView === 'google-setup') {
