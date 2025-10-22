@@ -59,6 +59,7 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
   const [reviews, setReviews] = useState<GoogleReview[]>([]);
   const [loading, setLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string>('');
+  const [importingAll, setImportingAll] = useState(false);
   const [generatedReplies, setGeneratedReplies] = useState<Record<string, string>>({});
   const [copiedReview, setCopiedReview] = useState<string>('');
 
@@ -201,8 +202,8 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         starRating: ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][r.rating] as any,
         comment: r.comment,
         createTime: r.review_date,
-        reviewReply: r.replied
-          ? { comment: 'Répondu', updateTime: r.updated_at }
+        reviewReply: r.replied && r.reply_content
+          ? { comment: r.reply_content, updateTime: r.replied_at || r.updated_at }
           : undefined,
       }));
 
@@ -338,6 +339,56 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
     }
   }, [accessToken, user, selectedLocationId]);
 
+  // Import ALL reviews from Google My Business
+  const importAllReviews = async () => {
+    if (!accessToken || !selectedLocationId || !user?.id) {
+      alert('Veuillez vous connecter avec Google pour importer tous les avis');
+      return;
+    }
+
+    setImportingAll(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      // Find the Google location name format (accounts/{accountId}/locations/{locationId})
+      const location = locations.find(l => l.name === selectedLocationId);
+      if (!location) {
+        throw new Error('Location not found');
+      }
+
+      console.log('🚀 Importing ALL reviews for:', location.locationName);
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/fetch-all-gmb-reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          locationName: location.name,
+          userId: user.id,
+          locationId: selectedLocationId,
+          accessToken: accessToken,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`✅ Import réussi !\n\nTotal: ${data.totalReviews} avis\nAjoutés: ${data.reviewsAdded}\nMis à jour: ${data.reviewsUpdated}`);
+        await loadStoredReviewsFromDB();
+      } else {
+        throw new Error(data.error || 'Erreur lors de l\'import');
+      }
+    } catch (err) {
+      console.error('❌ Error importing all reviews:', err);
+      alert('Erreur lors de l\'import de tous les avis. Vérifiez la console pour plus de détails.');
+    } finally {
+      setImportingAll(false);
+    }
+  };
+
   // Load reviews from database for all user locations
   const loadStoredReviewsFromDB = async () => {
     if (!user?.id) {
@@ -396,8 +447,8 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
         starRating: ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][r.rating] as any,
         comment: r.comment,
         createTime: r.review_date,
-        reviewReply: r.replied
-          ? { comment: r.reply_content || 'Répondu', updateTime: r.replied_at || r.updated_at }
+        reviewReply: r.replied && r.reply_content
+          ? { comment: r.reply_content, updateTime: r.replied_at || r.updated_at }
           : undefined,
       }));
 
@@ -451,13 +502,34 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Mes Avis</h1>
             <p className="text-gray-600">Gérez et répondez à vos avis clients</p>
           </div>
-          <button
-            onClick={loadStoredReviewsFromDB}
-            className="flex items-center px-4 py-2 text-sm text-white bg-[#4285F4] hover:bg-[#3367D6] rounded-lg transition"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={loadStoredReviewsFromDB}
+              className="flex items-center px-4 py-2 text-sm text-white bg-[#4285F4] hover:bg-[#3367D6] rounded-lg transition"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Actualiser
+            </button>
+            {accessToken && (
+              <button
+                onClick={importAllReviews}
+                disabled={importingAll}
+                className="flex items-center px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {importingAll ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Import en cours...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Importer tous les avis
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Stats cards */}
