@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -44,7 +43,6 @@ serve(async (req) => {
     
     console.log("🎯 Action requested:", action);
 
-    // ACTION: Générer l'URL d'authentification Google
     if (action === "get-auth-url") {
       const { redirectUri } = requestData;
       
@@ -63,8 +61,7 @@ serve(async (req) => {
 
       const scopes = [
         "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "https://www.googleapis.com/auth/business.manage"
+        "https://www.googleapis.com/auth/userinfo.profile"
       ].join(" ");
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + new URLSearchParams({
@@ -87,7 +84,6 @@ serve(async (req) => {
       });
     }
 
-    // ACTION: Échanger le code OAuth contre des tokens
     if (action === "exchange-code") {
       const { code, redirectUri } = requestData;
       
@@ -136,7 +132,6 @@ serve(async (req) => {
         });
       }
 
-      // Récupérer les informations utilisateur
       const userResponse = await fetch("https://www.googleapis.com/oauth2/v1/userinfo", {
         headers: {
           Authorization: `Bearer ${tokens.access_token}`
@@ -175,7 +170,6 @@ serve(async (req) => {
       });
     }
 
-    // ACTION: Récupérer les comptes Business Profile
     if (action === "get-accounts") {
       const { accessToken } = requestData;
       
@@ -230,7 +224,6 @@ serve(async (req) => {
       });
     }
 
-    // ACTION: Récupérer les établissements pour un compte
     if (action === "get-locations") {
       const { accessToken, accountId } = requestData;
       
@@ -285,7 +278,6 @@ serve(async (req) => {
       });
     }
 
-    // Action non supportée
     return new Response(JSON.stringify({
       error: `Action non supportée: ${action}`,
       success: false
