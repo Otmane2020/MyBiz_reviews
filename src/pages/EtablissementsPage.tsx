@@ -46,28 +46,11 @@ const EtablissementsPage: React.FC<EtablissementsPageProps> = ({ user, onNavigat
     }
   };
 
-  const handleGoogleMyBusinessConnect = async () => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          scopes: 'https://www.googleapis.com/auth/business.manage',
-          redirectTo: window.location.origin,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
+  const handleGoogleMyBusinessConnect = () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const redirectUrl = `${window.location.origin}`;
 
-      if (error) {
-        console.error('OAuth error:', error);
-        alert('Erreur lors de la connexion à Google My Business');
-      }
-    } catch (error) {
-      console.error('Connection error:', error);
-      alert('Erreur lors de la connexion');
-    }
+    window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&scopes=https://www.googleapis.com/auth/business.manage`;
   };
 
   const handleDeleteLocation = async (locationId: string) => {

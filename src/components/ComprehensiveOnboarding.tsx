@@ -501,10 +501,6 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         throw new Error(data.error || 'Erreur lors de la recherche');
       }
 
-      if (data.status === 'REQUEST_DENIED') {
-        throw new Error('API key invalide. Configurez le secret GOOGLE_MAPS_API_KEY dans Supabase.');
-      }
-
       setSearchedLocations(data.results || []);
 
       if (data.results?.length === 0) {
@@ -512,8 +508,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       }
     } catch (error) {
       console.error('Error searching business:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la recherche. Veuillez réessayer.';
-      alert(errorMessage);
+      alert('Erreur lors de la recherche. Veuillez réessayer.');
     } finally {
       setSearchingDataForSEO(false);
     }

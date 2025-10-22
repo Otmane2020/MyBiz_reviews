@@ -32,20 +32,16 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
   const [error, setError] = useState<string | null>(null);
   const [importingReviews, setImportingReviews] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  const searchBusinesses = async (searchQuery?: string) => {
-    const queryToSearch = searchQuery || query;
-
-    if (!queryToSearch.trim()) {
+  const searchBusinesses = async () => {
+    if (!query.trim()) {
       setError('Veuillez entrer un nom d\'entreprise');
       return;
     }
 
     setLoading(true);
     setError(null);
-    setShowSuggestions(true);
+    setBusinesses([]);
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -64,7 +60,7 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
             'Authorization': `Bearer ${supabaseKey}`,
           },
           body: JSON.stringify({
-            query: queryToSearch.trim(),
+            query: query.trim(),
             location: location.trim() || undefined
           })
         }
@@ -81,20 +77,17 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
       }
 
       if (data.status === 'REQUEST_DENIED') {
-        throw new Error('API key invalide ou restrictions activées. Veuillez configurer le secret GOOGLE_MAPS_API_KEY dans Supabase (voir GOOGLE_SETUP.md)');
+        throw new Error('API key invalide ou restrictions activées');
       }
 
       if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
         throw new Error(`Erreur API: ${data.status}`);
       }
 
-      const results = data.results || [];
-      setBusinesses(results);
+      setBusinesses(data.results || []);
 
-      if (results.length === 0) {
+      if (data.results?.length === 0) {
         setError('Aucune entreprise trouvée');
-      } else if (results.length === 1 && autoImportReviews) {
-        await handleBusinessClick(results[0]);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -107,26 +100,7 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      setShowSuggestions(true);
       searchBusinesses();
-    }
-  };
-
-  const handleQueryChange = (value: string) => {
-    setQuery(value);
-
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    if (value.trim().length >= 3) {
-      const timeout = setTimeout(() => {
-        searchBusinesses(value);
-      }, 500);
-      setSearchTimeout(timeout);
-    } else {
-      setBusinesses([]);
-      setShowSuggestions(false);
     }
   };
 
@@ -175,12 +149,10 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
           <input
             type="text"
             value={query}
-            onChange={(e) => handleQueryChange(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             onKeyPress={handleKeyPress}
-            onFocus={() => businesses.length > 0 && setShowSuggestions(true)}
             placeholder="Ex: Restaurant Le Gourmet"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            autoComplete="off"
           />
         </div>
 
@@ -199,10 +171,7 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
         </div>
 
         <button
-          onClick={() => {
-            setShowSuggestions(true);
-            searchBusinesses();
-          }}
+          onClick={searchBusinesses}
           disabled={loading || !query.trim()}
           className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
         >
@@ -233,7 +202,7 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
         </div>
       )}
 
-      {businesses.length > 0 && showSuggestions && (
+      {businesses.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-gray-800 mb-3">
             Résultats ({businesses.length})
