@@ -402,9 +402,12 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
       }));
 
       console.log('✅ Reviews converted and loaded:', converted.length);
+      console.log('First review sample:', converted[0]);
       setReviews(converted);
+      setLoading(false);
     } catch (err) {
       console.error('❌ Error loading reviews from database:', err);
+      setLoading(false);
     }
   };
 
