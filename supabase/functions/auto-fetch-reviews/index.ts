@@ -76,6 +76,12 @@ Deno.serve(async (req: Request) => {
       // Use text directly since we're requesting in French
       const reviewText = review.text || '';
 
+      // Check for owner reply
+      const hasReply = review.author_reply !== undefined;
+      const replyText = hasReply ? review.author_reply?.text || '' : null;
+      const replyTime = hasReply ? review.author_reply?.time : null;
+      const replyDate = replyTime ? new Date(replyTime * 1000).toISOString() : null;
+
       // Check if review already exists
       const { data: existingReview } = await supabase
         .from('reviews')
@@ -94,13 +100,16 @@ Deno.serve(async (req: Request) => {
           rating: review.rating,
           comment: reviewText,
           review_date: reviewDate,
-          replied: false,
+          replied: hasReply,
+          reply_content: replyText,
+          reply_source: hasReply ? 'google' : null,
+          replied_at: replyDate,
           user_id: userId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'review_id',
-          ignoreDuplicates: true
+          ignoreDuplicates: false
         });
 
       if (!error) {
