@@ -1,8 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Star, MessageSquare, Smartphone, Check, Building2, Users, TrendingUp, MapPin, CreditCard, Crown, Zap, Gift, Shield, Search, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  ChevronRight, 
+  ChevronLeft, 
+  Star, 
+  MessageSquare, 
+  Smartphone, 
+  Check, 
+  Building2, 
+  Users, 
+  TrendingUp, 
+  MapPin, 
+  CreditCard, 
+  Crown, 
+  Zap, 
+  Gift, 
+  Shield, 
+  Search, 
+  Loader2,
+  AlertCircle,
+  ExternalLink,
+  Calendar,
+  BadgeCheck,
+  Sparkles
+} from 'lucide-react';
 import { useStripe } from '../hooks/useStripe';
 import { supabase } from '../lib/supabase';
-import { searchBusinessLocations, saveLocationToDatabase, BusinessLocation } from '../lib/dataforseo';
 import BusinessSearch from './BusinessSearch';
 
 interface GoogleAccount {
@@ -28,12 +50,14 @@ interface ComprehensiveOnboardingProps {
   user: any;
   accessToken?: string;
   onComplete: (selectedStores: string[], selectedPlan: string) => void;
+  onSkip?: () => void;
 }
 
 const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({ 
   user, 
   accessToken: initialAccessToken,
-  onComplete 
+  onComplete,
+  onSkip 
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [accessToken, setAccessToken] = useState<string>(initialAccessToken || '');
@@ -43,6 +67,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<string>('starter');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [gmbConnected, setGmbConnected] = useState(!!initialAccessToken);
   const [autoLoadingGMB, setAutoLoadingGMB] = useState(false);
   const [businessName, setBusinessName] = useState('');
@@ -50,40 +76,67 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
   const [searchedLocations, setSearchedLocations] = useState<any[]>([]);
   const [searchingDataForSEO, setSearchingDataForSEO] = useState(false);
   const [selectedDataForSEOLocation, setSelectedDataForSEOLocation] = useState<any>(null);
+  const [savingLocation, setSavingLocation] = useState(false);
   
   const { products, loading: stripeLoading, redirectToCheckout } = useStripe();
 
-  // Save selected locations to database
-  const saveLocationsToDatabase = async () => {
-    if (!user?.id) return;
+  // Clear messages after timeout
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  // Save selected location to database
+  const saveLocationToDatabase = useCallback(async (location: any) => {
+    if (!user?.id) {
+      throw new Error('Utilisateur non connecté');
+    }
+
+    setSavingLocation(true);
     try {
-      // Save Google Places location if selected
-      if (selectedDataForSEOLocation) {
-        const { data: locationData, error: locationError } = await supabase
-          .from('locations')
-          .upsert({
-            user_id: user.id,
-            location_id: selectedDataForSEOLocation.place_id,
-            location_name: selectedDataForSEOLocation.name,
-            address: selectedDataForSEOLocation.formatted_address,
-            is_active: true,
-            last_synced_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id,location_id'
-          });
+      const { data: locationData, error: locationError } = await supabase
+        .from('locations')
+        .upsert({
+          user_id: user.id,
+          location_id: location.place_id,
+          location_name: location.name,
+          address: location.formatted_address,
+          rating: location.rating,
+          total_reviews: location.user_ratings_total,
+          is_active: true,
+          last_synced_at: new Date().toISOString(),
+          source: 'google_places'
+        }, {
+          onConflict: 'user_id,location_id'
+        });
 
-        if (locationError) {
-          console.error('Error saving location:', locationError);
-        }
-        return;
+      if (locationError) {
+        console.error('Error saving location:', locationError);
+        throw new Error('Erreur lors de la sauvegarde de l\'établissement');
       }
 
-      // Save Google OAuth locations if selected
-      if (selectedStores.length === 0) return;
+      return locationData;
+    } finally {
+      setSavingLocation(false);
+    }
+  }, [user?.id]);
 
+  // Save Google OAuth locations to database
+  const saveGoogleLocationsToDatabase = useCallback(async () => {
+    if (!user?.id || selectedStores.length === 0) return;
+
+    try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) throw new Error('Session non valide');
 
       // Get the first account ID from the accounts list
       const accountId = accounts[0]?.name || '';
@@ -119,11 +172,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       const googleAccountId = googleAccounts?.id;
 
       // Save all selected locations
-      for (const locationName of selectedStores) {
+      const savePromises = selectedStores.map(async (locationName) => {
         const location = locations.find(l => l.name === locationName);
-        if (!location) continue;
+        if (!location) return;
 
-        await supabase
+        return supabase
           .from('locations')
           .upsert({
             user_id: user.id,
@@ -134,15 +187,21 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
               `${location.address.locality}, ${location.address.administrativeArea}` : '',
             category: location.primaryCategory?.displayName || '',
             is_active: true,
-            last_synced_at: new Date().toISOString()
+            last_synced_at: new Date().toISOString(),
+            source: 'google_my_business'
           }, {
             onConflict: 'user_id,location_id'
           });
-      }
+      });
+
+      await Promise.all(savePromises);
+      setSuccess('Établissements sauvegardés avec succès !');
     } catch (error) {
       console.error('Error saving locations to database:', error);
+      setError('Erreur lors de la sauvegarde des établissements');
+      throw error;
     }
-  };
+  }, [user?.id, selectedStores, accounts, accessToken, locations]);
 
   const plans = [
     {
@@ -166,7 +225,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         'Tableau de bord basique'
       ],
       icon: <Star className="w-6 h-6" />,
-      color: 'from-[#4285F4] to-[#34A853]',
+      color: 'from-blue-500 to-green-500',
       popular: false,
       payAsYouGo: '0,10€ par réponse supplémentaire'
     },
@@ -192,7 +251,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         'Support email prioritaire'
       ],
       icon: <Crown className="w-6 h-6" />,
-      color: 'from-[#FBBC05] to-[#EA4335]',
+      color: 'from-yellow-500 to-red-500',
       popular: true,
       payAsYouGo: '0,10€ par réponse supplémentaire'
     },
@@ -219,7 +278,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         'Intégrations avancées'
       ],
       icon: <Zap className="w-6 h-6" />,
-      color: 'from-[#EA4335] to-[#4285F4]',
+      color: 'from-red-500 to-blue-500',
       popular: false,
       payAsYouGo: '0,10€ par réponse supplémentaire'
     }
@@ -227,53 +286,55 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
   const steps = [
     {
-      icon: <Gift className="w-16 h-16 text-[#FBBC05]" />,
+      icon: <Gift className="w-16 h-16 text-yellow-500" />,
       title: "Bienvenue !",
-      description: "Félicitations ! Vous venez de rejoindre Starlinko, la plateforme qui va révolutionner la gestion de vos avis Google My Business. Commencez avec 14 jours d'essai gratuit !",
-      color: "from-[#4285F4] to-[#34A853]",
+      description: "Félicitations ! Vous venez de rejoindre Starlinko, la plateforme qui va révolutionner la gestion de vos avis Google. Commencez avec 14 jours d'essai gratuit !",
+      color: "from-blue-500 to-green-500",
       type: 'welcome'
     },
     {
-      icon: <Search className="w-16 h-16 text-[#4285F4]" />,
+      icon: <Search className="w-16 h-16 text-blue-500" />,
       title: "Trouvez votre établissement",
-      description: "Indiquez le nom de votre établissement et nous le trouverons automatiquement sur Google Business.",
-      color: "from-[#34A853] to-[#FBBC05]",
+      description: "Indiquez le nom de votre établissement et nous le trouverons automatiquement sur Google.",
+      color: "from-green-500 to-yellow-500",
       type: 'business-search'
     },
     {
-      icon: <Building2 className="w-16 h-16 text-[#4285F4]" />,
+      icon: <Building2 className="w-16 h-16 text-blue-500" />,
       title: "Sélectionnez votre établissement",
-      description: selectedDataForSEOLocation
-        ? "Établissement sélectionné ! Nous allons surveiller vos avis automatiquement."
-        : "Choisissez votre établissement dans la liste ci-dessous.",
-      color: "from-[#34A853] to-[#FBBC05]",
+      description: "Choisissez votre établissement dans la liste ci-dessous. Nous surveillerons automatiquement vos avis.",
+      color: "from-green-500 to-yellow-500",
       type: 'location-selection'
     },
     {
-      icon: <CreditCard className="w-16 h-16 text-[#34A853]" />,
+      icon: <CreditCard className="w-16 h-16 text-green-500" />,
       title: "Choisissez votre plan",
-      description: "Sélectionnez le plan qui correspond le mieux à vos besoins. Tous les plans incluent 14 jours d'essai gratuit avec réponses IA incluses !",
-      color: "from-[#FBBC05] to-[#EA4335]",
+      description: "Sélectionnez le plan qui correspond le mieux à vos besoins. Tous les plans incluent 14 jours d'essai gratuit !",
+      color: "from-yellow-500 to-red-500",
       type: 'plan-selection'
     },
     {
-      icon: <Check className="w-16 h-16 text-[#FBBC05]" />,
+      icon: <Sparkles className="w-16 h-16 text-yellow-500" />,
       title: "Tout est prêt !",
-      description: "Votre compte est configuré et prêt à l'emploi. Commencez dès maintenant votre essai gratuit de 14 jours et améliorez votre réputation en ligne !",
-      color: "from-[#FBBC05] to-[#EA4335]",
+      description: "Votre compte est configuré et prêt à l'emploi. Commencez dès maintenant votre essai gratuit !",
+      color: "from-yellow-500 to-red-500",
       type: 'complete'
     }
   ];
 
   const handleSubscribe = async (planId: string, billingCycle: 'monthly' | 'annual') => {
     if (!user?.id || !user?.email) {
-      alert('Informations utilisateur manquantes');
+      setError('Informations utilisateur manquantes');
       return;
     }
 
     try {
-      // Save selected locations to database
-      await saveLocationsToDatabase();
+      // Save selected location to database
+      if (selectedDataForSEOLocation) {
+        await saveLocationToDatabase(selectedDataForSEOLocation);
+      } else if (selectedStores.length > 0) {
+        await saveGoogleLocationsToDatabase();
+      }
 
       // Find the corresponding Stripe product and price
       const stripeProduct = products.find(p => p.id === `starlinko_${planId}`);
@@ -303,171 +364,18 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       );
     } catch (error) {
       console.error('Error subscribing:', error);
-      onComplete(selectedStores, selectedPlan);
+      setError('Erreur lors de l\'abonnement. Veuillez réessayer.');
     }
-  };
-
-  // Auto-load GMB accounts and locations when user is already connected
-  useEffect(() => {
-    const autoLoadGMBData = async () => {
-      // Only auto-load if:
-      // 1. User is connected to GMB (has access token)
-      // 2. We haven't loaded accounts yet
-      // 3. We're not already loading
-      // 4. We're on the GMB connection step
-      if (gmbConnected && accessToken && accounts.length === 0 && !loading && !autoLoadingGMB && steps[currentStep]?.type === 'gmb-connection') {
-        console.log('🔄 Auto-loading GMB accounts and locations...');
-        setAutoLoadingGMB(true);
-        try {
-          await fetchAccounts();
-        } catch (error) {
-          console.error('Error auto-loading GMB data:', error);
-        } finally {
-          setAutoLoadingGMB(false);
-        }
-      }
-    };
-
-    autoLoadGMBData();
-  }, [gmbConnected, accessToken, accounts.length, loading, currentStep]);
-
-  const connectGoogleMyBusiness = async () => {
-    // Check if user is already authenticated with Google via Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session && session.provider_token) {
-      console.log('🔑 Found provider token, setting up GMB connection');
-      setAccessToken(session.provider_token);
-      setGmbConnected(true);
-      console.log('📞 Calling fetchAccounts...');
-      await fetchAccounts();
-    } else {
-      // User needs to authenticate with Google
-      alert('Veuillez d\'abord vous connecter avec Google depuis la page de connexion.');
-    }
-  };
-
-  const fetchAccounts = async () => {
-    console.log('🚀 fetchAccounts called with accessToken:', accessToken ? 'Present' : 'Missing');
-    if (!accessToken) return;
-
-    setLoading(true);
-    try {
-      console.log('📡 Making request to google-oauth function...');
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          action: 'get-accounts',
-          accessToken: accessToken,
-        }),
-      });
-      console.log('📡 Response status:', response.status);
-      const data = await response.json();
-      console.log('DEBUG: Data from Google Accounts API:', data);
-      
-      if (data.accounts && data.accounts.length > 0) {
-        console.log('✅ Found', data.accounts.length, 'accounts');
-        setAccounts(data.accounts);
-        // Fetch locations for the first account
-        console.log('📞 Calling fetchLocations for first account...');
-        await fetchLocations(data.accounts[0].name);
-      } else {
-        console.error('❌ Aucun compte trouvé dans onboarding:', data);
-        if (data.error) {
-          console.error('🚨 Erreur API onboarding:', data.error);
-          alert(`Erreur API Google: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
-        } else {
-          alert('Aucun compte Google My Business trouvé. Assurez-vous d\'avoir créé un profil d\'entreprise Google.');
-        }
-      }
-    } catch (error) {
-      console.error('Erreur lors de la récupération des comptes:', error);
-      alert(`Erreur lors de la récupération des comptes: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchLocations = async (accountId: string) => {
-    console.log('🏢 fetchLocations called with accountId:', accountId);
-    try {
-      console.log('📡 Making request to get locations...');
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          action: 'get-locations',
-          accessToken: accessToken,
-          accountId: accountId,
-        }),
-      });
-      console.log('📡 Locations response status:', response.status);
-      const data = await response.json();
-      console.log('DEBUG: Data from Google Locations API:', data);
-      
-      if (data.locations && data.locations.length > 0) {
-        console.log('✅ Found', data.locations.length, 'locations');
-        setLocations(data.locations);
-      } else {
-        console.error('❌ Aucun établissement trouvé dans onboarding:', data);
-        if (data.error) {
-          console.error('🚨 Erreur API établissements onboarding:', data.error);
-          alert(`Erreur lors de la récupération des établissements: ${data.error.message || data.error.code || 'Erreur inconnue'}`);
-        } else {
-          alert('Aucun établissement trouvé. Assurez-vous d\'avoir créé au moins un établissement dans votre profil Google My Business.');
-        }
-      }
-    } catch (error) {
-      console.error('Erreur lors de la récupération des établissements:', error);
-      alert(`Erreur lors de la récupération des établissements: ${error.message}`);
-    }
-  };
-
-  const toggleStoreSelection = (locationId: string) => {
-    setSelectedStores(prev => 
-      prev.includes(locationId)
-        ? prev.filter(id => id !== locationId)
-        : [...prev, locationId]
-    );
-  };
-
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // If user selected a plan, redirect to Stripe checkout
-      if (selectedPlan && user?.id && user?.email) {
-        handleSubscribe(selectedPlan, billingCycle);
-      } else {
-        onComplete(selectedStores, selectedPlan);
-      }
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const goToStep = (step: number) => {
-    setCurrentStep(step);
   };
 
   const searchBusinessWithDataForSEO = async () => {
     if (!businessName.trim()) {
-      alert('Veuillez saisir le nom de votre établissement');
+      setError('Veuillez saisir le nom de votre établissement');
       return;
     }
 
     setSearchingDataForSEO(true);
+    setError(null);
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -501,21 +409,34 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         throw new Error(data.error || 'Erreur lors de la recherche');
       }
 
-      setSearchedLocations(data.results || []);
-
-      if (data.results?.length === 0) {
-        alert('Aucun établissement trouvé. Vérifiez le nom et l\'adresse.');
+      if (data.status === 'ZERO_RESULTS') {
+        setSearchedLocations([]);
+        setError('Aucun établissement trouvé. Vérifiez le nom et l\'adresse.');
+        return;
       }
+
+      setSearchedLocations(data.results || []);
+      setSuccess(`${data.results?.length || 0} établissement(s) trouvé(s) !`);
+
     } catch (error) {
       console.error('Error searching business:', error);
-      alert('Erreur lors de la recherche. Veuillez réessayer.');
+      setError('Erreur lors de la recherche. Veuillez réessayer.');
     } finally {
       setSearchingDataForSEO(false);
     }
   };
 
-  const selectDataForSEOLocation = (location: any) => {
+  const selectDataForSEOLocation = async (location: any) => {
     setSelectedDataForSEOLocation(location);
+    setSuccess(`"${location.name}" sélectionné !`);
+    
+    // Auto-save the location
+    try {
+      await saveLocationToDatabase(location);
+    } catch (error) {
+      console.error('Error auto-saving location:', error);
+      // Don't show error to user for auto-save
+    }
   };
 
   const canProceed = () => {
@@ -526,7 +447,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     }
 
     if (currentStepData.type === 'location-selection') {
-      return selectedDataForSEOLocation !== null;
+      return selectedDataForSEOLocation !== null || selectedStores.length > 0;
     }
 
     if (currentStepData.type === 'plan-selection') {
@@ -536,12 +457,45 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     return true;
   };
 
+  const nextStep = async () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // Final step - handle subscription
+      await handleSubscribe(selectedPlan, billingCycle);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const goToStep = (step: number) => {
+    setCurrentStep(step);
+  };
+
   const renderStepContent = () => {
     const currentStepData = steps[currentStep];
 
     if (currentStepData.type === 'business-search') {
       return (
         <div className="space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start">
+              <Check className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+              <p className="text-green-800 text-sm font-medium">{success}</p>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -550,9 +504,13 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
               <input
                 type="text"
                 value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                onChange={(e) => {
+                  setBusinessName(e.target.value);
+                  setError(null);
+                }}
                 placeholder="Ex: Decora Home Lognes"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                disabled={searchingDataForSEO}
               />
             </div>
 
@@ -565,14 +523,15 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                 value={businessAddress}
                 onChange={(e) => setBusinessAddress(e.target.value)}
                 placeholder="Ex: Lognes, France"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4285F4] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                disabled={searchingDataForSEO}
               />
             </div>
 
             <button
               onClick={searchBusinessWithDataForSEO}
               disabled={searchingDataForSEO || !businessName.trim()}
-              className="w-full flex items-center justify-center px-6 py-4 bg-[#4285F4] text-white rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] disabled:opacity-50 transition-colors duration-200 font-medium"
+              className="w-full flex items-center justify-center px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors duration-200 font-medium"
             >
               {searchingDataForSEO ? (
                 <>
@@ -589,12 +548,12 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
           </div>
 
           {searchedLocations.length > 0 && (
-            <div className="bg-[#34A853]/10 rounded-lg p-4 text-center">
-              <Check className="w-8 h-8 text-[#34A853] mx-auto mb-2" />
-              <p className="text-[#34A853] font-medium">
+            <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
+              <Check className="w-8 h-8 text-green-500 mx-auto mb-2" />
+              <p className="text-green-700 font-medium">
                 {searchedLocations.length} établissement{searchedLocations.length > 1 ? 's' : ''} trouvé{searchedLocations.length > 1 ? 's' : ''} !
               </p>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-green-600 mt-1">
                 Passez à l'étape suivante pour sélectionner votre établissement
               </p>
             </div>
@@ -606,6 +565,27 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
     if (currentStepData.type === 'location-selection') {
       return (
         <div className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start">
+              <Check className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+              <p className="text-green-800 text-sm font-medium">{success}</p>
+            </div>
+          )}
+
+          {savingLocation && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center">
+              <Loader2 className="w-5 h-5 text-blue-500 mr-2 animate-spin" />
+              <p className="text-blue-700 text-sm">Sauvegarde de l'établissement...</p>
+            </div>
+          )}
+
           {searchedLocations.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-xl">
               <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -621,7 +601,7 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                   key={location.place_id}
                   className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     selectedDataForSEOLocation?.place_id === location.place_id
-                      ? 'border-[#4285F4] bg-[#4285F4]/5 shadow-md'
+                      ? 'border-blue-500 bg-blue-50 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                   }`}
                   onClick={() => selectDataForSEOLocation(location)}
@@ -629,29 +609,36 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                   <div className="flex items-start">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${
                       selectedDataForSEOLocation?.place_id === location.place_id
-                        ? 'bg-[#4285F4] text-white'
+                        ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-600'
                     }`}>
                       <Building2 className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 mb-1">
+                      <div className="font-medium text-gray-900 mb-1 flex items-center">
                         {location.name}
+                        {selectedDataForSEOLocation?.place_id === location.place_id && (
+                          <BadgeCheck className="w-4 h-4 text-blue-500 ml-2" />
+                        )}
                       </div>
-                      <div className="text-xs text-gray-400 mb-2">
+                      <div className="text-sm text-gray-600 mb-2 flex items-center">
+                        <MapPin className="w-3 h-3 mr-1" />
                         {location.formatted_address}
                       </div>
                       {location.rating && (
-                        <div className="flex items-center gap-3 text-xs">
-                          <span className="flex items-center text-yellow-600">
-                            <Star className="w-3 h-3 mr-1 fill-current" />
-                            {location.rating.toFixed(1)} {location.user_ratings_total && `(${location.user_ratings_total} avis)`}
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="flex items-center text-yellow-600 font-medium">
+                            <Star className="w-4 h-4 mr-1 fill-current" />
+                            {location.rating.toFixed(1)} 
+                            {location.user_ratings_total && 
+                              ` (${location.user_ratings_total.toLocaleString()} avis)`
+                            }
                           </span>
                         </div>
                       )}
                     </div>
                     {selectedDataForSEOLocation?.place_id === location.place_id && (
-                      <Check className="w-5 h-5 text-[#4285F4] flex-shrink-0" />
+                      <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
                     )}
                   </div>
                 </div>
@@ -662,102 +649,17 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       );
     }
 
-    if (currentStepData.type === 'gmb-connection') {
-      return (
-        <div className="space-y-6">
-          {!gmbConnected ? (
-            <button
-              onClick={connectGoogleMyBusiness}
-              disabled={loading}
-              className="w-full flex items-center justify-center px-6 py-4 bg-[#4285F4] text-white rounded-lg hover:bg-[#3367D6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] disabled:opacity-50 transition-colors duration-200 font-medium"
-            >
-              <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              {loading ? 'Connexion...' : 'Connecter Google My Business'}
-            </button>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-[#34A853]/10 rounded-lg p-4 text-center">
-                <Check className="w-8 h-8 text-[#34A853] mx-auto mb-2" />
-                <p className="text-[#34A853] font-medium">Google My Business connecté !</p>
-              </div>
-              
-              {(loading || autoLoadingGMB) && accounts.length === 0 && (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4285F4] mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-500">Chargement de vos établissements...</p>
-                </div>
-              )}
-              
-              {locations.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">
-                    Sélectionnez vos établissements ({selectedStores.length} sélectionné{selectedStores.length > 1 ? 's' : ''})
-                  </h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {locations.map((location) => (
-                      <label
-                        key={location.name}
-                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#4285F4] hover:bg-[#4285F4]/5 transition-colors cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedStores.includes(location.name)}
-                          onChange={() => toggleStoreSelection(location.name)}
-                          className="mr-3 h-4 w-4 text-[#4285F4] focus:ring-[#4285F4] border-gray-300 rounded"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900 text-sm">
-                            {location.locationName}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {location.primaryCategory?.displayName}
-                          </div>
-                          {location.address && (
-                            <div className="text-xs text-gray-400">
-                              {location.address.locality}, {location.address.administrativeArea}
-                            </div>
-                          )}
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {!loading && !autoLoadingGMB && accounts.length === 0 && gmbConnected && (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-4">Aucun compte Google My Business trouvé.</p>
-                  <button
-                    onClick={fetchAccounts}
-                    className="text-[#4285F4] hover:underline text-sm"
-                  >
-                    Réessayer le chargement
-                  </button>
-                </div>
-              )}
-              
-              {!loading && !autoLoadingGMB && accounts.length > 0 && locations.length === 0 && (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-4">Aucun établissement trouvé dans vos comptes Google My Business.</p>
-                  <p className="text-sm text-gray-500">
-                    Assurez-vous d'avoir créé au moins un établissement dans votre profil Google My Business.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      );
-    }
-
     if (currentStepData.type === 'plan-selection') {
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
           {/* Billing Cycle Toggle */}
           <div className="flex items-center justify-center mb-6">
             <div className="bg-gray-100 rounded-lg p-1 flex">
@@ -780,115 +682,221 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
                 }`}
               >
                 Annuel
-                <span className="absolute -top-2 -right-2 bg-[#34A853] text-white text-xs px-1.5 py-0.5 rounded-full">
+                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                   -20%
                 </span>
               </button>
             </div>
           </div>
           
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                selectedPlan === plan.id
-                  ? 'border-[#4285F4] bg-[#4285F4]/5'
-                  : 'border-gray-200 hover:border-gray-300'
-              } ${plan.popular ? 'ring-2 ring-[#FBBC05] ring-opacity-50' : ''}`}
-              onClick={() => setSelectedPlan(plan.id)}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-[#FBBC05] text-white px-3 py-1 rounded-full text-xs font-medium">
-                    Populaire
-                  </span>
+          {/* Plans */}
+          <div className="space-y-4">
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`relative border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                  selectedPlan === plan.id
+                    ? 'border-blue-500 bg-blue-50 shadow-lg'
+                    : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                } ${plan.popular ? 'ring-2 ring-yellow-400 ring-opacity-50' : ''}`}
+                onClick={() => setSelectedPlan(plan.id)}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                      Populaire
+                    </span>
+                  </div>
+                )}
+                
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className={`p-2 rounded-lg bg-gradient-to-r ${plan.color} text-white mr-3`}>
+                      {plan.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{plan.name}</h3>
+                      <p className="text-sm text-gray-600">{plan.subtitle}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-gray-900">
+                      {billingCycle === 'monthly' ? plan.price : plan.annualPrice}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {billingCycle === 'monthly' ? plan.period : plan.annualPeriod}
+                    </div>
+                    {billingCycle === 'annual' && (
+                      <div className="text-xs text-green-600 font-medium">
+                        Économie de {plan.annualSavings}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-              
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-lg bg-gradient-to-r ${plan.color} text-white mr-3`}>
-                    {plan.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{plan.name}</h3>
-                    <p className="text-sm text-gray-600">"{plan.subtitle}"</p>
-                  </div>
+
+                {/* Trial Badge */}
+                <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium mb-3 inline-block">
+                  <Gift className="w-3 h-3 inline mr-1" />
+                  {plan.trial} → {plan.trialBonus}
                 </div>
                 
-                <div className="text-right">
-                  <div className="text-xl font-bold text-gray-900">
-                    {billingCycle === 'monthly' ? plan.price : plan.annualPrice}
+                <ul className="space-y-2 mb-3">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-center text-sm text-gray-600">
+                      <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Pay as you go */}
+                <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 border">
+                  <strong>Pay-as-you-go:</strong> {plan.payAsYouGo}
+                </div>
+                
+                <div className="mt-3 flex items-center justify-center">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    selectedPlan === plan.id
+                      ? 'border-blue-500 bg-blue-500'
+                      : 'border-gray-300'
+                  }`}>
+                    {selectedPlan === plan.id && (
+                      <Check className="w-3 h-3 text-white" />
+                    )}
                   </div>
-                  <div className="text-sm text-gray-500">
-                    {billingCycle === 'monthly' ? plan.period : plan.annualPeriod}
-                  </div>
-                  {billingCycle === 'annual' && (
-                    <div className="text-xs text-[#34A853] font-medium">
-                      Économie de {plan.annualSavings}
-                    </div>
-                  )}
                 </div>
               </div>
-
-              {/* Trial Badge */}
-              <div className="bg-gradient-to-r from-[#34A853] to-[#4285F4] text-white px-3 py-1 rounded-full text-xs font-medium mb-3 inline-block">
-                <Gift className="w-3 h-3 inline mr-1" />
-                {plan.trial} → {plan.trialBonus}
-              </div>
-              
-              <ul className="space-y-1 mb-3">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center text-sm text-gray-600">
-                    <Check className="w-4 h-4 text-[#34A853] mr-2 flex-shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-
-              {/* Pay as you go */}
-              <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
-                <strong>Pay-as-you-go:</strong> {plan.payAsYouGo}
-              </div>
-              
-              <div className="mt-3 flex items-center justify-center">
-                <div className={`w-4 h-4 rounded-full border-2 ${
-                  selectedPlan === plan.id
-                    ? 'border-[#4285F4] bg-[#4285F4]'
-                    : 'border-gray-300'
-                }`}>
-                  {selectedPlan === plan.id && (
-                    <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
           
           {stripeLoading && (
             <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4285F4] mx-auto"></div>
-              <p className="text-sm text-gray-500 mt-2">Chargement des plans...</p>
+              <Loader2 className="w-6 h-6 text-blue-500 mx-auto mb-2 animate-spin" />
+              <p className="text-sm text-gray-500">Chargement des plans...</p>
             </div>
           )}
+
+          {/* Security Badge */}
+          <div className="text-center pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-center text-sm text-gray-500">
+              <Shield className="w-4 h-4 text-green-500 mr-2" />
+              Paiement 100% sécurisé • Annulation à tout moment
+            </div>
+          </div>
         </div>
       );
     }
 
-    return null;
+    if (currentStepData.type === 'complete') {
+      return (
+        <div className="space-y-6 text-center">
+          <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-2xl p-6">
+            <Sparkles className="w-12 h-12 mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2">Votre compte est prêt !</h3>
+            <p className="text-blue-100">
+              Vous pouvez maintenant commencer votre essai gratuit de 14 jours
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center">
+                <Building2 className="w-5 h-5 text-blue-500 mr-3" />
+                <span className="text-sm font-medium">Établissement</span>
+              </div>
+              <span className="text-sm text-gray-600">
+                {selectedDataForSEOLocation?.name || selectedStores.length + ' sélectionné(s)'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center">
+                <CreditCard className="w-5 h-5 text-green-500 mr-3" />
+                <span className="text-sm font-medium">Plan choisi</span>
+              </div>
+              <span className="text-sm text-gray-600 capitalize">
+                {selectedPlan}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center">
+                <Calendar className="w-5 h-5 text-purple-500 mr-3" />
+                <span className="text-sm font-medium">Essai gratuit</span>
+              </div>
+              <span className="text-sm text-gray-600">14 jours</span>
+            </div>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <Gift className="w-5 h-5 text-yellow-600 mr-2" />
+              <p className="text-sm text-yellow-800">
+                <strong>Votre essai gratuit commence maintenant !</strong><br />
+                Aucun paiement ne sera effectué avant la fin des 14 jours.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Welcome step
+    return (
+      <div className="space-y-6">
+        {user && (
+          <div className="bg-gradient-to-r from-blue-500/10 to-green-500/10 rounded-2xl p-6 border border-blue-200">
+            <div className="flex items-center justify-center mb-4">
+              <img
+                src={user.picture}
+                alt={user.name}
+                className="w-16 h-16 rounded-full mr-4 border-4 border-white shadow-lg"
+              />
+              <div className="text-left">
+                <div className="font-bold text-gray-900 text-lg">{user.name}</div>
+                <div className="text-sm text-gray-600">{user.email}</div>
+              </div>
+            </div>
+            <div className="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-medium inline-flex items-center mx-auto">
+              <Gift className="w-4 h-4 mr-2" />
+              14 jours d'essai gratuit inclus !
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <MessageSquare className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+            <h4 className="font-semibold text-gray-900 text-sm">Réponses IA</h4>
+            <p className="text-xs text-gray-600">Automatisez vos réponses aux avis</p>
+          </div>
+          <div className="p-4 bg-green-50 rounded-lg">
+            <TrendingUp className="w-8 h-8 text-green-500 mx-auto mb-2" />
+            <h4 className="font-semibold text-gray-900 text-sm">Analyse en temps réel</h4>
+            <p className="text-xs text-gray-600">Suivez votre réputation</p>
+          </div>
+          <div className="p-4 bg-purple-50 rounded-lg">
+            <Smartphone className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+            <h4 className="font-semibold text-gray-900 text-sm">Mobile friendly</h4>
+            <p className="text-xs text-gray-600">Gérez depuis votre mobile</p>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${steps[currentStep].color} flex items-center justify-center p-4`}>
+    <div className={`min-h-screen bg-gradient-to-br ${steps[currentStep].color} flex items-center justify-center p-4 transition-all duration-500`}>
       <div className="max-w-lg w-full">
         {/* Progress indicators */}
-        <div className="flex justify-center mb-8 overflow-x-auto">
-          <div className="flex items-center space-x-2 px-4">
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
             {steps.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToStep(index)}
-                className={`w-2.5 h-2.5 rounded-full transition-all flex-shrink-0 ${
+                className={`w-3 h-3 rounded-full transition-all flex-shrink-0 ${
                   index === currentStep 
                     ? 'bg-white scale-125' 
                     : index < currentStep 
@@ -900,8 +908,8 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="bg-white rounded-3xl p-8 text-center shadow-2xl">
+        {/* Content Card */}
+        <div className="bg-white rounded-3xl p-8 text-center shadow-2xl transform transition-all duration-300 hover:shadow-3xl">
           <div className="flex justify-center mb-6">
             {steps[currentStep].icon}
           </div>
@@ -914,42 +922,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
             {steps[currentStep].description}
           </p>
 
-          {/* User info for first step */}
-          {currentStep === 0 && user && (
-            <div className="bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 rounded-xl p-4 mb-6">
-              <div className="flex items-center justify-center mb-3">
-                <img
-                  src={user.picture}
-                  alt={user.name}
-                  className="w-12 h-12 rounded-full mr-3"
-                />
-                <div className="text-left">
-                  <div className="font-medium text-gray-900">{user.name}</div>
-                  <div className="text-sm text-gray-500">{user.email}</div>
-                </div>
-              </div>
-              <div className="bg-[#34A853] text-white px-4 py-2 rounded-full text-sm font-medium inline-flex items-center">
-                <Gift className="w-4 h-4 mr-2" />
-                14 jours d'essai gratuit inclus !
-              </div>
-            </div>
-          )}
-
           {/* Step-specific content */}
           {renderStepContent()}
 
-          {/* Features highlight for feature steps */}
-          {steps[currentStep].type === 'feature' && (
-            <div className="bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 rounded-xl p-4 mb-6">
-              <div className="flex items-center justify-center text-sm text-gray-600">
-                <Shield className="w-4 h-4 text-[#34A853] mr-2" />
-                Testez gratuitement pendant 14 jours
-              </div>
-            </div>
-          )}
-
           {/* Navigation */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
             <button
               onClick={prevStep}
               disabled={currentStep === 0}
@@ -963,29 +940,32 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
               Précédent
             </button>
 
-            <span className="text-sm text-gray-500">
-              {currentStep + 1} / {steps.length}
+            <span className="text-sm text-gray-500 font-medium">
+              Étape {currentStep + 1} sur {steps.length}
             </span>
 
             <button
               onClick={nextStep}
-              disabled={!canProceed()}
-              className="flex items-center px-6 py-3 bg-[#4285F4] text-white rounded-full hover:bg-[#3367D6] transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              disabled={!canProceed() || stripeLoading}
+              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-xl"
             >
               {currentStep === steps.length - 1 ? 
-                (stripeLoading ? 'Chargement...' : 'Commencer l\'essai') : 
+                (stripeLoading ? 
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : 
+                  'Commencer l\'essai'
+                ) : 
                 'Suivant'
               }
-              <ChevronRight className="w-5 h-5 ml-1" />
+              {currentStep < steps.length - 1 && <ChevronRight className="w-5 h-5 ml-1" />}
             </button>
           </div>
         </div>
 
         {/* Skip option */}
-        {currentStep < steps.length - 1 && (
+        {currentStep < steps.length - 1 && onSkip && (
           <div className="text-center mt-6">
             <button
-              onClick={() => onComplete(selectedStores, selectedPlan)}
+              onClick={onSkip}
               className="text-white/80 hover:text-white transition-colors text-sm underline"
             >
               Passer l'introduction
