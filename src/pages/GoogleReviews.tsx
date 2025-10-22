@@ -423,13 +423,30 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
+  // Filter state
+  const [filter, setFilter] = React.useState<'all' | 'with_reply' | 'without_reply'>('all');
+
+  // Filtered reviews based on selected filter
+  const filteredReviews = reviews.filter(r => {
+    if (filter === 'with_reply') return r.reviewReply;
+    if (filter === 'without_reply') return !r.reviewReply;
+    return true;
+  });
+
+  // Stats calculation
+  const totalReviews = reviews.length;
+  const withReply = reviews.filter(r => r.reviewReply).length;
+  const withoutReply = reviews.filter(r => !r.reviewReply).length;
+  const replyRate = totalReviews > 0 ? Math.round((withReply / totalReviews) * 100) : 0;
+
   return (
     <div className="min-h-screen bg-[#F1F3F4] pt-20 pb-20">
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Mes Avis</h1>
-            <p className="text-gray-600">Tous vos avis de vos établissements</p>
+            <p className="text-gray-600">Gérez et répondez à vos avis clients</p>
           </div>
           <button
             onClick={loadStoredReviewsFromDB}
@@ -440,23 +457,84 @@ const GoogleReviews: React.FC<GoogleReviewsProps> = ({
           </button>
         </div>
 
+        {/* Stats cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-sm text-gray-600 mb-1">Total des avis</div>
+            <div className="text-2xl font-bold text-gray-900">{totalReviews}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-sm text-gray-600 mb-1">Avec réponse</div>
+            <div className="text-2xl font-bold text-green-600">{withReply}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-sm text-gray-600 mb-1">Sans réponse</div>
+            <div className="text-2xl font-bold text-orange-600">{withoutReply}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-sm text-gray-600 mb-1">Taux de réponse</div>
+            <div className="text-2xl font-bold text-blue-600">{replyRate}%</div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Filtrer:</span>
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filter === 'all'
+                  ? 'bg-[#4285F4] text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Tous ({totalReviews})
+            </button>
+            <button
+              onClick={() => setFilter('without_reply')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filter === 'without_reply'
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Sans réponse ({withoutReply})
+            </button>
+            <button
+              onClick={() => setFilter('with_reply')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filter === 'with_reply'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Avec réponse ({withReply})
+            </button>
+          </div>
+        </div>
+
         {/* Liste des avis */}
         <div className="space-y-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              {reviews.length} avis au total
+              {filteredReviews.length} avis affichés
             </h2>
           </div>
 
-          {reviews.length === 0 && !loading && (
+          {filteredReviews.length === 0 && !loading && (
             <div className="text-center py-12 bg-white rounded-xl shadow-sm">
               <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun avis</h3>
-              <p className="mt-1 text-sm text-gray-500">Ajoutez un établissement pour voir vos avis</p>
+              <p className="mt-1 text-sm text-gray-500">
+                {reviews.length === 0
+                  ? 'Ajoutez un établissement pour voir vos avis'
+                  : 'Aucun avis avec ce filtre'}
+              </p>
             </div>
           )}
 
-          {reviews.map((r) => (
+          {filteredReviews.map((r) => (
             <div key={r.reviewId} className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center">

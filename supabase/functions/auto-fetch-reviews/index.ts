@@ -36,11 +36,10 @@ Deno.serve(async (req: Request) => {
 
     console.log('🔍 Fetching reviews for location:', locationId, 'placeId:', placeId);
 
-    // Fetch reviews from Google Places API without translation
-    // Note: We don't specify 'language' parameter to get original reviews
-    // reviews_no_translations parameter would be ideal but is not available in Places API
+    // Fetch reviews from Google Places API in French (original language)
+    // Force French language to get reviews in their original form without translation
     const fields = 'reviews,rating,user_ratings_total,name,formatted_address';
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${googleApiKey}`;
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&language=fr&key=${googleApiKey}`;
 
     const response = await fetch(url);
     const data = await response.json();
@@ -70,9 +69,8 @@ Deno.serve(async (req: Request) => {
 
       const reviewDate = new Date(review.time * 1000).toISOString();
 
-      // Use original_text if available, otherwise use text
-      // Google API returns original_text for reviews in their native language
-      const reviewText = review.original_text || review.text || '';
+      // Use text directly since we're requesting in French
+      const reviewText = review.text || '';
 
       const { error } = await supabase
         .from('reviews')
