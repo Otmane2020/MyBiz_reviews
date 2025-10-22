@@ -32,16 +32,20 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
   const [error, setError] = useState<string | null>(null);
   const [importingReviews, setImportingReviews] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  const searchBusinesses = async () => {
-    if (!query.trim()) {
+  const searchBusinesses = async (searchQuery?: string) => {
+    const queryToSearch = searchQuery || query;
+
+    if (!queryToSearch.trim()) {
       setError('Veuillez entrer un nom d\'entreprise');
       return;
     }
 
     setLoading(true);
     setError(null);
-    setBusinesses([]);
+    setShowSuggestions(true);
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -60,7 +64,7 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
             'Authorization': `Bearer ${supabaseKey}`,
           },
           body: JSON.stringify({
-            query: query.trim(),
+            query: queryToSearch.trim(),
             location: location.trim() || undefined
           })
         }
@@ -84,10 +88,13 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
         throw new Error(`Erreur API: ${data.status}`);
       }
 
-      setBusinesses(data.results || []);
+      const results = data.results || [];
+      setBusinesses(results);
 
-      if (data.results?.length === 0) {
+      if (results.length === 0) {
         setError('Aucune entreprise trouvée');
+      } else if (results.length === 1 && autoImportReviews) {
+        await handleBusinessClick(results[0]);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -100,7 +107,26 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      setShowSuggestions(true);
       searchBusinesses();
+    }
+  };
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    if (value.trim().length >= 3) {
+      const timeout = setTimeout(() => {
+        searchBusinesses(value);
+      }, 500);
+      setSearchTimeout(timeout);
+    } else {
+      setBusinesses([]);
+      setShowSuggestions(false);
     }
   };
 
@@ -149,10 +175,12 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleQueryChange(e.target.value)}
             onKeyPress={handleKeyPress}
+            onFocus={() => businesses.length > 0 && setShowSuggestions(true)}
             placeholder="Ex: Restaurant Le Gourmet"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            autoComplete="off"
           />
         </div>
 
@@ -171,7 +199,10 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
         </div>
 
         <button
-          onClick={searchBusinesses}
+          onClick={() => {
+            setShowSuggestions(true);
+            searchBusinesses();
+          }}
           disabled={loading || !query.trim()}
           className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
         >
@@ -202,7 +233,7 @@ const BusinessSearch: React.FC<BusinessSearchProps> = ({ onBusinessSelect, userI
         </div>
       )}
 
-      {businesses.length > 0 && (
+      {businesses.length > 0 && showSuggestions && (
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-gray-800 mb-3">
             Résultats ({businesses.length})
