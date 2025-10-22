@@ -3,9 +3,6 @@ import { Star, TrendingUp, MessageSquare } from 'lucide-react';
 import StarlinkoLogo from './StarlinkoLogo';
 import { supabase } from '../lib/supabase';
 
-// Utiliser la variable d'environnement
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-
 interface AuthPageProps {
   onGoogleAuth: (userData: any, token: string) => void;
   onEmailAuth: (userData: any) => void;
@@ -19,19 +16,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onGoogleAuth, onEmailAuth }) => {
     handleGoogleAuth(true);
   };
   const handleGoogleAuth = async (isTrial: boolean = false) => {
-    console.log('Google Client ID:', GOOGLE_CLIENT_ID);
-    console.log('Is trial signup:', isTrial);
     console.log('🔄 Starting Google OAuth process...');
-    
+
     // Set the trial signup flag before OAuth redirect
     if (isTrial) {
       localStorage.setItem('isTrialSignup', 'true');
       console.log('✅ Set isTrialSignup = true for trial signup');
-      console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     } else {
       localStorage.setItem('isTrialSignup', 'false');
       console.log('✅ Set isTrialSignup = false for regular login');
-      console.log('📝 localStorage isTrialSignup:', localStorage.getItem('isTrialSignup'));
     }
     
     // Set loading state
