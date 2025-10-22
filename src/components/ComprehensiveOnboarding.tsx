@@ -346,11 +346,24 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
         await saveGoogleLocationsToDatabase();
       }
 
+      // Check if Stripe is configured
+      if (products.length === 0) {
+        console.warn('Stripe not configured, completing onboarding without payment');
+        setSuccess('Configuration sauvegardée ! Vous pouvez configurer votre abonnement plus tard.');
+        setTimeout(() => {
+          onComplete(selectedStores, selectedPlan);
+        }, 1500);
+        return;
+      }
+
       // Find the corresponding Stripe product and price
       const stripeProduct = products.find(p => p.id === `starlinko_${planId}`);
       if (!stripeProduct) {
-        console.warn('Stripe products not loaded, proceeding with onboarding');
-        onComplete(selectedStores, selectedPlan);
+        console.warn('Stripe product not found, proceeding with onboarding');
+        setSuccess('Configuration sauvegardée ! Vous pouvez configurer votre abonnement plus tard.');
+        setTimeout(() => {
+          onComplete(selectedStores, selectedPlan);
+        }, 1500);
         return;
       }
 
@@ -360,7 +373,10 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
 
       if (!price) {
         console.warn('Price not found, proceeding with onboarding');
-        onComplete(selectedStores, selectedPlan);
+        setSuccess('Configuration sauvegardée ! Vous pouvez configurer votre abonnement plus tard.');
+        setTimeout(() => {
+          onComplete(selectedStores, selectedPlan);
+        }, 1500);
         return;
       }
 
@@ -374,7 +390,11 @@ const ComprehensiveOnboarding: React.FC<ComprehensiveOnboardingProps> = ({
       );
     } catch (error) {
       console.error('Error subscribing:', error);
-      setError('Erreur lors de l\'abonnement. Veuillez réessayer.');
+      setError('Erreur lors de l\'abonnement. Redirection vers le dashboard...');
+      setTimeout(() => {
+        onComplete(selectedStores, selectedPlan);
+      }, 2000);
+    } finally {
       setLoading(false);
     }
   };
