@@ -1,18 +1,5 @@
 # Configuration Google Maps API et Google My Business
 
-## 🔍 Page de Diagnostic
-
-**COMMENCEZ ICI** : Allez sur `/diagnostic` dans votre application pour tester votre configuration.
-
-Cette page vous permettra de :
-- Vérifier si la clé API est configurée
-- Voir les variables d'environnement disponibles
-- Obtenir des instructions détaillées
-
-URL : `http://localhost:5173/diagnostic` (en dev) ou `https://votre-domaine.com/diagnostic` (en prod)
-
----
-
 ## 1. Configuration de la clé API Google Maps
 
 ### Étape 1 : Créer/Configurer la clé API

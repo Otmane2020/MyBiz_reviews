@@ -22,7 +22,6 @@ import GDPRPage from './pages/GDPRPage';
 import AITestPage from './pages/AITestPage';
 import AIReplyHistory from './pages/AIReplyHistory';
 import EtablissementsPage from './pages/EtablissementsPage';
-import DiagnosticPage from './pages/DiagnosticPage';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'google-setup' | 'onboarding' | 'app'>('landing');
@@ -55,7 +54,6 @@ function App() {
   const isGDPRRoute = window.location.pathname === '/gdpr';
   const isAITestRoute = window.location.pathname === '/aitest';
   const isAIHistoryRoute = window.location.pathname === '/aihistory';
-  const isDiagnosticRoute = window.location.pathname === '/diagnostic';
 
   // Function to save Google OAuth tokens to database
   const saveGoogleTokensToDatabase = async (userId: string, providerToken: string, providerRefreshToken?: string) => {
@@ -317,10 +315,6 @@ function App() {
 
   if (isAIHistoryRoute) {
     return <AIReplyHistory user={user} />;
-  }
-
-  if (isDiagnosticRoute) {
-    return <DiagnosticPage />;
   }
 
   const handleNavigate = (page: string) => {
